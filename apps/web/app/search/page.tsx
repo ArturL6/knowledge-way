@@ -1,0 +1,1 @@
+import SearchClient from './search-client'; export default function Page(){return <SearchClient/>}

@@ -1,0 +1,1 @@
+import ChatClient from './chat-client'; export default function Page(){return <ChatClient/>}

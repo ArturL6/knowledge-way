@@ -1,0 +1,14 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+sqlalchemy==2.0.36
+psycopg[binary]==3.2.3
+pydantic-settings==2.7.0
+pgvector==0.3.6
+redis==5.2.1
+rq==2.0.0
+tree-sitter==0.24.0
+tree-sitter-language-pack==0.3.1
+openai==1.58.1
+python-multipart==0.0.20
+pytest==8.3.4
+httpx==0.28.1

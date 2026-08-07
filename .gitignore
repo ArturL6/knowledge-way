@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.next/
+dist/
+coverage/
+
+# Runtime data
+data/repositories/
+postgres-data/
+redis-data/
