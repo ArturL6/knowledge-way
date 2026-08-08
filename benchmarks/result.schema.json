@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "knowledge-way neutral code-intelligence benchmark result",
+  "type": "object",
+  "required": ["schema_version", "tool", "run", "provenance", "metrics", "tasks"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "tool": {"type": "object", "required": ["name", "version", "configuration"], "properties": {"name": {"type": "string"}, "version": {"type": "string"}, "configuration": {"type": "object"}}},
+    "run": {"type": "object", "required": ["id", "started_at_utc", "mode"], "properties": {"id": {"type": "string"}, "started_at_utc": {"type": "string", "format": "date-time"}, "mode": {"enum": ["cold", "warm", "update"]}}},
+    "provenance": {"type": "object", "required": ["harness_git_sha", "corpora", "hardware", "adapter"], "properties": {"harness_git_sha": {"type": "string"}, "corpora": {"type": "array", "items": {"type": "object", "required": ["id", "resolved_sha"], "properties": {"id": {"type": "string"}, "resolved_sha": {"type": "string"}}}}, "hardware": {"type": "object"}, "adapter": {"type": "object"}}},
+    "metrics": {"type": "object", "required": ["index_wall_seconds", "peak_rss_bytes", "index_disk_bytes", "update_wall_seconds", "measurement_notes"], "properties": {"index_wall_seconds": {"type": ["number", "null"]}, "peak_rss_bytes": {"type": ["integer", "null"]}, "index_disk_bytes": {"type": ["integer", "null"]}, "update_wall_seconds": {"type": ["number", "null"]}, "measurement_notes": {"type": "string"}}},
+    "tasks": {"type": "array", "items": {"type": "object", "required": ["id", "status", "wall_seconds"], "properties": {"id": {"type": "string"}, "status": {"enum": ["ok", "failed", "unsupported"]}, "wall_seconds": {"type": "number"}, "precision_at_k": {"type": ["number", "null"]}, "mrr": {"type": ["number", "null"]}, "edge_precision": {"type": ["number", "null"]}, "edge_recall": {"type": ["number", "null"]}, "mcp_success": {"type": ["boolean", "null"]}, "response": {"type": ["object", "null"]}, "error": {"type": ["string", "null"]}}}}
+  }
+}

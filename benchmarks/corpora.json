@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "corpora": [
+    {
+      "id": "click-small",
+      "description": "Small public Python CLI library for quick exact-symbol and call-relationship smoke tests.",
+      "source_url": "https://github.com/pallets/click.git",
+      "revision": "8.1.7",
+      "license": "BSD-3-Clause",
+      "role": "small_public_python"
+    },
+    {
+      "id": "flask-suite",
+      "description": "Related public Pallets projects used as separate repositories to exercise boundaries.",
+      "members": [
+        {"id": "flask", "source_url": "https://github.com/pallets/flask.git", "revision": "3.0.0", "license": "BSD-3-Clause"},
+        {"id": "werkzeug", "source_url": "https://github.com/pallets/werkzeug.git", "revision": "3.0.1", "license": "BSD-3-Clause"},
+        {"id": "jinja", "source_url": "https://github.com/pallets/jinja.git", "revision": "3.1.2", "license": "BSD-3-Clause"}
+      ],
+      "role": "multi_repo_python"
+    }
+  ]
+}

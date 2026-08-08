@@ -32,7 +32,8 @@ The optional read-only stdio MCP server calls the public API rather than the
 database. For a local test, first start the stack with `docker compose up -d`, then configure your MCP-capable agent to start `knowledge_way_mcp.server` with `KW_API_BASE_URL=http://localhost:8000`. The agent talks MCP over stdio; the bridge calls this service's REST API. See the copy-paste [local setup, launch, test, and client configuration](docs/mcp.md).
 
 For a repeatable UI, API, graph, MCP, workspace, and cleanup walkthrough, see
-the [guided demo playbook](docs/demo-playbook.md).
+the [guided demo playbook](docs/demo-playbook.md). For an implementation-neutral,
+reproducible comparison scaffold, see the [benchmark harness](benchmarks/README.md).
 
 ## Security model
 

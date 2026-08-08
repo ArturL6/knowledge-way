@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "task_categories": ["exact_symbol", "callers_callees", "natural_language_retrieval", "multi_repo_dependency_boundary", "mcp_task"],
+  "tasks": [
+    {"id": "click-command-symbol", "corpus": "click-small", "category": "exact_symbol", "query": "Command", "expected_symbols": ["click.core.Command"], "relevance": ["src/click/core.py"]},
+    {"id": "click-command-callees", "corpus": "click-small", "category": "callers_callees", "subject": "click.core.Command.main", "direction": "callees", "edge_oracle": [{"source": "click.core.Command.main", "relation": "calls", "target": "click.core.Command.make_context"}]},
+    {"id": "flask-route-nl", "corpus": "flask-suite/flask", "category": "natural_language_retrieval", "query": "Where is a URL rule registered on a Flask application?", "relevance": ["src/flask/sansio/scaffold.py", "src/flask/app.py"]},
+    {"id": "flask-werkzeug-boundary", "corpus": "flask-suite", "category": "multi_repo_dependency_boundary", "query": "Which declared external package provides routing primitives used by Flask?", "expected_boundary": {"from_repo": "flask", "to_repo": "werkzeug", "relation": "declared_dependency"}},
+    {"id": "mcp-click-symbol", "corpus": "click-small", "category": "mcp_task", "request": {"tool": "find_symbol", "arguments": {"query": "click.core.Command"}}, "assertion": "response contains an exact symbol identity and a source path"}
+  ]
+}

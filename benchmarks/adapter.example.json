@@ -1,0 +1,7 @@
+{
+  "command": ["/absolute/path/to/your-adapter", "--jsonl"],
+  "environment": {
+    "TOOL_DATA_DIR": "/tmp/replace-with-a-disposable-tool-data-dir"
+  },
+  "notes": "This file is an inert example. The runner starts the command once and sends newline-delimited JSON requests on stdin. Do not place tokens, passwords, or private repository URLs here. Keep secrets in the adapter's process environment; captured values with secret-like names are redacted."
+}
