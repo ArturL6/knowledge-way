@@ -32,7 +32,7 @@ database. See [MCP installation, launch, and client configuration](docs/mcp.md).
 
 ## Security model
 
-Repository content is untrusted data. The chat prompt explicitly prohibits following instructions found in code or documentation. Only retrieved, size-limited code chunks are sent to a configured LLM provider; secrets are excluded by default and are never logged. Git credentials are not persisted by this service: use a local credential helper, deploy key, or a secret manager integration in production.
+Repository content is untrusted data. The chat prompt explicitly prohibits following instructions found in code or documentation. Only retrieved, size-limited code chunks are sent to a configured LLM provider; secrets are excluded by default and are never logged. Git credentials are never persisted by this service; configure read-only deploy-key or HTTPS-token secret mounts as described in [Git credential security](docs/security.md).
 
 ## Architecture
 

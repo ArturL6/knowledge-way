@@ -5,6 +5,7 @@ from pathlib import Path
 from sqlalchemy import delete, select
 
 from app.config import settings
+from app.git_auth import git_environment, redact_git_error
 from app.db import SessionLocal
 from app.models import CodeChunk, File, IndexingJob, Repository, Symbol, SymbolEdge
 from app.parser_facts import analyze_source
@@ -18,7 +19,14 @@ RESOLVED_CONFIDENCE=100
 UNRESOLVED_CONFIDENCE=20
 
 
-def run(*args,cwd=None): return subprocess.run(args,cwd=cwd,text=True,capture_output=True,check=True).stdout.strip()
+def run(*args,cwd=None,clone_url=None):
+ env=git_environment(clone_url) if clone_url else None
+ try:
+  return subprocess.run(args,cwd=cwd,text=True,capture_output=True,check=True,env=env).stdout.strip()
+ except subprocess.CalledProcessError as error:
+  # stderr may contain HTTP diagnostics. Persist a deliberately redacted summary only.
+  detail=redact_git_error(error.stderr or error.stdout or '')[:2000]
+  raise RuntimeError(f'Git command failed (exit {error.returncode}): {detail or "no safe diagnostic available"}') from None
 def language(p): return EXT.get(Path(p).suffix.lower())
 def chunks(content,lang):
  lines=content.splitlines(); out=[]; pattern=r'^\s*(?:async\s+def|def|class)\s+([A-Za-z_]\w*)' if lang=='python' else r'^\s*(?:export\s+)?(?:async\s+)?(?:function|class|interface|const)\s+([A-Za-z_$]\w*)'
@@ -119,8 +127,8 @@ def index_repository(repo_id, full=False):
  db=SessionLocal(); repo=db.get(Repository,repo_id); job=IndexingJob(repository_id=repo_id,kind='full' if full else 'sync',status='running',started_at=datetime.utcnow(),progress={'phase':'cloning'}); db.add(job); db.commit()
  try:
   root=Path(settings.repository_storage_path)/repo_id; root.parent.mkdir(parents=True,exist_ok=True)
-  if not root.exists(): run('git','clone','--depth','1',repo.clone_url,str(root))
-  else: run('git','fetch','--depth','1','origin',cwd=root); run('git','reset','--hard','origin/HEAD',cwd=root)
+  if not root.exists(): run('git','clone','--depth','1',repo.clone_url,str(root),clone_url=repo.clone_url)
+  else: run('git','fetch','--depth','1','origin',cwd=root,clone_url=repo.clone_url); run('git','reset','--hard','origin/HEAD',cwd=root)
   sha=run('git','rev-parse','HEAD',cwd=root); repo.local_path=str(root); repo.latest_detected_commit_sha=sha; repo.indexing_status='indexing'; repo.indexing_progress={'phase':'scanning'}; db.commit()
   paths=[]
   for p in root.rglob('*'):

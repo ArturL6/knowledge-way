@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     max_file_size: int = 1_048_576
     chat_context_limit: int = 12_000
     cors_origins: str = "http://localhost:3000"
+    # Mount these read-only from a secret store; never put Git credentials in URLs.
+    git_ssh_key_path: str | None = None
+    git_ssh_known_hosts_path: str | None = None
+    git_https_token_file: str | None = None
+    git_https_username: str = "x-access-token"
+    git_https_askpass_path: str = "/app/app/git_askpass.py"
 
 
 settings = Settings()

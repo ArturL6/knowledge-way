@@ -2,13 +2,14 @@ from pathlib import PurePosixPath
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from sqlalchemy import select, func, delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from redis import Redis
 from rq import Queue
 from app.config import settings
+from app.git_auth import validate_clone_url
 from app.db import get_db, verify_migration_ready
 from app.models import Repository, Workspace, WorkspaceRepository, File, Symbol, SymbolEdge, CodeChunk, IndexingJob, Conversation, Message
 from app.search import search, search_with_capability
@@ -95,7 +96,8 @@ def remove_workspace_repository(workspace_id:str,repo_id:str,db:Session=Depends(
 def repositories(db:Session=Depends(get_db)): return [repo_out(r) for r in db.scalars(select(Repository).order_by(Repository.created_at.desc())).all()]
 @app.post('/api/repositories',status_code=202)
 def add_repository(body:RepositoryIn,db:Session=Depends(get_db)):
- if not (body.clone_url.startswith(('https://','git@','ssh://')) and '..' not in body.clone_url): raise HTTPException(422,'A safe Git clone URL is required')
+ try: body.clone_url=validate_clone_url(body.clone_url)
+ except ValueError as error: raise HTTPException(422,str(error))
  r=Repository(name=body.name,clone_url=body.clone_url,indexing_status='pending');db.add(r);db.commit();db.refresh(r); return {'repository':repo_out(r),'job_id':enqueue(r.id,True)}
 @app.get('/api/repositories/{repo_id}')
 def repository(repo_id:str,db:Session=Depends(get_db)):
