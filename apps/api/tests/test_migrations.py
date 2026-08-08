@@ -7,13 +7,13 @@ from alembic.script import ScriptDirectory
 API_DIR = Path(__file__).resolve().parents[1]
 
 
-def test_initial_migration_is_the_single_head():
+def test_migrations_have_expected_head():
     script = ScriptDirectory.from_config(Config(str(API_DIR / "alembic.ini")))
-    assert script.get_heads() == ["20260808_0001"]
+    assert script.get_heads() == ["20260808_0002"]
 
 
 def test_initial_migration_creates_pgvector_extension_and_all_model_tables():
-    revision = API_DIR / "alembic" / "versions" / "20260808_0001_initial_schema.py"
+    revision = API_DIR / "db_migrations" / "versions" / "20260808_0001_initial_schema.py"
     source = revision.read_text()
     assert "CREATE EXTENSION IF NOT EXISTS vector" in source
     for table in (
