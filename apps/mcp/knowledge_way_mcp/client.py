@@ -64,12 +64,16 @@ class KnowledgeWayClient:
         if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.query or parsed.fragment:
             raise ConfigurationError("KW_API_BASE_URL must be an absolute http(s) URL without query or fragment")
         self.base_url = base_url.rstrip("/")
+        # Accept both the API root (https://host) and the documented API base
+        # (https://host/api) without ever constructing a duplicated /api/api path.
+        self._base_includes_api = urlsplit(self.base_url).path.rstrip("/").endswith("/api")
         self.bearer_token = bearer_token
 
     def request_for(self, path: str, params: dict[str, Any] | None = None) -> APIRequest:
         if not path.startswith("/api/"):
             raise ValueError("only public /api read endpoints are permitted")
-        url = f"{self.base_url}{path}"
+        suffix = path[4:] if self._base_includes_api else path
+        url = f"{self.base_url}{suffix}"
         if params:
             url += "?" + urlencode(params)
         headers = {"Accept": "application/json"}

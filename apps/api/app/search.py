@@ -30,7 +30,7 @@ def result(kind, score, repo, file, item):
     return {'type': kind, 'score': score, 'repository': repo.name, 'repository_id': repo.id,
             'file_id': file.id, 'path': file.path, 'language': item.language,
             'start_line': item.start_line, 'end_line': item.end_line,
-            'snippet': item.source_text[:1200], 'symbol': getattr(item, 'qualified_symbol_name', None) or item.qualified_name}
+            'snippet': item.source_text[:1200], 'symbol': getattr(item, 'qualified_symbol_name', None) or getattr(item, 'qualified_name', None)}
 
 
 def _key(item): return (item['type'], item['file_id'], item['start_line'], item['end_line'])
