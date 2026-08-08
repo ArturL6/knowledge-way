@@ -67,7 +67,8 @@ export default function GraphExplorer() {
     setLoading(true);
     try {
       const boundedDepth = String(Math.max(1, Math.min(2, Number(depth) || 1)));
-      const response = await fetch(`/api/repositories/${encodeURIComponent(repositoryId.trim())}/symbols/${encodeURIComponent(symbolId.trim())}/subgraph?depth=${boundedDepth}`, { headers: { Accept: 'application/json' } });
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+      const response = await fetch(`${apiBase}/repositories/${encodeURIComponent(repositoryId.trim())}/symbols/${encodeURIComponent(symbolId.trim())}/subgraph?depth=${boundedDepth}`, { headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error(`Graph API returned ${response.status}.`);
       const nextGraph = mapApiGraph(await response.json()); setGraph(nextGraph); setSource('api'); setRelationship('all');
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to load graph data.'); }
