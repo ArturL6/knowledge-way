@@ -66,8 +66,8 @@ export default function GraphExplorer() {
     if (!repositoryId.trim() || !symbolId.trim()) { setError('Enter both a repository ID and a symbol ID to load the API graph, or use the fixture demo.'); return; }
     setLoading(true);
     try {
-      const params = new URLSearchParams({ repository_id: repositoryId.trim(), symbol_id: symbolId.trim(), depth: String(Math.max(1, Math.min(10, Number(depth) || 2)))});
-      const response = await fetch(`/api/graph/subgraph?${params}`, { headers: { Accept: 'application/json' } });
+      const boundedDepth = String(Math.max(1, Math.min(2, Number(depth) || 1)));
+      const response = await fetch(`/api/repositories/${encodeURIComponent(repositoryId.trim())}/symbols/${encodeURIComponent(symbolId.trim())}/subgraph?depth=${boundedDepth}`, { headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error(`Graph API returned ${response.status}.`);
       const nextGraph = mapApiGraph(await response.json()); setGraph(nextGraph); setSource('api'); setRelationship('all');
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to load graph data.'); }
