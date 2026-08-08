@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "tool": {
+    "name": "knowledge-way",
+    "version": "git ef97c5f2f793a8e3b62f6a25b03223baad65cb80",
+    "configuration": {
+      "ingestion": "repository create API followed by RQ worker",
+      "llm": false,
+      "semantic_provider": "disabled",
+      "remote_graph_database": false,
+      "note": "Service lifecycle timing, not a process-only extractor measurement."
+    }
+  },
+  "run": {"id": "2026-08-08-click-knowledge-way-cold-1", "started_at_utc": "2026-08-08T10:48:00Z", "mode": "cold"},
+  "provenance": {
+    "harness_git_sha": "ef97c5f2f793a8e3b62f6a25b03223baad65cb80",
+    "corpora": [{"id": "click-small", "resolved_sha": "874ca2bc1c30d93a4ac6e36a15ed685eafe89097"}],
+    "hardware": {"os": "Linux 6.8.0-117-generic x86_64", "cpu_cores": 4, "memory_bytes": 8127717376},
+    "adapter": {"type": "running service API", "credential_free": true}
+  },
+  "metrics": {
+    "index_wall_seconds": 6.384,
+    "peak_rss_bytes": null,
+    "index_disk_bytes": null,
+    "update_wall_seconds": null,
+    "measurement_notes": "Single run measured from repository POST until ready; shared Docker service storage and RSS were deliberately not attributed to one repository. Stored 163 files, 2022 code chunks, 1945 symbols, 6936 edges."
+  },
+  "tasks": [
+    {"id": "exact-symbol-context", "status": "failed", "wall_seconds": 0.0, "precision_at_k": null, "mrr": null, "edge_precision": null, "edge_recall": null, "mcp_success": null, "response": null, "error": "The current unscoped search endpoint returned no Context result; repository-scoped retrieval is not supported by this endpoint."}
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "tool": {
+    "name": "CodeGraphContext",
+    "version": "git e367db2488d9a0d112e28c446498a81a59e914f8",
+    "configuration": {
+      "command": "cgc index --force --no-progress --summarize <corpus>",
+      "backend": "auto-detected kuzudb",
+      "llm": false,
+      "scip": false,
+      "remote_graph_database": false
+    }
+  },
+  "run": {"id": "2026-08-08-click-cgc-cold-1", "started_at_utc": "2026-08-08T10:40:00Z", "mode": "cold"},
+  "provenance": {
+    "harness_git_sha": "ef97c5f2f793a8e3b62f6a25b03223baad65cb80",
+    "corpora": [{"id": "click-small", "resolved_sha": "874ca2bc1c30d93a4ac6e36a15ed685eafe89097"}],
+    "hardware": {"os": "Linux 6.8.0-117-generic x86_64", "cpu_cores": 4, "memory_bytes": 8127717376},
+    "adapter": {"type": "direct_cli", "credential_free": true}
+  },
+  "metrics": {
+    "index_wall_seconds": 208.21,
+    "peak_rss_bytes": 3461345280,
+    "index_disk_bytes": 30448924,
+    "update_wall_seconds": null,
+    "measurement_notes": "Single sequential cold run; the OS killed the process with exit 137 before a usable graph was produced."
+  },
+  "tasks": [
+    {"id": "exact-symbol-context", "status": "failed", "wall_seconds": 0.0, "precision_at_k": null, "mrr": null, "edge_precision": null, "edge_recall": null, "mcp_success": null, "response": null, "error": "Indexing was killed by the host before retrieval could run (exit 137)."}
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "tool": {
+    "name": "Graphify",
+    "version": "0.9.36 / git 3d19463484ebcf773b399ddad9fd3363b2ab3bff",
+    "configuration": {
+      "command": "graphify extract <corpus> --code-only --no-cluster",
+      "llm": false,
+      "remote_graph_database": false,
+      "note": "Graphify reported 71 code files, skipped 49 non-code and 27 unclassified files."
+    }
+  },
+  "run": {"id": "2026-08-08-click-graphify-cold-1", "started_at_utc": "2026-08-08T10:45:00Z", "mode": "cold"},
+  "provenance": {
+    "harness_git_sha": "ef97c5f2f793a8e3b62f6a25b03223baad65cb80",
+    "corpora": [{"id": "click-small", "resolved_sha": "874ca2bc1c30d93a4ac6e36a15ed685eafe89097"}],
+    "hardware": {"os": "Linux 6.8.0-117-generic x86_64", "cpu_cores": 4, "memory_bytes": 8127717376},
+    "adapter": {"type": "direct_cli", "credential_free": true}
+  },
+  "metrics": {
+    "index_wall_seconds": 1.83,
+    "peak_rss_bytes": 73031680,
+    "index_disk_bytes": 3153701,
+    "update_wall_seconds": null,
+    "measurement_notes": "Single sequential cold run; /usr/bin/time -v. No clustering, no LLM."
+  },
+  "tasks": [
+    {"id": "exact-symbol-context", "status": "ok", "wall_seconds": 0.0, "precision_at_k": null, "mrr": null, "edge_precision": null, "edge_recall": null, "mcp_success": null, "response": {"node": "Context", "path": "src/click/core.py", "line": 160}, "error": null}
+  ]
+}
