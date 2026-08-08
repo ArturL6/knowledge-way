@@ -35,6 +35,9 @@ For a repeatable UI, API, graph, MCP, workspace, and cleanup walkthrough, see
 the [guided demo playbook](docs/demo-playbook.md). For an implementation-neutral,
 reproducible comparison scaffold, see the [benchmark harness](benchmarks/README.md).
 
+For a repeatable UI, API, graph, MCP, workspace, and cleanup walkthrough, see
+the [guided demo playbook](docs/demo-playbook.md).
+
 ## Security model
 
 Repository content is untrusted data. The chat prompt explicitly prohibits following instructions found in code or documentation. Only retrieved, size-limited code chunks are sent to a configured LLM provider; secrets are excluded by default and are never logged. Git credentials are never persisted by this service; configure read-only deploy-key or HTTPS-token secret mounts as described in [Git credential security](docs/security.md).
