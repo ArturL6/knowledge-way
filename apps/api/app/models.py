@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, JSON, Index
+from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, JSON, Index, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from pgvector.sqlalchemy import Vector
 from app.db import Base
@@ -9,6 +9,12 @@ def now(): return datetime.utcnow()
 class Repository(Base):
  __tablename__='repositories'
  id:Mapped[str]=mapped_column(String(36),primary_key=True,default=uid); name:Mapped[str]=mapped_column(String(255),index=True); clone_url:Mapped[str]=mapped_column(Text); local_path:Mapped[str|None]=mapped_column(Text,nullable=True); provider:Mapped[str]=mapped_column(String(30),default='git'); default_branch:Mapped[str|None]=mapped_column(String(255),nullable=True); indexed_branch:Mapped[str|None]=mapped_column(String(255),nullable=True); indexed_commit_sha:Mapped[str|None]=mapped_column(String(64),nullable=True); latest_detected_commit_sha:Mapped[str|None]=mapped_column(String(64),nullable=True); indexing_status:Mapped[str]=mapped_column(String(20),default='pending',index=True); indexing_progress:Mapped[dict]=mapped_column(JSON,default=dict); error_message:Mapped[str|None]=mapped_column(Text,nullable=True); last_indexed_at:Mapped[datetime|None]=mapped_column(DateTime,nullable=True); last_sync_at:Mapped[datetime|None]=mapped_column(DateTime,nullable=True); created_at:Mapped[datetime]=mapped_column(DateTime,default=now); updated_at:Mapped[datetime]=mapped_column(DateTime,default=now,onupdate=now)
+class Workspace(Base):
+ __tablename__='workspaces'
+ id:Mapped[str]=mapped_column(String(36),primary_key=True,default=uid); name:Mapped[str]=mapped_column(String(255),index=True); description:Mapped[str|None]=mapped_column(Text,nullable=True); created_at:Mapped[datetime]=mapped_column(DateTime,default=now); updated_at:Mapped[datetime]=mapped_column(DateTime,default=now,onupdate=now)
+class WorkspaceRepository(Base):
+ __tablename__='workspace_repositories'; __table_args__=(UniqueConstraint('repository_id',name='uq_workspace_repositories_repository_id'),)
+ workspace_id:Mapped[str]=mapped_column(ForeignKey('workspaces.id',ondelete='CASCADE'),primary_key=True); repository_id:Mapped[str]=mapped_column(ForeignKey('repositories.id',ondelete='CASCADE'),primary_key=True); created_at:Mapped[datetime]=mapped_column(DateTime,default=now)
 class File(Base):
  __tablename__='files'; __table_args__=(Index('ix_files_repo_path','repository_id','path',unique=True),)
  id:Mapped[str]=mapped_column(String(36),primary_key=True,default=uid); repository_id:Mapped[str]=mapped_column(ForeignKey('repositories.id',ondelete='CASCADE'),index=True); path:Mapped[str]=mapped_column(Text); language:Mapped[str|None]=mapped_column(String(50),index=True); content:Mapped[str]=mapped_column(Text); content_hash:Mapped[str]=mapped_column(String(64),index=True); size_bytes:Mapped[int]=mapped_column(Integer); indexed_commit_sha:Mapped[str]=mapped_column(String(64)); created_at:Mapped[datetime]=mapped_column(DateTime,default=now); updated_at:Mapped[datetime]=mapped_column(DateTime,default=now,onupdate=now)

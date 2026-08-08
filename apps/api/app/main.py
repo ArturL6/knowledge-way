@@ -3,13 +3,14 @@ from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, HttpUrl
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from redis import Redis
 from rq import Queue
 from app.config import settings
 from app.db import get_db, verify_migration_ready
-from app.models import Repository, File, Symbol, SymbolEdge, CodeChunk, IndexingJob, Conversation, Message
+from app.models import Repository, Workspace, WorkspaceRepository, File, Symbol, SymbolEdge, CodeChunk, IndexingJob, Conversation, Message
 from app.search import search
 
 app=FastAPI(title='knowledge-way API',version='0.1.0')
@@ -18,10 +19,15 @@ app.add_middleware(CORSMiddleware,allow_origins=settings.cors_origins.split(',')
 def startup(): verify_migration_ready()
 class RepositoryIn(BaseModel):
  name:str=Field(min_length=1,max_length=255); clone_url:str=Field(min_length=8,max_length=2048)
+class WorkspaceIn(BaseModel):
+ name:str=Field(min_length=1,max_length=255); description:str|None=Field(default=None,max_length=10000)
+class WorkspaceUpdate(BaseModel):
+ name:str|None=Field(default=None,min_length=1,max_length=255); description:str|None=Field(default=None,max_length=10000)
 class ChatIn(BaseModel):
  question:str=Field(min_length=1,max_length=8000); repository_id:str|None=None; conversation_id:str|None=None
 
 def repo_out(r): return {'id':r.id,'name':r.name,'clone_url':r.clone_url,'default_branch':r.default_branch,'indexed_branch':r.indexed_branch,'indexed_commit_sha':r.indexed_commit_sha,'latest_detected_commit_sha':r.latest_detected_commit_sha,'indexing_status':r.indexing_status,'indexing_progress':r.indexing_progress,'error_message':r.error_message,'last_indexed_at':r.last_indexed_at,'last_sync_at':r.last_sync_at,'created_at':r.created_at}
+def workspace_out(w): return {'id':w.id,'name':w.name,'description':w.description,'created_at':w.created_at,'updated_at':w.updated_at}
 def enqueue(repo_id,full=False):
  try: return Queue('indexing',connection=Redis.from_url(settings.redis_url)).enqueue('app.ingestion.index_repository',repo_id,full).id
  except Exception: return None
@@ -37,6 +43,54 @@ def scoped_edges(db,repo_id): return sorted((e for e in db.scalars(select(Symbol
 def scoped_symbols(db,repo_id,ids): return {s.id:s for s in db.scalars(select(Symbol).where(Symbol.repository_id==repo_id,Symbol.id.in_(ids))).all() if s.repository_id==repo_id and s.id in ids}
 @app.get('/health')
 def health(): return {'status':'ok'}
+@app.get('/api/workspaces')
+def workspaces(db:Session=Depends(get_db)): return [workspace_out(w) for w in db.scalars(select(Workspace).order_by(Workspace.created_at.desc())).all()]
+@app.post('/api/workspaces',status_code=201)
+def add_workspace(body:WorkspaceIn,db:Session=Depends(get_db)):
+ w=Workspace(name=body.name,description=body.description); db.add(w); db.commit(); db.refresh(w); return workspace_out(w)
+@app.get('/api/workspaces/{workspace_id}')
+def workspace(workspace_id:str,db:Session=Depends(get_db)):
+ w=db.get(Workspace,workspace_id)
+ if not w: raise HTTPException(404,'Workspace not found')
+ return workspace_out(w)
+@app.patch('/api/workspaces/{workspace_id}')
+def update_workspace(workspace_id:str,body:WorkspaceUpdate,db:Session=Depends(get_db)):
+ w=db.get(Workspace,workspace_id)
+ if not w: raise HTTPException(404,'Workspace not found')
+ for field,value in body.model_dump(exclude_unset=True).items(): setattr(w,field,value)
+ db.commit(); db.refresh(w); return workspace_out(w)
+@app.delete('/api/workspaces/{workspace_id}',status_code=204)
+def delete_workspace(workspace_id:str,db:Session=Depends(get_db)):
+ w=db.get(Workspace,workspace_id)
+ if not w: raise HTTPException(404,'Workspace not found')
+ db.execute(delete(WorkspaceRepository).where(WorkspaceRepository.workspace_id==workspace_id)); db.delete(w); db.commit()
+@app.get('/api/workspaces/{workspace_id}/repositories')
+def workspace_repositories(workspace_id:str,db:Session=Depends(get_db)):
+ if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
+ statement=select(Repository).join(WorkspaceRepository,WorkspaceRepository.repository_id==Repository.id).where(WorkspaceRepository.workspace_id==workspace_id).order_by(Repository.created_at.desc())
+ return [repo_out(r) for r in db.scalars(statement).all()]
+@app.put('/api/workspaces/{workspace_id}/repositories/{repo_id}')
+@app.post('/api/workspaces/{workspace_id}/repositories/{repo_id}')
+def add_workspace_repository(workspace_id:str,repo_id:str,db:Session=Depends(get_db)):
+ if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
+ if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
+ membership=db.scalar(select(WorkspaceRepository).where(WorkspaceRepository.repository_id==repo_id))
+ if membership:
+  if membership.workspace_id==workspace_id: return {'workspace_id':workspace_id,'repository_id':repo_id}
+  raise HTTPException(409,'Repository already belongs to another workspace')
+ db.add(WorkspaceRepository(workspace_id=workspace_id,repository_id=repo_id))
+ try: db.commit()
+ except IntegrityError:
+  db.rollback(); membership=db.scalar(select(WorkspaceRepository).where(WorkspaceRepository.repository_id==repo_id))
+  if membership and membership.workspace_id==workspace_id: return {'workspace_id':workspace_id,'repository_id':repo_id}
+  raise HTTPException(409,'Repository already belongs to another workspace')
+ return {'workspace_id':workspace_id,'repository_id':repo_id}
+@app.delete('/api/workspaces/{workspace_id}/repositories/{repo_id}',status_code=204)
+def remove_workspace_repository(workspace_id:str,repo_id:str,db:Session=Depends(get_db)):
+ if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
+ membership=db.scalar(select(WorkspaceRepository).where(WorkspaceRepository.workspace_id==workspace_id,WorkspaceRepository.repository_id==repo_id))
+ if not membership: raise HTTPException(404,'Repository is not a member of this workspace')
+ db.delete(membership); db.commit()
 @app.get('/api/repositories')
 def repositories(db:Session=Depends(get_db)): return [repo_out(r) for r in db.scalars(select(Repository).order_by(Repository.created_at.desc())).all()]
 @app.post('/api/repositories',status_code=202)
@@ -52,7 +106,7 @@ def repository(repo_id:str,db:Session=Depends(get_db)):
 def delete_repository(repo_id:str,db:Session=Depends(get_db)):
  r=db.get(Repository,repo_id)
  if not r: raise HTTPException(404,'Repository not found')
- db.delete(r);db.commit()
+ db.execute(delete(WorkspaceRepository).where(WorkspaceRepository.repository_id==repo_id)); db.delete(r);db.commit()
 @app.post('/api/repositories/{repo_id}/sync',status_code=202)
 def sync(repo_id:str,db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
