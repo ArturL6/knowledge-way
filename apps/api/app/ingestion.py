@@ -1,4 +1,4 @@
-import hashlib, re, subprocess
+import asyncio, hashlib, re, subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -8,6 +8,7 @@ from app.config import settings
 from app.db import SessionLocal
 from app.models import CodeChunk, File, IndexingJob, Repository, Symbol, SymbolEdge
 from app.parser_facts import analyze_source
+from app.providers import embedding_provider
 
 EXT={'.py':'python','.js':'javascript','.jsx':'jsx','.ts':'typescript','.tsx':'tsx','.go':'go','.java':'java','.rs':'rust','.c':'c','.h':'c','.cpp':'cpp','.cs':'csharp','.rb':'ruby','.php':'php','.sh':'bash','.sql':'sql','.json':'json','.yaml':'yaml','.yml':'yaml','.toml':'toml','.md':'markdown'}
 IGNORE={'.git','node_modules','vendor','dist','build','.next','coverage','target','.venv','venv','__pycache__'}
@@ -93,6 +94,27 @@ def _persist_edges(db, repo_id, parser_files):
     edge(file, None, target_name, 'import', imported.range.start_line)
 
 
+def _embed_full_index_chunks(db, repo_id, reusable_embeddings):
+ """Persist enabled-provider embeddings in bounded batches after a full index."""
+ provider = embedding_provider()
+ if provider is None:
+  return
+ missing = []
+ for chunk in db.scalars(select(CodeChunk).where(CodeChunk.repository_id == repo_id)).all():
+  cached = reusable_embeddings.get((chunk.content_hash, provider.model))
+  if cached is not None:
+   chunk.embedding, chunk.embedding_model = cached, provider.model
+  else:
+   missing.append(chunk)
+ for offset in range(0, len(missing), settings.embedding_batch_size):
+  batch = missing[offset:offset + settings.embedding_batch_size]
+  vectors = asyncio.run(provider.embed_texts([chunk.source_text for chunk in batch]))
+  if len(vectors) != len(batch):
+   raise RuntimeError('embedding provider returned an incomplete embedding batch')
+  for chunk, vector in zip(batch, vectors):
+   chunk.embedding, chunk.embedding_model = vector, provider.model
+
+
 def index_repository(repo_id, full=False):
  db=SessionLocal(); repo=db.get(Repository,repo_id); job=IndexingJob(repository_id=repo_id,kind='full' if full else 'sync',status='running',started_at=datetime.utcnow(),progress={'phase':'cloning'}); db.add(job); db.commit()
  try:
@@ -109,6 +131,11 @@ def index_repository(repo_id, full=False):
   if full:
    # A full index is a graph snapshot. Never leave references to replaced symbols.
    db.execute(delete(SymbolEdge).where(SymbolEdge.repository_id == repo_id))
+  reusable_embeddings = {}
+  if full and embedding_provider() is not None:
+   for chunk in db.scalars(select(CodeChunk).where(CodeChunk.repository_id==repo_id).where(CodeChunk.embedding.is_not(None))).all():
+    if chunk.embedding_model:
+     reusable_embeddings[(chunk.content_hash, chunk.embedding_model)] = list(chunk.embedding)
   existing={f.path:f for f in db.scalars(select(File).where(File.repository_id==repo_id)).all()}
   parser_files=[]
   for path,content,size,lang in paths:
@@ -125,6 +152,8 @@ def index_repository(repo_id, full=False):
   if full:
    db.flush()
    _persist_edges(db, repo_id, parser_files)
+   db.flush()
+   _embed_full_index_chunks(db, repo_id, reusable_embeddings)
   repo.indexed_commit_sha=sha;repo.indexed_branch=run('git','branch','--show-current',cwd=root);repo.indexing_status='ready';repo.indexing_progress={'phase':'finalizing','files':len(paths)};repo.last_indexed_at=datetime.utcnow();repo.last_sync_at=datetime.utcnow();job.status='ready';job.progress=repo.indexing_progress;job.finished_at=datetime.utcnow();db.commit()
  except Exception as e:
   repo.indexing_status='failed';repo.error_message=str(e);job.status='failed';job.error_message=str(e);job.finished_at=datetime.utcnow();db.commit();raise

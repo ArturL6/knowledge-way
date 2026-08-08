@@ -11,7 +11,7 @@ from rq import Queue
 from app.config import settings
 from app.db import get_db, verify_migration_ready
 from app.models import Repository, Workspace, WorkspaceRepository, File, Symbol, SymbolEdge, CodeChunk, IndexingJob, Conversation, Message
-from app.search import search
+from app.search import search, search_with_capability
 
 app=FastAPI(title='knowledge-way API',version='0.1.0')
 app.add_middleware(CORSMiddleware,allow_origins=settings.cors_origins.split(','),allow_methods=['*'],allow_headers=['*'])
@@ -176,20 +176,24 @@ def subgraph(repo_id:str,symbol_id:str,depth:int=Query(1,ge=1,le=2),max_nodes:in
  graph_edges=[e for e in edges if e.source_symbol_id in selected and e.target_symbol_id in selected]
  return {'root_symbol_id':symbol_id,'depth':depth,'max_nodes':max_nodes,'truncated':truncated,'nodes':[symbol_out(available[i]) for i in sorted(selected,key=lambda i:(available[i].qualified_name,i))],'edges':[edge_out(e) for e in graph_edges]}
 @app.get('/api/search')
-def text_search(q:str,mode:str='hybrid',limit:int=30,db:Session=Depends(get_db)): return {'query':q,'mode':mode,'results':search(db,q,mode,min(max(limit,1),100))}
+def text_search(q:str,mode:str='hybrid',limit:int=30,db:Session=Depends(get_db)):
+ results, semantic = search_with_capability(db,q,mode,min(max(limit,1),100))
+ return {'query':q,'mode':mode,'results':results,'semantic':semantic}
 @app.get('/api/search/symbols')
 def symbol_search(q:str,db:Session=Depends(get_db)): return {'results':search(db,q,'symbols')}
 @app.post('/api/search/semantic')
-def semantic_search(body:dict,db:Session=Depends(get_db)): return {'results':search(db,body.get('query',''),'semantic')}
+def semantic_search(body:dict,db:Session=Depends(get_db)):
+ results, semantic = search_with_capability(db,body.get('query',''),'semantic')
+ return {'results':results,'semantic':semantic}
 @app.post('/api/chat')
 def chat(body:ChatIn,db:Session=Depends(get_db)):
- results=search(db,body.question,'hybrid',12,repository_id=body.repository_id); citations=[{'repository':x['repository'],'file_id':x['file_id'],'path':x['path'],'start_line':x['start_line'],'end_line':x['end_line']} for x in results]
+ results, semantic = search_with_capability(db,body.question,'hybrid',12,repository_id=body.repository_id); citations=[{'repository':x['repository'],'file_id':x['file_id'],'path':x['path'],'start_line':x['start_line'],'end_line':x['end_line']} for x in results]
  context='\n\n'.join(f"[{i+1}] {x['repository']}/{x['path']}:{x['start_line']}-{x['end_line']}\n{x['snippet']}" for i,x in enumerate(results))
  answer=('No indexed code matched this question.' if not results else 'Grounded sources found for your question. Configure OPENAI_API_KEY to enable synthesized answers; the citations below are verified retrieval results.')
  convo=db.get(Conversation,body.conversation_id) if body.conversation_id else None
  if not convo: convo=Conversation(repository_id=body.repository_id,title=body.question[:120]);db.add(convo);db.flush()
  db.add(Message(conversation_id=convo.id,role='user',content=body.question));db.add(Message(conversation_id=convo.id,role='assistant',content=answer,citations=citations));db.commit()
- return {'conversation_id':convo.id,'answer':answer,'citations':citations,'retrieval':{'lexical':True,'semantic':False,'symbols':any(x['type']=='symbol' for x in results),'context_preview':context[:settings.chat_context_limit]}}
+ return {'conversation_id':convo.id,'answer':answer,'citations':citations,'retrieval':{'lexical':True,'semantic':semantic,'symbols':any(x['type']=='symbol' for x in results),'context_preview':context[:settings.chat_context_limit]}}
 @app.get('/api/jobs/{job_id}')
 def job(job_id:str,db:Session=Depends(get_db)):
  j=db.get(IndexingJob,job_id)
