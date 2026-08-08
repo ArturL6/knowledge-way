@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.db import get_db
 from app.main import app
-from app.models import Repository, Workspace, WorkspaceRepository
+from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency
 
 
 def test_workspace_crud_and_exclusive_idempotent_membership():
@@ -15,6 +15,7 @@ def test_workspace_crud_and_exclusive_idempotent_membership():
     Repository.__table__.create(engine)
     Workspace.__table__.create(engine)
     WorkspaceRepository.__table__.create(engine)
+    WorkspaceDependency.__table__.create(engine)
     Session = sessionmaker(bind=engine)
     db = Session()
     db.add_all([
@@ -40,9 +41,25 @@ def test_workspace_crud_and_exclusive_idempotent_membership():
 
         assert api.delete(f"/api/workspaces/{first_id}/repositories/repo-1").status_code == 204
         assert api.get(f"/api/workspaces/{first_id}/repositories").json() == []
+        api.put(f"/api/workspaces/{first_id}/repositories/repo-1")
         api.put(f"/api/workspaces/{first_id}/repositories/repo-2")
+        declared = api.post(f"/api/workspaces/{first_id}/dependencies", json={
+            "source_repository_id": "repo-1", "target_repository_id": "repo-2",
+            "package_name": "shared-client", "import_path": "@shared/client",
+            "reason": "uses the shared API client", "note": "declared metadata only",
+        })
+        assert declared.status_code == 201
+        dependency_id = declared.json()["id"]
+        assert api.get(f"/api/workspaces/{first_id}/dependencies").json()[0]["import_path"] == "@shared/client"
+        updated = api.patch(f"/api/workspaces/{first_id}/dependencies/{dependency_id}", json={"note": "updated"})
+        assert updated.status_code == 200
+        assert updated.json()["note"] == "updated"
+        assert api.post(f"/api/workspaces/{first_id}/dependencies", json={"source_repository_id": "repo-1", "target_repository_id": "repo-1"}).status_code == 422
+        assert api.post(f"/api/workspaces/{first_id}/dependencies", json={"source_repository_id": "repo-1", "target_repository_id": "missing"}).status_code == 422
+        assert api.delete(f"/api/workspaces/{first_id}/dependencies/{dependency_id}").status_code == 204
         assert api.delete(f"/api/workspaces/{first_id}").status_code == 204
         assert db.query(WorkspaceRepository).count() == 0
+        assert db.query(WorkspaceDependency).count() == 0
         assert api.get(f"/api/workspaces/{first_id}").status_code == 404
     finally:
         app.dependency_overrides.clear()

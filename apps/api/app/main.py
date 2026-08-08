@@ -11,7 +11,7 @@ from rq import Queue
 from app.config import settings
 from app.git_auth import validate_clone_url
 from app.db import get_db, verify_migration_ready
-from app.models import Repository, Workspace, WorkspaceRepository, File, Symbol, SymbolEdge, CodeChunk, IndexingJob, Conversation, Message
+from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, IndexingJob, Conversation, Message
 from app.search import search, search_with_capability
 
 app=FastAPI(title='knowledge-way API',version='0.1.0')
@@ -24,11 +24,20 @@ class WorkspaceIn(BaseModel):
  name:str=Field(min_length=1,max_length=255); description:str|None=Field(default=None,max_length=10000)
 class WorkspaceUpdate(BaseModel):
  name:str|None=Field(default=None,min_length=1,max_length=255); description:str|None=Field(default=None,max_length=10000)
+class WorkspaceDependencyIn(BaseModel):
+ source_repository_id:str; target_repository_id:str; package_name:str|None=Field(default=None,max_length=512); import_path:str|None=Field(default=None,max_length=1024); reason:str|None=Field(default=None,max_length=10000); note:str|None=Field(default=None,max_length=10000)
+class WorkspaceDependencyUpdate(BaseModel):
+ package_name:str|None=Field(default=None,max_length=512); import_path:str|None=Field(default=None,max_length=1024); reason:str|None=Field(default=None,max_length=10000); note:str|None=Field(default=None,max_length=10000)
 class ChatIn(BaseModel):
  question:str=Field(min_length=1,max_length=8000); repository_id:str|None=None; conversation_id:str|None=None
 
 def repo_out(r): return {'id':r.id,'name':r.name,'clone_url':r.clone_url,'default_branch':r.default_branch,'indexed_branch':r.indexed_branch,'indexed_commit_sha':r.indexed_commit_sha,'latest_detected_commit_sha':r.latest_detected_commit_sha,'indexing_status':r.indexing_status,'indexing_progress':r.indexing_progress,'error_message':r.error_message,'last_indexed_at':r.last_indexed_at,'last_sync_at':r.last_sync_at,'created_at':r.created_at}
 def workspace_out(w): return {'id':w.id,'name':w.name,'description':w.description,'created_at':w.created_at,'updated_at':w.updated_at}
+def workspace_dependency_out(d): return {'id':d.id,'workspace_id':d.workspace_id,'source_repository_id':d.source_repository_id,'target_repository_id':d.target_repository_id,'package_name':d.package_name,'import_path':d.import_path,'reason':d.reason,'note':d.note,'created_at':d.created_at,'updated_at':d.updated_at}
+def validate_dependency_membership(db,workspace_id,source_repository_id,target_repository_id):
+ if source_repository_id==target_repository_id: raise HTTPException(422,'Source and target repositories must differ')
+ members=set(db.scalars(select(WorkspaceRepository.repository_id).where(WorkspaceRepository.workspace_id==workspace_id)).all())
+ if source_repository_id not in members or target_repository_id not in members: raise HTTPException(422,'Source and target repositories must both belong to this workspace')
 def enqueue(repo_id,full=False):
  try: return Queue('indexing',connection=Redis.from_url(settings.redis_url)).enqueue('app.ingestion.index_repository',repo_id,full).id
  except Exception: return None
@@ -64,7 +73,32 @@ def update_workspace(workspace_id:str,body:WorkspaceUpdate,db:Session=Depends(ge
 def delete_workspace(workspace_id:str,db:Session=Depends(get_db)):
  w=db.get(Workspace,workspace_id)
  if not w: raise HTTPException(404,'Workspace not found')
- db.execute(delete(WorkspaceRepository).where(WorkspaceRepository.workspace_id==workspace_id)); db.delete(w); db.commit()
+ db.execute(delete(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace_id)); db.execute(delete(WorkspaceRepository).where(WorkspaceRepository.workspace_id==workspace_id)); db.delete(w); db.commit()
+@app.get('/api/workspaces/{workspace_id}/dependencies')
+def workspace_dependencies(workspace_id:str,db:Session=Depends(get_db)):
+ if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
+ return [workspace_dependency_out(d) for d in db.scalars(select(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace_id).order_by(WorkspaceDependency.created_at.desc())).all()]
+@app.post('/api/workspaces/{workspace_id}/dependencies',status_code=201)
+def add_workspace_dependency(workspace_id:str,body:WorkspaceDependencyIn,db:Session=Depends(get_db)):
+ if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
+ validate_dependency_membership(db,workspace_id,body.source_repository_id,body.target_repository_id)
+ dependency=WorkspaceDependency(workspace_id=workspace_id,**body.model_dump()); db.add(dependency)
+ try: db.commit()
+ except IntegrityError: db.rollback(); raise HTTPException(409,'Dependency declaration already exists')
+ db.refresh(dependency); return workspace_dependency_out(dependency)
+@app.patch('/api/workspaces/{workspace_id}/dependencies/{dependency_id}')
+def update_workspace_dependency(workspace_id:str,dependency_id:str,body:WorkspaceDependencyUpdate,db:Session=Depends(get_db)):
+ dependency=db.scalar(select(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace_id,WorkspaceDependency.id==dependency_id))
+ if not dependency: raise HTTPException(404,'Dependency not found')
+ for field,value in body.model_dump(exclude_unset=True).items(): setattr(dependency,field,value)
+ try: db.commit()
+ except IntegrityError: db.rollback(); raise HTTPException(409,'Dependency declaration already exists')
+ db.refresh(dependency); return workspace_dependency_out(dependency)
+@app.delete('/api/workspaces/{workspace_id}/dependencies/{dependency_id}',status_code=204)
+def delete_workspace_dependency(workspace_id:str,dependency_id:str,db:Session=Depends(get_db)):
+ dependency=db.scalar(select(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace_id,WorkspaceDependency.id==dependency_id))
+ if not dependency: raise HTTPException(404,'Dependency not found')
+ db.delete(dependency); db.commit()
 @app.get('/api/workspaces/{workspace_id}/repositories')
 def workspace_repositories(workspace_id:str,db:Session=Depends(get_db)):
  if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
@@ -91,7 +125,7 @@ def remove_workspace_repository(workspace_id:str,repo_id:str,db:Session=Depends(
  if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
  membership=db.scalar(select(WorkspaceRepository).where(WorkspaceRepository.workspace_id==workspace_id,WorkspaceRepository.repository_id==repo_id))
  if not membership: raise HTTPException(404,'Repository is not a member of this workspace')
- db.delete(membership); db.commit()
+ db.execute(delete(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace_id,(WorkspaceDependency.source_repository_id==repo_id)|(WorkspaceDependency.target_repository_id==repo_id))); db.delete(membership); db.commit()
 @app.get('/api/repositories')
 def repositories(db:Session=Depends(get_db)): return [repo_out(r) for r in db.scalars(select(Repository).order_by(Repository.created_at.desc())).all()]
 @app.post('/api/repositories',status_code=202)
@@ -108,7 +142,7 @@ def repository(repo_id:str,db:Session=Depends(get_db)):
 def delete_repository(repo_id:str,db:Session=Depends(get_db)):
  r=db.get(Repository,repo_id)
  if not r: raise HTTPException(404,'Repository not found')
- db.execute(delete(WorkspaceRepository).where(WorkspaceRepository.repository_id==repo_id)); db.delete(r);db.commit()
+ db.execute(delete(WorkspaceDependency).where((WorkspaceDependency.source_repository_id==repo_id)|(WorkspaceDependency.target_repository_id==repo_id))); db.execute(delete(WorkspaceRepository).where(WorkspaceRepository.repository_id==repo_id)); db.delete(r);db.commit()
 @app.post('/api/repositories/{repo_id}/sync',status_code=202)
 def sync(repo_id:str,db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
