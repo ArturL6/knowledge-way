@@ -45,6 +45,10 @@ python3 benchmarks/scripts/validate.py --result ~/kw-results/run-001.json
 
 `run_benchmark.py` refuses to overwrite an output file, redacts common secret-shaped configuration values in captured provenance, and uses no credentials itself. It reports command wall time and optional adapter-provided RSS/disk measurements; tools should document their own measurement method in `measurement_notes`.
 
+## Recorded runs
+
+- [Preliminary feasibility run (2026-08-08)](results/2026-08-08-preliminary-feasibility.md) — installation and smoke-index evidence only; it explicitly documents why it is **not** a comparative performance or quality result.
+
 ## Measurement protocol
 
 1. Use the exact same `corpora.json`, `tasks.json`, machine, corpus checkout SHAs, adapter limits, and cold/warm policy for every tool.
