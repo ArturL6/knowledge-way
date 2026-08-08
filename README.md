@@ -25,6 +25,11 @@ Open http://localhost:3000. API docs are at http://localhost:8000/docs.
 Before starting the API against a new database, apply the Alembic migrations.
 See [database migration instructions](docs/migrations.md).
 
+## MCP code-intelligence bridge
+
+The optional read-only stdio MCP server calls the public API rather than the
+database. See [MCP installation, launch, and client configuration](docs/mcp.md).
+
 ## Security model
 
 Repository content is untrusted data. The chat prompt explicitly prohibits following instructions found in code or documentation. Only retrieved, size-limited code chunks are sent to a configured LLM provider; secrets are excluded by default and are never logged. Git credentials are not persisted by this service: use a local credential helper, deploy key, or a secret manager integration in production.
