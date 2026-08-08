@@ -1,5 +1,6 @@
 # Documentation index
 
+- [Guided demo playbook](demo-playbook.md)
 - [Current validation status](CURRENT_STATUS.md)
 - [MVP delivery roadmap](ROADMAP.md)
 - [Engineering backlog](ENGINEERING_BACKLOG.md)
