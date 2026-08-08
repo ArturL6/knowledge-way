@@ -8,6 +8,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     cache: 'no-store',
   });
   if (!response.ok) throw new Error(await response.text());
+  if (response.status === 204) return undefined as T;
   return response.json();
 }
 

@@ -1,2 +1,13 @@
 import {api} from '../lib/api';
-type Repo={id:string,name:string,indexing_status:string,indexed_commit_sha?:string,last_indexed_at?:string}; export default async function Home(){let repos:Repo[]=[];try{repos=await api('/repositories')}catch{} return <><h2>Repository dashboard</h2><p className="muted">Index, search, and understand code across every connected repository.</p><section className="grid"><div className="card"><div className="metric">{repos.length}</div>Repositories</div><div className="card"><div className="metric">{repos.filter(x=>x.indexing_status==='ready').length}</div>Ready</div><div className="card"><div className="metric">{repos.filter(x=>x.indexing_status==='indexing').length}</div>Indexing</div></section><h3>Connected repositories</h3><section className="grid">{repos.map(r=><div className="card" key={r.id}><b>{r.name}</b><p className="muted">{r.indexing_status} · {r.indexed_commit_sha?.slice(0,8)||'not indexed'}</p><a href={`/search?repo=${r.name}`}>Search repository →</a></div>)}{!repos.length&&<div className="card">No repositories yet. Add one through the API at <code>/docs</code>; repository management UI is the next slice.</div>}</section></>}
+import {Repository} from '../lib/repositories';
+import DashboardClient from './dashboard-client';
+
+export default async function Home() {
+  let repos: Repository[] = [];
+  try { repos = await api<Repository[]>('/repositories'); } catch { /* The client can still connect once the API is available. */ }
+  return <>
+    <h2>Repository dashboard</h2>
+    <p className="muted">Index, search, and understand code across every connected repository.</p>
+    <DashboardClient initialRepos={repos} />
+  </>;
+}
