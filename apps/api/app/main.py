@@ -80,7 +80,7 @@ def symbol_search(q:str,db:Session=Depends(get_db)): return {'results':search(db
 def semantic_search(body:dict,db:Session=Depends(get_db)): return {'results':search(db,body.get('query',''),'semantic')}
 @app.post('/api/chat')
 def chat(body:ChatIn,db:Session=Depends(get_db)):
- results=search(db,body.question,'hybrid',12); citations=[{'repository':x['repository'],'file_id':x['file_id'],'path':x['path'],'start_line':x['start_line'],'end_line':x['end_line']} for x in results]
+ results=search(db,body.question,'hybrid',12,repository_id=body.repository_id); citations=[{'repository':x['repository'],'file_id':x['file_id'],'path':x['path'],'start_line':x['start_line'],'end_line':x['end_line']} for x in results]
  context='\n\n'.join(f"[{i+1}] {x['repository']}/{x['path']}:{x['start_line']}-{x['end_line']}\n{x['snippet']}" for i,x in enumerate(results))
  answer=('No indexed code matched this question.' if not results else 'Grounded sources found for your question. Configure OPENAI_API_KEY to enable synthesized answers; the citations below are verified retrieval results.')
  convo=db.get(Conversation,body.conversation_id) if body.conversation_id else None
