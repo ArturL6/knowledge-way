@@ -34,7 +34,9 @@ services:
   web:
     build: ./apps/web
     environment:
+      # Browser requests use localhost; server-rendered Next.js requests use Docker DNS.
       NEXT_PUBLIC_API_URL: http://localhost:8000/api
+      API_INTERNAL_URL: http://api:8000/api
     ports: ["3000:3000"]
     depends_on: [api]
 volumes:
