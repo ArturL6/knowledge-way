@@ -8,14 +8,14 @@ from sqlalchemy.orm import Session
 from redis import Redis
 from rq import Queue
 from app.config import settings
-from app.db import Base, engine, get_db
+from app.db import get_db, verify_migration_ready
 from app.models import Repository, File, Symbol, CodeChunk, IndexingJob, Conversation, Message
 from app.search import search
 
 app=FastAPI(title='knowledge-way API',version='0.1.0')
 app.add_middleware(CORSMiddleware,allow_origins=settings.cors_origins.split(','),allow_methods=['*'],allow_headers=['*'])
 @app.on_event('startup')
-def startup(): Base.metadata.create_all(engine)
+def startup(): verify_migration_ready()
 class RepositoryIn(BaseModel):
  name:str=Field(min_length=1,max_length=255); clone_url:str=Field(min_length=8,max_length=2048)
 class ChatIn(BaseModel):
