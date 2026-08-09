@@ -19,7 +19,9 @@ app.add_middleware(CORSMiddleware,allow_origins=settings.cors_origins.split(',')
 @app.on_event('startup')
 def startup(): verify_migration_ready()
 class RepositoryIn(BaseModel):
- name:str=Field(min_length=1,max_length=255); clone_url:str=Field(min_length=8,max_length=2048)
+ name:str=Field(min_length=1,max_length=255); clone_url:str=Field(min_length=8,max_length=2048); requested_revision:str|None=Field(default=None,pattern=r'^[0-9a-f]{40}$')
+class RepositoryReindexIn(BaseModel):
+ requested_revision:str|None=Field(default=None,pattern=r'^[0-9a-f]{40}$')
 class WorkspaceIn(BaseModel):
  name:str=Field(min_length=1,max_length=255); description:str|None=Field(default=None,max_length=10000)
 class WorkspaceUpdate(BaseModel):
@@ -37,17 +39,15 @@ class DocumentationIn(BaseModel):
 class CodeCardRunIn(BaseModel):
  limit:int|None=Field(default=25,ge=1,le=500)
 
-def repo_out(r): return {'id':r.id,'name':r.name,'clone_url':r.clone_url,'default_branch':r.default_branch,'indexed_branch':r.indexed_branch,'indexed_commit_sha':r.indexed_commit_sha,'latest_detected_commit_sha':r.latest_detected_commit_sha,'indexing_status':r.indexing_status,'indexing_progress':r.indexing_progress,'error_message':r.error_message,'last_indexed_at':r.last_indexed_at,'last_sync_at':r.last_sync_at,'created_at':r.created_at}
+def repo_out(r): return {'id':r.id,'name':r.name,'clone_url':r.clone_url,'requested_revision':r.requested_revision,'default_branch':r.default_branch,'indexed_branch':r.indexed_branch,'indexed_commit_sha':r.indexed_commit_sha,'latest_detected_commit_sha':r.latest_detected_commit_sha,'indexing_status':r.indexing_status,'indexing_progress':r.indexing_progress,'error_message':r.error_message,'last_indexed_at':r.last_indexed_at,'last_sync_at':r.last_sync_at,'created_at':r.created_at}
 def workspace_out(w): return {'id':w.id,'name':w.name,'description':w.description,'created_at':w.created_at,'updated_at':w.updated_at}
 def workspace_dependency_out(d): return {'id':d.id,'workspace_id':d.workspace_id,'source_repository_id':d.source_repository_id,'target_repository_id':d.target_repository_id,'package_name':d.package_name,'import_path':d.import_path,'reason':d.reason,'note':d.note,'created_at':d.created_at,'updated_at':d.updated_at}
 def validate_dependency_membership(db,workspace_id,source_repository_id,target_repository_id):
  if source_repository_id==target_repository_id: raise HTTPException(422,'Source and target repositories must differ')
  members=set(db.scalars(select(WorkspaceRepository.repository_id).where(WorkspaceRepository.workspace_id==workspace_id)).all())
  if source_repository_id not in members or target_repository_id not in members: raise HTTPException(422,'Source and target repositories must both belong to this workspace')
-INDEXING_JOB_TIMEOUT_SECONDS=1800
-
 def enqueue(repo_id,full=False):
- try: return Queue('indexing',connection=Redis.from_url(settings.redis_url)).enqueue('app.ingestion.index_repository',repo_id,full,job_timeout=INDEXING_JOB_TIMEOUT_SECONDS).id
+ try: return Queue('indexing',connection=Redis.from_url(settings.redis_url),default_timeout=settings.index_job_timeout).enqueue('app.ingestion.index_repository',repo_id,full).id
  except Exception: return None
 MAX_GRAPH_NODES=100
 def symbol_out(s): return {'id':s.id,'repository_id':s.repository_id,'file_id':s.file_id,'name':s.name,'qualified_name':s.qualified_name,'type':s.symbol_type,'language':s.language,'start_line':s.start_line,'end_line':s.end_line,'start_byte':s.start_byte,'end_byte':s.end_byte,'parent_symbol_id':s.parent_symbol_id,'signature':s.signature,'source_text':s.source_text}
@@ -150,7 +150,7 @@ def repositories(db:Session=Depends(get_db)): return [repo_out(r) for r in db.sc
 def add_repository(body:RepositoryIn,db:Session=Depends(get_db)):
  try: body.clone_url=validate_clone_url(body.clone_url)
  except ValueError as error: raise HTTPException(422,str(error))
- r=Repository(name=body.name,clone_url=body.clone_url,indexing_status='pending');db.add(r);db.commit();db.refresh(r); return {'repository':repo_out(r),'job_id':enqueue(r.id,True)}
+ r=Repository(name=body.name,clone_url=body.clone_url,requested_revision=body.requested_revision,indexing_status='pending');db.add(r);db.commit();db.refresh(r); return {'repository':repo_out(r),'job_id':enqueue(r.id,True)}
 @app.get('/api/repositories/{repo_id}')
 def repository(repo_id:str,db:Session=Depends(get_db)):
  r=db.get(Repository,repo_id)
@@ -166,8 +166,10 @@ def sync(repo_id:str,db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
  return {'job_id':enqueue(repo_id,False)}
 @app.post('/api/repositories/{repo_id}/reindex',status_code=202)
-def reindex(repo_id:str,db:Session=Depends(get_db)):
- if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
+def reindex(repo_id:str,body:RepositoryReindexIn|None=None,db:Session=Depends(get_db)):
+ repo=db.get(Repository,repo_id)
+ if not repo: raise HTTPException(404,'Repository not found')
+ if body and 'requested_revision' in body.model_fields_set: repo.requested_revision=body.requested_revision; db.commit()
  return {'job_id':enqueue(repo_id,True)}
 @app.get('/api/repositories/{repo_id}/status')
 def status(repo_id:str,db:Session=Depends(get_db)):
@@ -178,7 +180,7 @@ def status(repo_id:str,db:Session=Depends(get_db)):
 def generate_code_cards(repo_id:str,body:CodeCardRunIn,db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
  if not settings.code_cards_enabled: raise HTTPException(409,'Code cards are disabled')
- try: job_id=Queue('indexing',connection=Redis.from_url(settings.redis_url)).enqueue('app.code_cards.generate_code_cards',repo_id,body.limit,job_timeout=INDEXING_JOB_TIMEOUT_SECONDS).id
+ try: job_id=Queue('indexing',connection=Redis.from_url(settings.redis_url),default_timeout=settings.index_job_timeout).enqueue('app.code_cards.generate_code_cards',repo_id,body.limit).id
  except Exception: raise HTTPException(503,'Could not enqueue code-card generation')
  return {'job_id':job_id,'model':settings.vertex_gemini_model,'limit':body.limit}
 @app.get('/api/repositories/{repo_id}/symbols/{symbol_id}/code-card')

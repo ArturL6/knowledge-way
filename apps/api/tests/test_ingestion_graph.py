@@ -115,3 +115,36 @@ def test_embedding_prunes_empty_structural_chunks(monkeypatch, tmp_path):
         embedded = db.get(CodeChunk, useful.id)
         assert embedded.embedding == [0.25, 0.75]
         assert embedded.embedding_model == "test:embedding"
+
+
+def test_full_index_checks_out_requested_immutable_revision(monkeypatch, tmp_path):
+    sessions = _index_with_sqlite(monkeypatch, tmp_path)
+    requested = "a" * 40
+    repo = Repository(name="pinned", clone_url="https://example.test/pinned.git", requested_revision=requested)
+    with sessions() as db:
+        db.add(repo)
+        db.commit()
+
+    calls = []
+
+    def fake_run(*args, **kwargs):
+        calls.append(args)
+        if args[1:3] == ("rev-parse", "HEAD"):
+            return requested
+        if args[1:3] == ("branch", "--show-current"):
+            return ""
+        return ""
+
+    monkeypatch.setattr(ingestion, "run", fake_run)
+    root = Path(tmp_path) / repo.id
+    root.mkdir()
+    (root / "fixture.py").write_text("def stable():\n    pass\n")
+
+    ingestion.index_repository(repo.id, full=True)
+
+    assert ("git", "fetch", "--depth", "1", "origin", requested) in calls
+    assert ("git", "checkout", "--detach", requested) in calls
+    with sessions() as db:
+        indexed = db.get(Repository, repo.id)
+        assert indexed.indexed_commit_sha == requested
+        assert indexed.indexed_branch is None

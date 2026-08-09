@@ -148,8 +148,14 @@ def index_repository(repo_id, full=False):
  try:
   root=Path(settings.repository_storage_path)/repo_id; root.parent.mkdir(parents=True,exist_ok=True)
   if not root.exists(): run('git','clone','--depth','1',repo.clone_url,str(root),clone_url=repo.clone_url)
-  else: run('git','fetch','--depth','1','origin',cwd=root,clone_url=repo.clone_url); run('git','reset','--hard','origin/HEAD',cwd=root)
-  sha=run('git','rev-parse','HEAD',cwd=root); repo.local_path=str(root); repo.latest_detected_commit_sha=sha; repo.indexing_status='indexing'; repo.indexing_progress={'phase':'scanning'}; db.commit()
+  if repo.requested_revision:
+   run('git','fetch','--depth','1','origin',repo.requested_revision,cwd=root,clone_url=repo.clone_url)
+   run('git','checkout','--detach',repo.requested_revision,cwd=root)
+  else:
+   run('git','fetch','--depth','1','origin',cwd=root,clone_url=repo.clone_url); run('git','reset','--hard','origin/HEAD',cwd=root)
+  sha=run('git','rev-parse','HEAD',cwd=root)
+  if repo.requested_revision and sha != repo.requested_revision: raise RuntimeError('requested revision did not resolve to the indexed commit')
+  repo.local_path=str(root); repo.latest_detected_commit_sha=sha; repo.indexing_status='indexing'; repo.indexing_progress={'phase':'scanning'}; db.commit()
   paths=[]
   for p in root.rglob('*'):
    if not p.is_file() or any(x in IGNORE for x in p.parts) or p.name in SECRET or p.suffix.lower() in {'.pem','.key'} or p.stat().st_size>settings.max_file_size: continue
@@ -182,7 +188,7 @@ def index_repository(repo_id, full=False):
   refresh_structural_cards(db, repo_id, sha)
   if full:
    _embed_full_index_chunks(db, repo_id, reusable_embeddings)
-  repo.indexed_commit_sha=sha;repo.indexed_branch=run('git','branch','--show-current',cwd=root);repo.indexing_status='ready';repo.error_message=None;repo.indexing_progress={'phase':'finalizing','files':len(paths)};repo.last_indexed_at=datetime.utcnow();repo.last_sync_at=datetime.utcnow();job.status='ready';job.progress=repo.indexing_progress;job.finished_at=datetime.utcnow();db.commit()
+  repo.indexed_commit_sha=sha;repo.indexed_branch=run('git','branch','--show-current',cwd=root) or None;repo.indexing_status='ready';repo.error_message=None;repo.indexing_progress={'phase':'finalizing','files':len(paths)};repo.last_indexed_at=datetime.utcnow();repo.last_sync_at=datetime.utcnow();job.status='ready';job.progress=repo.indexing_progress;job.finished_at=datetime.utcnow();db.commit()
  except Exception as e:
   repo.indexing_status='failed';repo.error_message=str(e);job.status='failed';job.error_message=str(e);job.finished_at=datetime.utcnow();db.commit();raise
  finally: db.close()

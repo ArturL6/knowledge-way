@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     rerank_candidate_limit: int = 40
     repository_storage_path: str = "/data/repositories"
     max_file_size: int = 1_048_576
+    # Full parser-graph rebuilds for large repositories can exceed RQ's default timeout.
+    index_job_timeout: int = 1_800
     chat_context_limit: int = 12_000
     cors_origins: str = "http://localhost:3000"
     # Mount these read-only from a secret store; never put Git credentials in URLs.
