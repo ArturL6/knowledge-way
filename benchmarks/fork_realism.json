@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "track": "fork_realism",
+  "purpose": "Real upstream repositories plus small, auditable commits with known cross-repository impact.",
+  "repositories": [
+    {
+      "id": "pydantic",
+      "url": "https://github.com/ArturL6/kw-bench-pydantic.git",
+      "upstream": "https://github.com/pydantic/pydantic.git",
+      "baseline": "af35b9245c7d9a53db299f1f80315e63fb904458",
+      "head": "12da66c8c9fbc13d79106e8af95a18a3397b17e8"
+    },
+    {
+      "id": "fastapi",
+      "url": "https://github.com/ArturL6/kw-bench-fastapi.git",
+      "upstream": "https://github.com/fastapi/fastapi.git",
+      "baseline": "084fd1eda41526766a6013d24c534ab2c47a0510",
+      "head": "084fd1eda41526766a6013d24c534ab2c47a0510"
+    },
+    {
+      "id": "starlette",
+      "url": "https://github.com/ArturL6/kw-bench-starlette.git",
+      "upstream": "https://github.com/Kludex/starlette.git",
+      "baseline": "7baa82bcfac0a58f2eeae615325ba6bcd08223f8",
+      "head": "7baa82bcfac0a58f2eeae615325ba6bcd08223f8"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "initial-baseline",
+      "phase": "initial",
+      "snapshot": "baseline",
+      "queries": [
+        {
+          "id": "find-contract",
+          "query": "Where is normalize_request_context defined?",
+          "expected_symbols": ["pydantic.benchmarks.knowledge_way_fixture.contracts.normalize_request_context"],
+          "expected_files": ["pydantic:benchmarks/knowledge_way_fixture/contracts.py"]
+        },
+        {
+          "id": "find-consumers",
+          "query": "Which repositories consume normalize_request_context?",
+          "expected_repositories": ["fastapi"],
+          "expected_files": ["fastapi:benchmarks/knowledge_way_fixture/consumer.py"]
+        },
+        {
+          "id": "find-contract-adopters",
+          "query": "Which repositories import RequestContext from the benchmark contract?",
+          "expected_repositories": ["fastapi", "starlette"],
+          "expected_files": ["fastapi:benchmarks/knowledge_way_fixture/consumer.py", "starlette:benchmarks/knowledge_way_fixture/adapter.py"]
+        }
+      ]
+    },
+    {
+      "id": "remove-v1-contract-entrypoint",
+      "phase": "incremental",
+      "snapshot": "head",
+      "changed_repositories": ["pydantic"],
+      "changed_files": ["pydantic:benchmarks/knowledge_way_fixture/contracts.py"],
+      "expected_invalidated_repositories": ["pydantic", "fastapi", "starlette"],
+      "queries": [
+        {
+          "id": "removed-symbol-is-stale-free",
+          "query": "Where is normalize_request_context defined?",
+          "expected_symbols": [],
+          "forbidden_symbols": ["pydantic.benchmarks.knowledge_way_fixture.contracts.normalize_request_context"]
+        },
+        {
+          "id": "replacement-symbol-found",
+          "query": "Where is canonicalize_request_context defined?",
+          "expected_symbols": ["pydantic.benchmarks.knowledge_way_fixture.contracts.canonicalize_request_context"],
+          "expected_files": ["pydantic:benchmarks/knowledge_way_fixture/contracts.py"]
+        },
+        {
+          "id": "impact-finds-stale-consumer",
+          "query": "Which consumers still call the removed normalize_request_context entry point?",
+          "expected_repositories": ["fastapi"],
+          "expected_files": ["fastapi:benchmarks/knowledge_way_fixture/consumer.py"]
+        }
+      ]
+    }
+  ],
+  "evaluation_rules": {
+    "initial": ["fresh datastore", "pin all repository baseline commits", "run all initial queries", "record exact evidence paths and symbols"],
+    "incremental": ["index baseline", "advance only pydantic to head", "measure update wall time", "assert removed symbol is absent", "assert replacement and stale consumer impact are present", "compare with a fresh head re-index for equivalence"],
+    "report": ["precision_at_k", "recall_at_k", "mrr", "edge_precision", "edge_recall", "stale_fact_free", "impacted_repository_recall", "initial_wall_seconds", "incremental_wall_seconds", "fresh_head_wall_seconds"]
+  }
+}

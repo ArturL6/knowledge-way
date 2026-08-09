@@ -45,6 +45,23 @@ python3 benchmarks/scripts/validate.py --result ~/kw-results/run-001.json
 
 `run_benchmark.py` refuses to overwrite an output file, redacts common secret-shaped configuration values in captured provenance, and uses no credentials itself. It reports command wall time and optional adapter-provided RSS/disk measurements; tools should document their own measurement method in `measurement_notes`.
 
+## Fork-realism track
+
+[`fork_realism.json`](fork_realism.json) is a separate, reproducible **realism** track. It uses three GitHub forks owned by `ArturL6`—Pydantic, FastAPI, and Starlette—at explicit commits. Their upstream code provides real repository size, dependency declarations, package layouts, and indirect imports; the small `kw-benchmark-scenarios` commits add an auditable contract whose expected cross-repository impact is known exactly.
+
+- **Initial evaluation:** fresh datastore; index the three `baseline` commits; execute the `initial-baseline` queries and save exact symbol/file evidence.
+- **Incremental evaluation:** advance only Pydantic from `baseline` to `head`; the removed v1 symbol must disappear, its replacement must be found, and the stale FastAPI consumer must be surfaced. Pydantic, FastAPI, and Starlette are the expected invalidation set.
+- **Equivalence guard:** compare the incremental head state with an isolated fresh full index at the same three head commits. Snapshot facts and query assertions must agree before reporting delta indexing as correct.
+
+Validate the oracle without network access:
+
+```bash
+python3 benchmarks/scripts/validate_fork_realism.py
+python3 -m unittest discover -s benchmarks/tests -v
+```
+
+This is deliberately not a published performance result yet: an actual knowledge-way adapter must run the pinned snapshots and write provenance-rich result JSON first. The synthetic contract is confined to `benchmarks/knowledge_way_fixture/` in the forks and does not modify runtime behavior of the upstream projects.
+
 ## Recorded runs
 
 - [Preliminary feasibility run (2026-08-08)](results/2026-08-08-preliminary-feasibility.md) — installation and smoke-index evidence only; it explicitly documents why it is **not** a comparative performance or quality result.
