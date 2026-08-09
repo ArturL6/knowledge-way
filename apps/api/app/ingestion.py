@@ -8,6 +8,7 @@ from app.config import settings
 from app.git_auth import git_environment, redact_git_error
 from app.db import SessionLocal
 from app.models import CodeCard, CodeChunk, File, IndexingJob, Repository, Symbol, SymbolEdge
+from app.structural_cards import refresh_structural_cards
 from app.parser_facts import analyze_source
 from app.providers import embedding_provider
 
@@ -155,9 +156,8 @@ def index_repository(repo_id, full=False):
    try: raw=p.read_text(errors='strict')
    except (UnicodeDecodeError,OSError): continue
    paths.append((p.relative_to(root).as_posix(),raw,p.stat().st_size,language(str(p))))
-  if full:
-   # A full index is a graph snapshot. Never leave references to replaced symbols.
-   db.execute(delete(SymbolEdge).where(SymbolEdge.repository_id == repo_id))
+  # Every sync rebuilds a consistent graph snapshot; structural cards must never see stale edges.
+  db.execute(delete(SymbolEdge).where(SymbolEdge.repository_id == repo_id))
   reusable_embeddings = {}
   if full and embedding_provider() is not None:
    for chunk in db.scalars(select(CodeChunk).where(CodeChunk.repository_id==repo_id).where(CodeChunk.embedding.is_not(None))).all():
@@ -167,19 +167,20 @@ def index_repository(repo_id, full=False):
   parser_files=[]
   for path,content,size,lang in paths:
    digest=hashlib.sha256(content.encode()).hexdigest(); f=existing.pop(path,None)
-   if f and f.content_hash==digest and not full: continue
+   if f and f.content_hash==digest: f.indexed_commit_sha=sha
    if f: db.execute(delete(Symbol).where(Symbol.file_id==f.id)); db.execute(delete(CodeChunk).where(CodeChunk.file_id==f.id)); f.content=content;f.content_hash=digest;f.size_bytes=size;f.language=lang;f.indexed_commit_sha=sha
    else: f=File(repository_id=repo_id,path=path,content=content,content_hash=digest,size_bytes=size,language=lang,indexed_commit_sha=sha);db.add(f);db.flush()
-   if full and lang in PARSER_LANGUAGES:
+   if lang in PARSER_LANGUAGES:
     facts, symbols = _parser_symbols_and_chunks(db, repo_id, f, content, lang, sha)
     parser_files.append((f, facts, symbols))
    else:
     _legacy_symbols_and_chunks(db, repo_id, f, content, lang, sha)
   for f in existing.values(): db.delete(f)
+  db.flush()
+  _persist_edges(db, repo_id, parser_files)
+  db.flush()
+  refresh_structural_cards(db, repo_id, sha)
   if full:
-   db.flush()
-   _persist_edges(db, repo_id, parser_files)
-   db.flush()
    _embed_full_index_chunks(db, repo_id, reusable_embeddings)
   repo.indexed_commit_sha=sha;repo.indexed_branch=run('git','branch','--show-current',cwd=root);repo.indexing_status='ready';repo.error_message=None;repo.indexing_progress={'phase':'finalizing','files':len(paths)};repo.last_indexed_at=datetime.utcnow();repo.last_sync_at=datetime.utcnow();job.status='ready';job.progress=repo.indexing_progress;job.finished_at=datetime.utcnow();db.commit()
  except Exception as e:

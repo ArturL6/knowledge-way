@@ -11,7 +11,7 @@ from rq import Queue
 from app.config import settings
 from app.git_auth import validate_clone_url
 from app.db import get_db, verify_migration_ready
-from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, CodeCard, IndexingJob, Conversation, Message
+from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, CodeCard, StructuralCard, IndexingJob, Conversation, Message
 from app.search import search, search_with_capability
 
 app=FastAPI(title='knowledge-way API',version='0.1.0')
@@ -187,6 +187,21 @@ def code_card(repo_id:str,symbol_id:str,db:Session=Depends(get_db)):
  card=db.scalar(select(CodeCard).where(CodeCard.repository_id==repo_id,CodeCard.symbol_id==symbol_id))
  if not card: raise HTTPException(404,'No Code Card for this symbol')
  return {'symbol_id':card.symbol_id,'summary':card.summary,'details':card.details,'model':card.model,'prompt_version':card.prompt_version,'indexed_commit_sha':card.indexed_commit_sha,'input_tokens':card.input_tokens,'output_tokens':card.output_tokens}
+@app.get('/api/repositories/{repo_id}/structural-cards')
+def structural_cards(repo_id:str,path:str='',kind:str|None=None,limit:int=Query(50,ge=1,le=100),db:Session=Depends(get_db)):
+ if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
+ if kind and kind not in {'directory','package'}: raise HTTPException(422,'Invalid structural card kind')
+ query=select(StructuralCard).where(StructuralCard.repository_id==repo_id)
+ if kind: query=query.where(StructuralCard.kind==kind)
+ cards=sorted(db.scalars(query).all(),key=lambda c:(c.path.count('/'),c.path,c.kind))
+ prefix=path.strip('/')
+ cards=[c for c in cards if c.path==prefix or (not prefix and c.path.count('/')==0) or (prefix and c.path.startswith(prefix+'/') and c.path[len(prefix)+1:].count('/')==0)]
+ return {'repository_id':repo_id,'path':prefix,'cards':[{'kind':c.kind,'path':c.path,'facts':c.facts,'indexed_commit_sha':c.indexed_commit_sha,'content_fingerprint':c.content_fingerprint,'provenance_fingerprint':c.provenance_fingerprint,'schema_version':c.schema_version} for c in cards[:limit]],'truncated':len(cards)>limit}
+@app.get('/api/repositories/{repo_id}/structural-cards/{kind}')
+def structural_card(repo_id:str,kind:str,path:str='',db:Session=Depends(get_db)):
+ card=db.scalar(select(StructuralCard).where(StructuralCard.repository_id==repo_id,StructuralCard.kind==kind,StructuralCard.path==path.strip('/')))
+ if not card: raise HTTPException(404,'Structural card not found')
+ return {'repository_id':repo_id,'kind':card.kind,'path':card.path,'facts':card.facts,'indexed_commit_sha':card.indexed_commit_sha,'content_fingerprint':card.content_fingerprint,'provenance_fingerprint':card.provenance_fingerprint,'schema_version':card.schema_version}
 @app.get('/api/repositories/{repo_id}/tree')
 def tree(repo_id:str,path:str='',db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
@@ -261,7 +276,7 @@ def repository_graph(repo_id:str,max_nodes:int=Query(MAX_GRAPH_NODES,ge=10,le=MA
   added=1+(0 if file.id in selected_files else 1)+sum(directory not in directories for directory in ancestors)
   if len(selected)+len(selected_files)+len(directories)+added>budget: continue
   selected.append(symbol.id); selected_files.add(file.id); directories.update(ancestors)
- graph_nodes=[{'id':f'repository:{repo.id}','name':repo.name,'kind':'repository'}]
+ graph_nodes=[{'id':f'repository:{repo.id}','name':getattr(repo,'name',repo.id),'kind':'repository'}]
  graph_nodes += [{'id':f'directory:{directory}','name':directory,'kind':'directory'} for directory in sorted(directories)]
  graph_nodes += [{'id':f'file:{file.id}','name':file.path,'path':file.path,'kind':'file'} for file_id,file in sorted(files.items(),key=lambda item:item[1].path) if file_id in selected_files]
  graph_nodes += [dict(symbol_out(symbols[symbol_id]),kind=symbols[symbol_id].symbol_type) for symbol_id in selected]
