@@ -11,7 +11,7 @@ from rq import Queue
 from app.config import settings
 from app.git_auth import validate_clone_url
 from app.db import get_db, verify_migration_ready
-from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, IndexingJob, Conversation, Message
+from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, CodeCard, IndexingJob, Conversation, Message
 from app.search import search, search_with_capability
 
 app=FastAPI(title='knowledge-way API',version='0.1.0')
@@ -30,6 +30,12 @@ class WorkspaceDependencyUpdate(BaseModel):
  package_name:str|None=Field(default=None,max_length=512); import_path:str|None=Field(default=None,max_length=1024); reason:str|None=Field(default=None,max_length=10000); note:str|None=Field(default=None,max_length=10000)
 class ChatIn(BaseModel):
  question:str=Field(min_length=1,max_length=8000); repository_id:str|None=None; conversation_id:str|None=None
+class ExplanationIn(BaseModel):
+ question:str=Field(min_length=1,max_length=8000); repository_id:str
+class DocumentationIn(BaseModel):
+ repository_id:str; symbol_id:str
+class CodeCardRunIn(BaseModel):
+ limit:int|None=Field(default=25,ge=1,le=500)
 
 def repo_out(r): return {'id':r.id,'name':r.name,'clone_url':r.clone_url,'default_branch':r.default_branch,'indexed_branch':r.indexed_branch,'indexed_commit_sha':r.indexed_commit_sha,'latest_detected_commit_sha':r.latest_detected_commit_sha,'indexing_status':r.indexing_status,'indexing_progress':r.indexing_progress,'error_message':r.error_message,'last_indexed_at':r.last_indexed_at,'last_sync_at':r.last_sync_at,'created_at':r.created_at}
 def workspace_out(w): return {'id':w.id,'name':w.name,'description':w.description,'created_at':w.created_at,'updated_at':w.updated_at}
@@ -38,8 +44,10 @@ def validate_dependency_membership(db,workspace_id,source_repository_id,target_r
  if source_repository_id==target_repository_id: raise HTTPException(422,'Source and target repositories must differ')
  members=set(db.scalars(select(WorkspaceRepository.repository_id).where(WorkspaceRepository.workspace_id==workspace_id)).all())
  if source_repository_id not in members or target_repository_id not in members: raise HTTPException(422,'Source and target repositories must both belong to this workspace')
+INDEXING_JOB_TIMEOUT_SECONDS=1800
+
 def enqueue(repo_id,full=False):
- try: return Queue('indexing',connection=Redis.from_url(settings.redis_url)).enqueue('app.ingestion.index_repository',repo_id,full).id
+ try: return Queue('indexing',connection=Redis.from_url(settings.redis_url)).enqueue('app.ingestion.index_repository',repo_id,full,job_timeout=INDEXING_JOB_TIMEOUT_SECONDS).id
  except Exception: return None
 MAX_GRAPH_NODES=100
 def symbol_out(s): return {'id':s.id,'repository_id':s.repository_id,'file_id':s.file_id,'name':s.name,'qualified_name':s.qualified_name,'type':s.symbol_type,'language':s.language,'start_line':s.start_line,'end_line':s.end_line,'start_byte':s.start_byte,'end_byte':s.end_byte,'parent_symbol_id':s.parent_symbol_id,'signature':s.signature,'source_text':s.source_text}
@@ -51,6 +59,16 @@ def scoped_symbol(db,repo_id,symbol_id):
  return s
 def scoped_edges(db,repo_id): return sorted((e for e in db.scalars(select(SymbolEdge).where(SymbolEdge.repository_id==repo_id)).all() if e.repository_id==repo_id),key=edge_key)
 def scoped_symbols(db,repo_id,ids): return {s.id:s for s in db.scalars(select(Symbol).where(Symbol.repository_id==repo_id,Symbol.id.in_(ids))).all() if s.repository_id==repo_id and s.id in ids}
+def scoped_files(db,repo_id): return {f.id:f for f in db.scalars(select(File).where(File.repository_id==repo_id)).all() if f.repository_id==repo_id}
+def citation(repo,file,item):
+ line_count=max(len((file.content or '').splitlines()),1); start=max(1,min(item.start_line,line_count)); end=max(start,min(item.end_line,line_count))
+ return {'repository_id':repo.id,'repository':repo.name,'indexed_commit_sha':getattr(item,'indexed_commit_sha',None) or file.indexed_commit_sha or repo.indexed_commit_sha,'file_id':file.id,'path':file.path,'start_line':start,'end_line':end,'symbol_id':getattr(item,'symbol_id',None) or getattr(item,'id',None)}
+def result_citation(db,repo,result):
+ file=db.get(File,result['file_id'])
+ if file:
+  item=type('Retrieved',(),{'start_line':result['start_line'],'end_line':result['end_line'],'symbol_id':result.get('symbol_id'),'indexed_commit_sha':result.get('indexed_commit_sha')})()
+  return citation(repo,file,item)
+ return {'repository_id':repo.id,'repository':repo.name,'indexed_commit_sha':result.get('indexed_commit_sha') or repo.indexed_commit_sha,'file_id':result['file_id'],'path':result['path'],'start_line':max(1,result['start_line']),'end_line':max(max(1,result['start_line']),result['end_line']),'symbol_id':result.get('symbol_id')}
 @app.get('/health')
 def health(): return {'status':'ok'}
 @app.get('/api/workspaces')
@@ -156,6 +174,19 @@ def status(repo_id:str,db:Session=Depends(get_db)):
  r=db.get(Repository,repo_id)
  if not r: raise HTTPException(404,'Repository not found')
  return {'status':r.indexing_status,'progress':r.indexing_progress,'error':r.error_message,'indexed_commit_sha':r.indexed_commit_sha}
+@app.post('/api/repositories/{repo_id}/code-cards',status_code=202)
+def generate_code_cards(repo_id:str,body:CodeCardRunIn,db:Session=Depends(get_db)):
+ if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
+ if not settings.code_cards_enabled: raise HTTPException(409,'Code cards are disabled')
+ try: job_id=Queue('indexing',connection=Redis.from_url(settings.redis_url)).enqueue('app.code_cards.generate_code_cards',repo_id,body.limit,job_timeout=INDEXING_JOB_TIMEOUT_SECONDS).id
+ except Exception: raise HTTPException(503,'Could not enqueue code-card generation')
+ return {'job_id':job_id,'model':settings.vertex_gemini_model,'limit':body.limit}
+@app.get('/api/repositories/{repo_id}/symbols/{symbol_id}/code-card')
+def code_card(repo_id:str,symbol_id:str,db:Session=Depends(get_db)):
+ scoped_symbol(db,repo_id,symbol_id)
+ card=db.scalar(select(CodeCard).where(CodeCard.repository_id==repo_id,CodeCard.symbol_id==symbol_id))
+ if not card: raise HTTPException(404,'No Code Card for this symbol')
+ return {'symbol_id':card.symbol_id,'summary':card.summary,'details':card.details,'model':card.model,'prompt_version':card.prompt_version,'indexed_commit_sha':card.indexed_commit_sha,'input_tokens':card.input_tokens,'output_tokens':card.output_tokens}
 @app.get('/api/repositories/{repo_id}/tree')
 def tree(repo_id:str,path:str='',db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
@@ -211,9 +242,44 @@ def subgraph(repo_id:str,symbol_id:str,depth:int=Query(1,ge=1,le=2),max_nodes:in
   if not frontier: break
  graph_edges=[e for e in edges if e.source_symbol_id in selected and e.target_symbol_id in selected]
  return {'root_symbol_id':symbol_id,'depth':depth,'max_nodes':max_nodes,'truncated':truncated,'nodes':[symbol_out(available[i]) for i in sorted(selected,key=lambda i:(available[i].qualified_name,i))],'edges':[edge_out(e) for e in graph_edges]}
+@app.get('/api/repositories/{repo_id}/graph')
+def repository_graph(repo_id:str,max_nodes:int=Query(MAX_GRAPH_NODES,ge=10,le=MAX_GRAPH_NODES),db:Session=Depends(get_db)):
+ """Return a bounded repository overview with structural and code relationship nodes."""
+ repo=db.get(Repository,repo_id)
+ if not repo: raise HTTPException(404,'Repository not found')
+ files=scoped_files(db,repo_id); edges=[e for e in scoped_edges(db,repo_id) if e.source_symbol_id and e.target_symbol_id]
+ symbols={s.id:s for s in db.scalars(select(Symbol).where(Symbol.repository_id==repo_id)).all() if s.repository_id==repo_id and s.file_id in files}
+ degree={symbol_id:0 for symbol_id in symbols}
+ for edge in edges:
+  if edge.source_symbol_id in degree: degree[edge.source_symbol_id]+=1
+  if edge.target_symbol_id in degree: degree[edge.target_symbol_id]+=1
+ selected=[]; selected_files=set(); directories=set(); budget=max_nodes-1
+ for symbol in sorted(symbols.values(),key=lambda s:(-degree[s.id],s.qualified_name,s.id)):
+  file=files[symbol.file_id]; ancestors=[]; parent=PurePosixPath(file.path).parent
+  while str(parent) not in ('', '.'):
+   ancestors.append(str(parent)); parent=parent.parent
+  added=1+(0 if file.id in selected_files else 1)+sum(directory not in directories for directory in ancestors)
+  if len(selected)+len(selected_files)+len(directories)+added>budget: continue
+  selected.append(symbol.id); selected_files.add(file.id); directories.update(ancestors)
+ graph_nodes=[{'id':f'repository:{repo.id}','name':repo.name,'kind':'repository'}]
+ graph_nodes += [{'id':f'directory:{directory}','name':directory,'kind':'directory'} for directory in sorted(directories)]
+ graph_nodes += [{'id':f'file:{file.id}','name':file.path,'path':file.path,'kind':'file'} for file_id,file in sorted(files.items(),key=lambda item:item[1].path) if file_id in selected_files]
+ graph_nodes += [dict(symbol_out(symbols[symbol_id]),kind=symbols[symbol_id].symbol_type) for symbol_id in selected]
+ graph_edges=[]
+ for directory in directories:
+  parent=str(PurePosixPath(directory).parent)
+  graph_edges.append({'source':f'directory:{parent}' if parent not in ('', '.') else f'repository:{repo.id}','target':f'directory:{directory}','relationship':'contains','confidence':1})
+ for file_id in selected_files:
+  file=files[file_id]; parent=str(PurePosixPath(file.path).parent)
+  graph_edges.append({'source':f'directory:{parent}' if parent not in ('', '.') else f'repository:{repo.id}','target':f'file:{file.id}','relationship':'contains','confidence':1})
+ for symbol_id in selected:
+  graph_edges.append({'source':f'file:{symbols[symbol_id].file_id}','target':symbol_id,'relationship':'defines','confidence':1})
+ graph_edges += [edge_out(edge) for edge in edges if edge.source_symbol_id in selected and edge.target_symbol_id in selected]
+ return {'repository_id':repo.id,'max_nodes':max_nodes,'truncated':len(selected)<len(symbols),'nodes':graph_nodes,'edges':graph_edges}
 @app.get('/api/search')
-def text_search(q:str,mode:str='hybrid',limit:int=30,db:Session=Depends(get_db)):
- results, semantic = search_with_capability(db,q,mode,min(max(limit,1),100))
+def text_search(q:str,mode:str='hybrid',limit:int=30,repository_id:str|None=None,rerank:bool=False,db:Session=Depends(get_db)):
+ if repository_id and not db.get(Repository,repository_id): raise HTTPException(404,'Repository not found')
+ results, semantic = search_with_capability(db,q,mode,min(max(limit,1),100),repository_id=repository_id,rerank=rerank)
  return {'query':q,'mode':mode,'results':results,'semantic':semantic}
 @app.get('/api/search/symbols')
 def symbol_search(q:str,db:Session=Depends(get_db)): return {'results':search(db,q,'symbols')}
@@ -221,6 +287,27 @@ def symbol_search(q:str,db:Session=Depends(get_db)): return {'results':search(db
 def semantic_search(body:dict,db:Session=Depends(get_db)):
  results, semantic = search_with_capability(db,body.get('query',''),'semantic')
  return {'results':results,'semantic':semantic}
+@app.post('/api/explanations')
+def explanation(body:ExplanationIn,db:Session=Depends(get_db)):
+ repo=db.get(Repository,body.repository_id)
+ if not repo: raise HTTPException(404,'Repository not found')
+ results,_=search_with_capability(db,body.question,'hybrid',8,repository_id=repo.id); citations=[result_citation(db,repo,x) for x in results]
+ answer='No indexed code in this repository evidences an answer to this question.' if not results else 'Retrieved evidence: '+'; '.join(f"{x['path']}:{x['start_line']}-{x['end_line']}"+(f" ({x['symbol']})" if x.get('symbol') else '') for x in results[:3])+'.'
+ return {'answer':answer,'citations':citations,'scope':{'repository_id':repo.id,'indexed_commit_sha':repo.indexed_commit_sha},'grounded':bool(results),'answer_mode':'retrieval_only'}
+@app.post('/api/documentation/generate')
+def documentation(body:DocumentationIn,db:Session=Depends(get_db)):
+ repo=db.get(Repository,body.repository_id)
+ if not repo: raise HTTPException(404,'Repository not found')
+ symbol=scoped_symbol(db,repo.id,body.symbol_id); file=db.get(File,symbol.file_id)
+ if not file: raise HTTPException(404,'File not found')
+ edges=scoped_edges(db,repo.id); callers=[e for e in edges if e.target_symbol_id==symbol.id and e.source_symbol_id]; callees=[e for e in edges if e.source_symbol_id==symbol.id and e.target_symbol_id]
+ related=scoped_symbols(db,repo.id,{e.source_symbol_id for e in callers}|{e.target_symbol_id for e in callees}); citations=[citation(repo,file,symbol)]
+ for related_symbol in sorted(related.values(),key=lambda s:(s.qualified_name,s.id)):
+  related_file=db.get(File,related_symbol.file_id)
+  if related_file: citations.append(citation(repo,related_file,related_symbol))
+ caller_names=[related[e.source_symbol_id].qualified_name for e in callers if e.source_symbol_id in related]; callee_names=[related[e.target_symbol_id].qualified_name for e in callees if e.target_symbol_id in related]
+ markdown=f"# {symbol.qualified_name}\n\n**Type:** {symbol.symbol_type}\n\n**Location:** `{file.path}:{symbol.start_line}-{symbol.end_line}`\n\n## Overview\n\n{symbol.signature or symbol.name}\n\n## Direct callers\n\n"+('\n'.join(f'- `{name}`' for name in sorted(caller_names)) if caller_names else 'No indexed direct callers.')+"\n\n## Direct callees\n\n"+('\n'.join(f'- `{name}`' for name in sorted(callee_names)) if callee_names else 'No indexed direct callees.')
+ return {'markdown':markdown,'citations':citations,'scope':{'repository_id':repo.id,'indexed_commit_sha':repo.indexed_commit_sha}}
 @app.post('/api/chat')
 def chat(body:ChatIn,db:Session=Depends(get_db)):
  results, semantic = search_with_capability(db,body.question,'hybrid',12,repository_id=body.repository_id); citations=[{'repository':x['repository'],'file_id':x['file_id'],'path':x['path'],'start_line':x['start_line'],'end_line':x['end_line']} for x in results]

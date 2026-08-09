@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.db import get_db
 from app.main import app
-from app.models import Repository, Symbol, SymbolEdge
+from app.models import Repository, File, Symbol, SymbolEdge
 
 
 class Result:
@@ -26,10 +26,15 @@ class GraphDb:
             SimpleNamespace(id="e1", repository_id="repo", source_symbol_id="b", target_symbol_id="a", target_name="pkg.root", relationship_type="calls", source_file_id="fb", line_number=11, confidence=95),
             SimpleNamespace(id="x", repository_id="other", source_symbol_id="foreign", target_symbol_id="a", target_name="pkg.root", relationship_type="calls", source_file_id="fx", line_number=1, confidence=1),
         ]
+        self.files = [
+            SimpleNamespace(id="fa", repository_id="repo", path="pkg/root.py"),
+            SimpleNamespace(id="fb", repository_id="repo", path="pkg/beta.py"),
+            SimpleNamespace(id="fc", repository_id="repo", path="pkg/charlie.py"),
+        ]
     def get(self, model, value): return self.repo if model is Repository and value == "repo" else None
     def scalars(self, statement):
         entity = statement.column_descriptions[0]["entity"]
-        return Result(self.symbols if entity is Symbol else self.edges if entity is SymbolEdge else [])
+        return Result(self.symbols if entity is Symbol else self.edges if entity is SymbolEdge else self.files if entity is File else [])
 
 
 def client():
@@ -65,3 +70,14 @@ def test_subgraph_is_bounded_deterministic_and_validates_depth():
     assert [edge["id"] for edge in graph["edges"]] == ["e1"]
     assert graph["truncated"] is True
     assert invalid_low.status_code == invalid_high.status_code == 422
+
+
+def test_repository_graph_includes_bounded_structure_and_symbol_relationships():
+    api = client()
+    response = api.get("/api/repositories/repo/graph?max_nodes=10")
+    assert response.status_code == 200
+    graph = response.json()
+    assert {node["kind"] for node in graph["nodes"]} >= {"repository", "directory", "file", "function"}
+    assert any(edge["relationship"] == "contains" for edge in graph["edges"])
+    assert any(edge["relationship"] == "defines" for edge in graph["edges"])
+    assert any(edge.get("type") == "calls" for edge in graph["edges"])

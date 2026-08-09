@@ -18,8 +18,10 @@ services:
   api:
     build: ./apps/api
     env_file: .env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /root/.config/gcloud/application_default_credentials.json
     ports: ["8000:8000"]
-    volumes: ["./data:/data"]
+    volumes: ["./data:/data", "${HOME}/.config/gcloud:/root/.config/gcloud:ro"]
     depends_on:
       postgres: {condition: service_healthy}
       redis: {condition: service_started}
@@ -27,7 +29,9 @@ services:
     build: ./apps/api
     command: python -m app.worker
     env_file: .env
-    volumes: ["./data:/data"]
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /root/.config/gcloud/application_default_credentials.json
+    volumes: ["./data:/data", "${HOME}/.config/gcloud:/root/.config/gcloud:ro"]
     depends_on:
       postgres: {condition: service_healthy}
       redis: {condition: service_started}

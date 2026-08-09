@@ -7,7 +7,7 @@ from sqlalchemy import delete, select
 from app.config import settings
 from app.git_auth import git_environment, redact_git_error
 from app.db import SessionLocal
-from app.models import CodeChunk, File, IndexingJob, Repository, Symbol, SymbolEdge
+from app.models import CodeCard, CodeChunk, File, IndexingJob, Repository, Symbol, SymbolEdge
 from app.parser_facts import analyze_source
 from app.providers import embedding_provider
 
@@ -102,25 +102,44 @@ def _persist_edges(db, repo_id, parser_files):
     edge(file, None, target_name, 'import', imported.range.start_line)
 
 
+def _embedding_document(repo, chunk, file, symbol, card, edges):
+ """Evidence-first retrieval document; AI cards are optional, never a substitute for code."""
+ calls=sorted({e.target_name for e in edges if symbol and e.source_symbol_id==symbol.id and e.relationship_type=='call'})[:20]
+ imports=sorted({e.target_name for e in edges if e.source_file_id==file.id and e.relationship_type=='import'})[:20]
+ header=[f'Repository: {repo.name}',f'Path: {file.path}',f'Language: {chunk.language or "unknown"}',f'Kind: {chunk.chunk_type}']
+ if symbol: header += [f'Symbol: {symbol.qualified_name}',f'Signature: {symbol.signature or symbol.name}']
+ if card: header += [f'AI code-card summary (commit {card.indexed_commit_sha}): {card.summary}',f'Keywords: {", ".join(card.details.get("keywords", []))}']
+ if calls: header.append(f'Static calls: {", ".join(calls)}')
+ if imports: header.append(f'Static imports: {", ".join(imports)}')
+ return '\n'.join(header)+'\n\nSource code:\n'+chunk.source_text
+
+
 def _embed_full_index_chunks(db, repo_id, reusable_embeddings):
- """Persist enabled-provider embeddings in bounded batches after a full index."""
+ """Persist embeddings for contextual retrieval documents, with code as primary evidence."""
  provider = embedding_provider()
- if provider is None:
-  return
- missing = []
+ if provider is None: return
+ repo=db.get(Repository,repo_id); files={f.id:f for f in db.scalars(select(File).where(File.repository_id==repo_id)).all()}; symbols={s.id:s for s in db.scalars(select(Symbol).where(Symbol.repository_id==repo_id)).all()}; cards={c.symbol_id:c for c in db.scalars(select(CodeCard).where(CodeCard.repository_id==repo_id)).all()}; edges=db.scalars(select(SymbolEdge).where(SymbolEdge.repository_id==repo_id)).all(); missing=[]
  for chunk in db.scalars(select(CodeChunk).where(CodeChunk.repository_id == repo_id)).all():
-  cached = reusable_embeddings.get((chunk.content_hash, provider.model))
-  if cached is not None:
-   chunk.embedding, chunk.embedding_model = cached, provider.model
-  else:
-   missing.append(chunk)
- for offset in range(0, len(missing), settings.embedding_batch_size):
-  batch = missing[offset:offset + settings.embedding_batch_size]
-  vectors = asyncio.run(provider.embed_texts([chunk.source_text for chunk in batch]))
-  if len(vectors) != len(batch):
-   raise RuntimeError('embedding provider returned an incomplete embedding batch')
-  for chunk, vector in zip(batch, vectors):
-   chunk.embedding, chunk.embedding_model = vector, provider.model
+  if not chunk.source_text.strip(): db.delete(chunk); continue
+  text=_embedding_document(repo,chunk,files[chunk.file_id],symbols.get(chunk.symbol_id),cards.get(chunk.symbol_id),edges); key=hashlib.sha256(text.encode()).hexdigest()
+  cached=reusable_embeddings.get((key,provider.model))
+  if cached is not None: chunk.embedding,chunk.embedding_model=cached,provider.model
+  else: missing.append((chunk,text,key))
+ for offset in range(0,len(missing),settings.embedding_batch_size):
+  batch=missing[offset:offset+settings.embedding_batch_size]; vectors=asyncio.run(provider.embed_texts([text for _,text,_ in batch]))
+  if len(vectors)!=len(batch): raise RuntimeError('embedding provider returned an incomplete embedding batch')
+  for (chunk,_,_),vector in zip(batch,vectors): chunk.embedding,chunk.embedding_model=vector,provider.model
+
+
+def reembed_repository(repo_id):
+ """Refresh only vectors after Code Cards change; no clone or graph rebuild."""
+ db=SessionLocal()
+ try:
+  repo=db.get(Repository,repo_id)
+  if not repo: raise RuntimeError('Repository not found')
+  _embed_full_index_chunks(db,repo_id,{})
+  db.commit()
+ finally: db.close()
 
 
 def index_repository(repo_id, full=False):
@@ -162,7 +181,7 @@ def index_repository(repo_id, full=False):
    _persist_edges(db, repo_id, parser_files)
    db.flush()
    _embed_full_index_chunks(db, repo_id, reusable_embeddings)
-  repo.indexed_commit_sha=sha;repo.indexed_branch=run('git','branch','--show-current',cwd=root);repo.indexing_status='ready';repo.indexing_progress={'phase':'finalizing','files':len(paths)};repo.last_indexed_at=datetime.utcnow();repo.last_sync_at=datetime.utcnow();job.status='ready';job.progress=repo.indexing_progress;job.finished_at=datetime.utcnow();db.commit()
+  repo.indexed_commit_sha=sha;repo.indexed_branch=run('git','branch','--show-current',cwd=root);repo.indexing_status='ready';repo.error_message=None;repo.indexing_progress={'phase':'finalizing','files':len(paths)};repo.last_indexed_at=datetime.utcnow();repo.last_sync_at=datetime.utcnow();job.status='ready';job.progress=repo.indexing_progress;job.finished_at=datetime.utcnow();db.commit()
  except Exception as e:
   repo.indexing_status='failed';repo.error_message=str(e);job.status='failed';job.error_message=str(e);job.finished_at=datetime.utcnow();db.commit();raise
  finally: db.close()

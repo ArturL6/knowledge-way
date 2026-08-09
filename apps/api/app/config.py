@@ -14,9 +14,21 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = None
     openrouter_embedding_model: str = "openai/text-embedding-3-small"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    # Reserved for a future paid reranker integration; no reranking request is made yet.
+    # Vertex uses Google Application Default Credentials; mount them read-only in Docker.
+    vertex_project_id: str | None = None
+    vertex_location: str = "us-central1"
+    vertex_embedding_model: str = "text-embedding-005"
+    vertex_embedding_dimensions: int = 768
+    # Optional, versioned Gemini summaries of symbols. Explicit opt-in because they incur usage costs.
+    code_cards_enabled: bool = False
+    vertex_gemini_location: str = "global"
+    vertex_gemini_model: str = "gemini-3.5-flash"
+    code_card_max_source_characters: int = 12000
+    # Reranking is opt-in per query and runs only over a bounded retrieval candidate set.
     rerank_provider: str = "none"
     rerank_model: str | None = None
+    cohere_api_key: str | None = None
+    rerank_candidate_limit: int = 40
     repository_storage_path: str = "/data/repositories"
     max_file_size: int = 1_048_576
     chat_context_limit: int = 12_000

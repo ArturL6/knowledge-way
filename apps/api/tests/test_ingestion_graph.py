@@ -5,7 +5,16 @@ from sqlalchemy.orm import sessionmaker
 
 from app import ingestion
 from app.db import Base
-from app.models import File, Repository, Symbol, SymbolEdge
+from app.models import CodeChunk, File, Repository, Symbol, SymbolEdge
+
+
+class _FakeEmbeddingProvider:
+    model = "test:embedding"
+
+    async def embed_texts(self, texts):
+        assert len(texts) == 1
+        assert texts[0].endswith("Source code:\ndef useful(): pass")
+        return [[0.25, 0.75]]
 
 
 def _index_with_sqlite(monkeypatch, tmp_path):
@@ -66,7 +75,7 @@ def test_full_index_builds_parser_graph_with_safe_resolution_and_source_provenan
 
 def test_full_reindex_clears_old_edges_before_rebuilding(monkeypatch, tmp_path):
     sessions = _index_with_sqlite(monkeypatch, tmp_path)
-    repo = Repository(name="example", clone_url="unused")
+    repo = Repository(name="example", clone_url="unused", error_message="previous indexing failure")
     with sessions() as db:
         db.add(repo); db.commit()
         file = File(repository_id=repo.id, path="old.py", language="python", content="", content_hash="old", size_bytes=0, indexed_commit_sha="old")
@@ -86,3 +95,23 @@ def test_full_reindex_clears_old_edges_before_rebuilding(monkeypatch, tmp_path):
         edges = db.scalars(select(SymbolEdge).where(SymbolEdge.repository_id == repo.id)).all()
         assert [(edge.target_name, edge.relationship_type) for edge in edges] == [("unknown", "call")]
         assert edges[0].target_symbol_id is None
+        assert db.get(Repository, repo.id).error_message is None
+
+
+def test_embedding_prunes_empty_structural_chunks(monkeypatch, tmp_path):
+    sessions = _index_with_sqlite(monkeypatch, tmp_path)
+    monkeypatch.setattr(ingestion, "embedding_provider", lambda: _FakeEmbeddingProvider())
+    repo = Repository(name="example", clone_url="unused")
+    with sessions() as db:
+        db.add(repo); db.flush()
+        file = File(repository_id=repo.id, path="source.py", language="python", content="", content_hash="a" * 64, size_bytes=0, indexed_commit_sha="test")
+        db.add(file); db.flush()
+        blank = CodeChunk(repository_id=repo.id, file_id=file.id, language="python", chunk_type="module", start_line=1, end_line=1, source_text="  \n", content_hash="b" * 64, indexed_commit_sha="test")
+        useful = CodeChunk(repository_id=repo.id, file_id=file.id, language="python", chunk_type="function", start_line=2, end_line=2, source_text="def useful(): pass", content_hash="c" * 64, indexed_commit_sha="test")
+        db.add_all([blank, useful]); db.flush()
+        ingestion._embed_full_index_chunks(db, repo.id, {})
+        db.flush()
+        assert db.get(CodeChunk, blank.id) is None
+        embedded = db.get(CodeChunk, useful.id)
+        assert embedded.embedding == [0.25, 0.75]
+        assert embedded.embedding_model == "test:embedding"

@@ -3,8 +3,9 @@ import math
 import re
 from dataclasses import dataclass
 from sqlalchemy import select, or_
+from app.config import settings
 from app.models import Repository, File, Symbol, CodeChunk
-from app.providers import embedding_provider, semantic_capability
+from app.providers import embedding_provider, rerank_provider, semantic_capability
 
 STOP_WORDS = {"a", "an", "and", "are", "defined", "do", "for", "how", "in", "is", "of", "the", "to", "what", "where", "which", "with"}
 
@@ -27,10 +28,12 @@ def query_terms(text: str) -> list[str]:
 
 
 def result(kind, score, repo, file, item):
-    return {'type': kind, 'score': score, 'repository': repo.name, 'repository_id': repo.id,
+    return {'type': kind, 'score': float(score), 'repository': repo.name, 'repository_id': repo.id,
             'file_id': file.id, 'path': file.path, 'language': item.language,
             'start_line': item.start_line, 'end_line': item.end_line,
-            'snippet': item.source_text[:1200], 'symbol': getattr(item, 'qualified_symbol_name', None) or getattr(item, 'qualified_name', None)}
+            'snippet': item.source_text[:1200], 'symbol': getattr(item, 'qualified_symbol_name', None) or getattr(item, 'qualified_name', None),
+            'symbol_id': item.id if kind == 'symbol' else getattr(item, 'symbol_id', None),
+            'indexed_commit_sha': getattr(item, 'indexed_commit_sha', None) or getattr(file, 'indexed_commit_sha', None)}
 
 
 def _key(item): return (item['type'], item['file_id'], item['start_line'], item['end_line'])
@@ -51,7 +54,7 @@ def _fuse(result_sets, limit):
     return sorted(combined.values(), key=lambda x: (-x['score'], _key(x)))[:limit]
 
 
-def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id: str | None = None):
+def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id: str | None = None, rerank: bool = False):
     q, terms = parse_query(raw), query_terms(parse_query(raw).text)
     repos = {r.id: r for r in db.scalars(select(Repository)).all()}
     lexical, symbols, semantic = [], [], []
@@ -95,8 +98,23 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
     if mode == 'semantic': results = semantic[:limit]
     elif mode == 'symbols': results = _fuse([symbols], limit)
     elif mode in ('text', 'exact'): results = _fuse([lexical], limit)
-    else: results = _fuse([lexical, symbols, semantic], limit)
-    return results, capability
+    else:
+        candidate_limit = max(limit, min(settings.rerank_candidate_limit, 100)) if rerank else limit
+        results = _fuse([lexical, symbols, semantic], candidate_limit)
+    reranker = rerank_provider() if rerank and mode == 'hybrid' else None
+    capability['reranking']['requested'] = rerank
+    capability['reranking']['applied'] = False
+    if rerank and reranker is not None and results:
+        try:
+            documents = [f"{item.get('symbol') or ''}\n{item['path']}\n{item['snippet']}" for item in results]
+            scores = asyncio.run(reranker.rerank(q.text, documents))
+            if len(scores) != len(results): raise RuntimeError('reranker returned incomplete scores')
+            results = [item for _, item in sorted(zip(scores, results), key=lambda x: (-x[0], _key(x[1])))]
+            capability['reranking']['applied'] = True
+        except Exception:
+            capability['reranking']['state'] = 'degraded'
+            capability['reranking']['reason'] = 'rerank_request_failed'
+    return results[:limit], capability
 
 
 def search(db, raw: str, mode='hybrid', limit=30, repository_id: str | None = None):
