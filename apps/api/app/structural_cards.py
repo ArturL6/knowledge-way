@@ -20,8 +20,10 @@ def refresh_structural_cards(db,repo_id,sha):
  files=sorted(db.scalars(select(File).where(File.repository_id==repo_id)).all(),key=lambda f:f.path)
  symbols=db.scalars(select(Symbol).where(Symbol.repository_id==repo_id)).all()
  edges=db.scalars(select(SymbolEdge).where(SymbolEdge.repository_id==repo_id)).all()
- by_file=defaultdict(list); by_id={f.id:f for f in files}
- for symbol in symbols: by_file[symbol.file_id].append(symbol)
+ by_file=defaultdict(list); by_id={f.id:f for f in files}; symbol_file_by_id={}
+ for symbol in symbols:
+  by_file[symbol.file_id].append(symbol)
+  symbol_file_by_id[symbol.id]=symbol.file_id
  paths={p for file in files for p in ancestors(file.path)}
  package_paths={str(PurePosixPath(f.path).parent) if str(PurePosixPath(f.path).parent)!="." else "" for f in files if PurePosixPath(f.path).name in {"__init__.py","package.json"}}
  inputs=[]
@@ -32,7 +34,7 @@ def refresh_structural_cards(db,repo_id,sha):
   owned={f.id for f in files if f.path==path or (not path or f.path.startswith(path+"/"))}
   boundary=[]
   for edge in edges:
-   source_inside=edge.source_file_id in owned; target_file=by_id.get(next((s.file_id for s in symbols if s.id==edge.target_symbol_id),None)); target_inside=bool(target_file and target_file.id in owned)
+   source_inside=edge.source_file_id in owned; target_file=by_id.get(symbol_file_by_id.get(edge.target_symbol_id)); target_inside=bool(target_file and target_file.id in owned)
    if source_inside != target_inside:
     boundary.append((edge.relationship_type,"resolved" if edge.target_symbol_id else "unresolved",edge.target_name,edge.confidence))
   aggregates=[]
