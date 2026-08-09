@@ -96,3 +96,51 @@ Ein identischer Reindex eines Commits ist idempotent. Wenn das Budget für LLM-E
 ## Einordnung in die Roadmap
 
 Dies ist sinnvoll **nach** dem belastbaren Tree-sitter-/Code-Graph-Fundament und commit-aware Incremental Indexing. Es ersetzt weder die Suche noch den Symbolgraphen, sondern ergänzt sie um eine navigierbare Verständnis- und Dokumentationsschicht.
+
+## Unabhängige GPT-5.6-Sol-High-Effort-Review
+
+**Durchgeführt am:** 2026-08-09 via Codex CLI, Modell `gpt-5.6-sol`, Reasoning Effort `high`, read-only.
+
+### Bestätigte Richtung
+
+Die Review bestätigt die Produktidee, verschiebt aber den Schwerpunkt:
+
+> **Evidence first, views second, prose last.**
+
+Nicht hierarchische LLM-Zusammenfassungen sind die Wissensbasis. Die kanonische Schicht ist ein commit-versionierter Evidenzgraph; Folder-, Modul- und Repository-Cards sind daraus erzeugte, ersetzbare materialisierte Sichten. LLM-Prosa erklärt nur einen zuvor ausgewählten, belegten Claim-Satz.
+
+### Präzisierungen
+
+- Die UX-Ebenen **Portfolio/Cross-Repo → Repository/Modul → Code/Symbol** sind sinnvoll für progressive Navigation, aber keine harten Datenmodellgrenzen.
+- `Repository` und `Ordner` bleiben wichtige Locator-Facetten, bilden Architektur aber nicht zuverlässig ab. Wo verfügbar, sind **Capability/System → Service/Deployable → Build Target/Package → Datei → Symbol** stärkere semantische Einheiten.
+- Tree-sitter liefert Syntax und Containment. Belastbare Imports, Calls, Overloads oder Typauflösung benötigen je Sprache Resolver, Compiler-/LSP-/SCIP-Informationen oder eine klar sichtbare Unsicherheit.
+- Parent-Cards dürfen nie ausschließlich aus Child-Prosa entstehen. Sie aggregieren atomare Graph-Fakten und selektierte Evidenz.
+- Die Invalidierung braucht langfristig eine explizite **Derivations-/Provenienz-DAG**. Auch gelöschte Kanten, Renames, Build-/Parseränderungen sowie alte und neue Snapshot-Nachbarn müssen berücksichtigt werden.
+- Cross-Repo-Ergebnisse brauchen ein **Snapshot-Manifest** mit den jeweils verwendeten Repository-Commits; ein einzelner SHA genügt nicht.
+
+### Empfohlener MVP
+
+Ein schmaler vertikaler Slice für **10–30 zusammenhängende Repositories** und zunächst ein bis zwei Sprachen:
+
+1. Portfolio-weite Suche nach relevanten Systemen.
+2. Präzise Packages/Build Targets, Dateien, Symbole, Tests und Entry Points.
+3. Statisch belastbare Imports sowie explizite Cross-Repo-Verträge aus Manifests/API-Spezifikationen.
+4. Drill-downfähige, deterministische Cards und eine zitierte Rangliste wahrscheinlicher Änderungsorte.
+5. LLM nur für die interaktive Erklärung, nie während deterministischer Ingestion.
+
+Nicht Teil des MVP: vollständiger Runtime-Datenfluss, beliebige Sprachen, ungesicherte Call-Auflösung oder LLM-generierte Ingest-Fakten.
+
+### Vorab zu validierende Annahmen
+
+- Navigieren Menschen und Agents tatsächlich portfolio-weit und anschließend hierarchisch, oder springen sie überwiegend zwischen Symbolen, APIs, Services und Tests?
+- Entsprechen Ordner in den Ziel-Repositories wirklich Modulen?
+- Welcher Anteil von Imports/Calls ist im realen Sprachmix eindeutig statisch auflösbar?
+- Stecken die wichtigsten Cross-Repo-Beziehungen in Packages/APIs oder in Deployments, Queues, Datenbanken und Konfiguration?
+- Verbessern Cards die Task-Erfolgsrate gegenüber Code-Suche plus Graph wirklich messbar?
+
+### Harte Prinzipien für die Umsetzung
+
+- Jeder ausgegebene Claim/Knoten/Kante ist mit Snapshot, Evidence-ID, Datei und Quellspanne belegbar.
+- Unbelegte Claims werden technisch verworfen oder sichtbar als Hypothese markiert.
+- Strukturierte API-Antworten enthalten stabile IDs, Commit- und Evidence-Referenzen; Agents müssen keine Prosa parsen.
+- Voll- und inkrementelle Läufe werden gegen historische Änderungsfälle und bekannte Abhängigkeiten evaluiert, bevor ihre Qualität behauptet wird.
