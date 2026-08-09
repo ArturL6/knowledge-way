@@ -33,7 +33,7 @@ def test_vertex_provider_uses_explicit_project_configuration(monkeypatch):
         "enabled": True,
         "provider": "vertex",
         "model": "vertex:text-embedding-005",
-        "reranking": {"enabled": False, "provider": "none", "model": None},
+        "reranking": {"enabled": False, "provider": "none", "model": None, "state": "disabled"},
     }
 
 

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Live acceptance checks against already indexed public repositories. These assert observable retrieval evidence, not a full relevance benchmark.",
+  "cases": [
+    {
+      "id": "click-exact-symbol",
+      "query": "echo_via_pager",
+      "mode": "symbols",
+      "expected": {"repository": "Click benchmark 8.1.7 1786186126", "path": "src/click/termui.py", "symbol": "echo_via_pager"}
+    },
+    {
+      "id": "jinja-exact-symbol",
+      "query": "Bucket",
+      "mode": "symbols",
+      "expected": {"repository": "Jinja demo dependency suite", "path": "src/jinja2/bccache.py", "symbol": "Bucket"}
+    },
+    {
+      "id": "requests-exact-symbol",
+      "query": "stream_decode_response_unicode",
+      "mode": "symbols",
+      "expected": {"repository": "requests-graph-e2e", "path": "src/requests/utils.py", "symbol": "stream_decode_response_unicode"}
+    },
+    {
+      "id": "fastapi-exact-symbol",
+      "query": "FastAPI",
+      "mode": "symbols",
+      "expected": {"repository": "FastAPI public integration fixture", "path": "fastapi/applications.py", "symbol": "FastAPI"}
+    }
+  ]
+}
