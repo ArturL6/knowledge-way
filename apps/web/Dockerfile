@@ -6,9 +6,12 @@ COPY package.json package-lock.json* ./
 RUN npm install
 COPY . .
 RUN npm run build
+
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /app .
+ENV HOSTNAME=0.0.0.0
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
 EXPOSE 3000
-CMD ["npm","start"]
+CMD ["node", "server.js"]

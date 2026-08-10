@@ -15,6 +15,12 @@ services:
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
+  migrate:
+    build: ./apps/api
+    command: alembic -c alembic.ini upgrade head
+    env_file: .env
+    depends_on:
+      postgres: {condition: service_healthy}
   api:
     build: ./apps/api
     env_file: .env
@@ -23,7 +29,7 @@ services:
     ports: ["8000:8000"]
     volumes: ["./data:/data", "${HOME}/.config/gcloud:/root/.config/gcloud:ro"]
     depends_on:
-      postgres: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
       redis: {condition: service_started}
   worker:
     build: ./apps/api
@@ -33,7 +39,7 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: /root/.config/gcloud/application_default_credentials.json
     volumes: ["./data:/data", "${HOME}/.config/gcloud:/root/.config/gcloud:ro"]
     depends_on:
-      postgres: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
       redis: {condition: service_started}
   web:
     build: ./apps/web
