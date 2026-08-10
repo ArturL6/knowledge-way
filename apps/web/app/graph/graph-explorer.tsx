@@ -1,8 +1,8 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../lib/api';
 import { apiErrorMessage } from '../../lib/repositories';
 import { graphNodeKind, nodeStyles } from './graph-model';
@@ -85,6 +85,16 @@ const SYMBOL_HIT_LIMIT = 15;
 const MIN_QUERY_LENGTH = 3;
 const hitKey = (hit: SymbolHit) => `${hit.file_id}:${hit.start_line}:${hit.symbol ?? ''}`;
 
+/** Serializes the deep-link-able graph view state; the default depth is omitted to keep an all-default URL as plain `/graph`. */
+export function buildGraphUrl(repositoryId: string, symbolId: string, depth: string): string {
+  const params = new URLSearchParams();
+  if (repositoryId) params.set('repository', repositoryId);
+  if (symbolId) params.set('symbol', symbolId);
+  if (depth && depth !== '2') params.set('depth', depth);
+  const query = params.toString();
+  return query ? `/graph?${query}` : '/graph';
+}
+
 /** Picks the file symbol behind a search hit; the hit carries a qualified name and start line but no UUID. */
 export function matchFileSymbol(symbols: FileSymbol[], hit: SymbolHit): FileSymbol | null {
   const named = hit.symbol ? symbols.filter((symbol) => symbol.qualified_name === hit.symbol || symbol.name === hit.symbol) : [];
@@ -95,10 +105,14 @@ export function matchFileSymbol(symbols: FileSymbol[], hit: SymbolHit): FileSymb
 }
 
 export default function GraphExplorer() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialRepositoryId = searchParams.get('repository') ?? '';
-  const initialSymbolId = searchParams.get('symbol') ?? '';
-  const [repositoryId, setRepositoryId] = useState(initialRepositoryId); const [symbolId, setSymbolId] = useState(initialSymbolId); const [depth, setDepth] = useState('2');
+  // Snapshotted once: these seed the initial hydration effect below and must stay stable even though our own
+  // writeback effect (further down) keeps changing the *live* URL as the user explores.
+  const initialRepositoryId = useRef(searchParams.get('repository') ?? '').current;
+  const initialSymbolId = useRef(searchParams.get('symbol') ?? '').current;
+  const initialDepth = useRef(searchParams.get('depth') ?? '2').current;
+  const [repositoryId, setRepositoryId] = useState(initialRepositoryId); const [symbolId, setSymbolId] = useState(initialSymbolId); const [depth, setDepth] = useState(initialDepth);
   const [repositories, setRepositories] = useState<RepositoryOption[]>([]);
   const [graph, setGraph] = useState<GraphData>({ nodes: [], links: [] }); const [source, setSource] = useState<'fixture' | 'api' | 'empty'>('empty');
   const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const [selected, setSelected] = useState<GraphNode | null>(null);
@@ -153,6 +167,9 @@ export default function GraphExplorer() {
   }
   useEffect(() => { api<RepositoryOption[]>('/repositories').then((items) => { const ready = items.filter((item) => item.indexing_status === 'ready'); setRepositories(ready); if (!repositoryId && ready[0]) setRepositoryId(ready[0].id); }).catch(() => {}); }, []);
   useEffect(() => { if (initialRepositoryId && initialSymbolId) void requestGraph(initialRepositoryId, initialSymbolId); else if (initialRepositoryId) void requestOverview(); }, [initialRepositoryId, initialSymbolId]);
+  // Keeps the URL in sync as the user explores (repository/symbol/depth), so refresh, Back and Forward land on
+  // the same view. `replace` avoids piling up a history entry per dropdown/depth tweak.
+  useEffect(() => { router.replace(buildGraphUrl(repositoryId, symbolId, depth), { scroll: false }); }, [repositoryId, symbolId, depth, router]);
   async function requestOverview() {
     setError(''); setSelected(null);
     if (!repositoryId.trim()) { setError('Choose an indexed repository first.'); return; }
