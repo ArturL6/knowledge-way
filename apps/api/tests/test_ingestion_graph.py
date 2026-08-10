@@ -1,11 +1,12 @@
 from pathlib import Path
 
+import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from app import ingestion
 from app.db import Base
-from app.models import CodeCard, CodeChunk, File, Repository, Symbol, SymbolEdge
+from app.models import CodeCard, CodeChunk, File, IndexingJob, Repository, Symbol, SymbolEdge
 
 
 class _FakeEmbeddingProvider:
@@ -176,3 +177,54 @@ def test_full_index_checks_out_requested_immutable_revision(monkeypatch, tmp_pat
         indexed = db.get(Repository, repo.id)
         assert indexed.indexed_commit_sha == requested
         assert indexed.indexed_branch is None
+
+
+def _index_snapshot(db, repo_id):
+    """Row identity, not just counts: re-created rows get fresh UUIDs, so equality here proves
+    the previous index was preserved rather than rebuilt into something that merely looks alike."""
+    return {
+        "files": {f.id: f.content_hash for f in db.scalars(select(File).where(File.repository_id == repo_id)).all()},
+        "symbols": {s.id: s.qualified_name for s in db.scalars(select(Symbol).where(Symbol.repository_id == repo_id)).all()},
+        "chunks": {c.id: c.content_hash for c in db.scalars(select(CodeChunk).where(CodeChunk.repository_id == repo_id)).all()},
+        "edges": {(e.source_symbol_id, e.target_name) for e in db.scalars(select(SymbolEdge).where(SymbolEdge.repository_id == repo_id)).all()},
+    }
+
+
+def test_failed_reindex_leaves_the_previous_index_intact(monkeypatch, tmp_path):
+    sessions = _index_with_sqlite(monkeypatch, tmp_path)
+    repo = Repository(name="example", clone_url="unused")
+    with sessions() as db:
+        db.add(repo); db.commit()
+
+    root = Path(tmp_path) / repo.id
+    root.mkdir()
+    (root / "source.py").write_text("def kept():\n    helper()\n\ndef helper():\n    pass\n")
+    ingestion.index_repository(repo.id, full=True)
+
+    with sessions() as db:
+        before = _index_snapshot(db, repo.id)
+    assert before["files"] and before["symbols"] and before["chunks"] and before["edges"]
+
+    # Raise after the destructive delete-and-rebuild has already run, but before the run is
+    # published. This is the ordinary failure path: a provider error, a parse error, a lost
+    # connection. SIGKILL is the one mode that skips the handler, which is why manual kill
+    # testing wrongly suggested the data survives.
+    monkeypatch.setattr(ingestion, "refresh_structural_cards", _raise_provider_failure)
+    (root / "source.py").write_text("def replaced():\n    pass\n")
+
+    with pytest.raises(RuntimeError, match="provider unavailable"):
+        ingestion.index_repository(repo.id, full=True)
+
+    with sessions() as db:
+        assert _index_snapshot(db, repo.id) == before
+        failed_repo = db.get(Repository, repo.id)
+        assert failed_repo.indexing_status == "failed"
+        assert "provider unavailable" in failed_repo.error_message
+        jobs = db.scalars(select(IndexingJob).where(IndexingJob.repository_id == repo.id)).all()
+        assert jobs[-1].status == "failed"
+        assert "provider unavailable" in jobs[-1].error_message
+        assert jobs[-1].finished_at is not None
+
+
+def _raise_provider_failure(*args, **kwargs):
+    raise RuntimeError("provider unavailable")

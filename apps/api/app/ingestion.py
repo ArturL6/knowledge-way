@@ -237,5 +237,10 @@ def index_repository(repo_id, full=False):
    _embed_full_index_chunks(db, repo_id, reusable_embeddings)
   repo.indexed_commit_sha=sha;repo.indexed_branch=run('git','branch','--show-current',cwd=root) or None;repo.indexing_status='ready';repo.error_message=None;repo.indexing_progress={'phase':'finalizing','files':len(paths)};repo.last_indexed_at=datetime.utcnow();repo.last_sync_at=datetime.utcnow();job.status='ready';job.progress=repo.indexing_progress;job.finished_at=datetime.utcnow();db.commit()
  except Exception as e:
+  # The try block is part-way through a destructive rewrite: the old symbols, chunks and edges
+  # are already deleted and the replacements are incomplete. Committing the failure bookkeeping
+  # on this session would flush that half-written state and publish a corrupt index, so discard
+  # it first and record the failure on a clean transaction.
+  db.rollback()
   repo.indexing_status='failed';repo.error_message=str(e);job.status='failed';job.error_message=str(e);job.finished_at=datetime.utcnow();db.commit();raise
  finally: db.close()

@@ -1,3 +1,7 @@
+# Every published port is bound to loopback. Redis runs with no password and RQ deserialises
+# with pickle, so reaching 6379 from the network is remote code execution in the worker, which
+# holds the PostgreSQL superuser DSN and a read-write host mount. Auth is KW-012; this is
+# containment. Change a binding only behind a reverse proxy that terminates authentication.
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -5,7 +9,7 @@ services:
       POSTGRES_DB: knowledgeway
       POSTGRES_USER: knowledgeway
       POSTGRES_PASSWORD: knowledgeway
-    ports: ["5432:5432"]
+    ports: ["127.0.0.1:5432:5432"]
     volumes: ["postgres-data:/var/lib/postgresql/data", "./infra/init.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U knowledgeway -d knowledgeway"]
@@ -14,7 +18,7 @@ services:
       retries: 20
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    ports: ["127.0.0.1:6379:6379"]
   migrate:
     build: ./apps/api
     command: alembic -c alembic.ini upgrade head
@@ -26,7 +30,7 @@ services:
     env_file: .env
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /root/.config/gcloud/application_default_credentials.json
-    ports: ["8000:8000"]
+    ports: ["127.0.0.1:8000:8000"]
     volumes: ["./data:/data", "${HOME}/.config/gcloud:/root/.config/gcloud:ro"]
     depends_on:
       migrate: {condition: service_completed_successfully}
@@ -47,7 +51,7 @@ services:
       # Browser requests use localhost; server-rendered Next.js requests use Docker DNS.
       NEXT_PUBLIC_API_URL: http://localhost:8000/api
       API_INTERNAL_URL: http://api:8000/api
-    ports: ["3000:3000"]
+    ports: ["127.0.0.1:3000:3000"]
     depends_on: [api]
 volumes:
   postgres-data:
