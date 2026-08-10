@@ -37,7 +37,9 @@ class CodeCardDetails(BaseModel):
 def _generation_config():
     return {
         "temperature": 0,
-        "maxOutputTokens": 512,
+        # A real response hit the 512-token ceiling before closing its JSON object.
+        # 1024 accommodates the bounded schema while still capping provider output.
+        "maxOutputTokens": 1024,
         "thinkingConfig": {"thinkingBudget": 0},
         "responseMimeType": "application/json",
         "responseSchema": {

@@ -84,9 +84,11 @@ def test_code_card_prompt_bounds_lists_and_requests_json_only():
     assert "Return JSON only" in prompt
 
 
-def test_code_card_generation_contract_uses_native_json_schema_and_bounded_output():
+def test_code_card_generation_contract_uses_native_json_schema_and_safe_output_budget():
     config = code_cards._generation_config()
-    assert config["maxOutputTokens"] == 512
+    # 512 caused a real provider response to end before the closing JSON delimiter.
+    # The contract allows structured fields whose valid compact serialization exceeds it.
+    assert config["maxOutputTokens"] == 1024
     assert config["responseMimeType"] == "application/json"
     assert config["responseSchema"]["type"] == "OBJECT"
     assert set(config["responseSchema"]["required"]) == {
