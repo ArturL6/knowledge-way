@@ -10,14 +10,19 @@ from redis import Redis
 from rq import Queue
 from app.config import settings
 from app.git_auth import validate_clone_url
-from app.db import get_db, verify_migration_ready
+from app.db import SessionLocal, get_db, verify_migration_ready
 from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, CodeCard, StructuralCard, IndexingJob, Conversation, Message
+from app.reconcile import reconcile_indexing_jobs
 from app.search import search, search_with_capability
 
 app=FastAPI(title='knowledge-way API',version='0.1.0')
 app.add_middleware(CORSMiddleware,allow_origins=settings.cors_origins.split(','),allow_methods=['*'],allow_headers=['*'])
 @app.on_event('startup')
-def startup(): verify_migration_ready()
+def startup():
+ verify_migration_ready()
+ db=SessionLocal()
+ try: reconcile_indexing_jobs(db)
+ finally: db.close()
 class RepositoryIn(BaseModel):
  name:str=Field(min_length=1,max_length=255); clone_url:str=Field(min_length=8,max_length=2048); requested_revision:str|None=Field(default=None,pattern=r'^[0-9a-f]{40}$')
 class RepositoryReindexIn(BaseModel):
@@ -145,7 +150,9 @@ def remove_workspace_repository(workspace_id:str,repo_id:str,db:Session=Depends(
  if not membership: raise HTTPException(404,'Repository is not a member of this workspace')
  db.execute(delete(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace_id,(WorkspaceDependency.source_repository_id==repo_id)|(WorkspaceDependency.target_repository_id==repo_id))); db.delete(membership); db.commit()
 @app.get('/api/repositories')
-def repositories(db:Session=Depends(get_db)): return [repo_out(r) for r in db.scalars(select(Repository).order_by(Repository.created_at.desc())).all()]
+def repositories(db:Session=Depends(get_db)):
+ reconcile_indexing_jobs(db)
+ return [repo_out(r) for r in db.scalars(select(Repository).order_by(Repository.created_at.desc())).all()]
 @app.post('/api/repositories',status_code=202)
 def add_repository(body:RepositoryIn,db:Session=Depends(get_db)):
  try: body.clone_url=validate_clone_url(body.clone_url)
@@ -173,6 +180,8 @@ def reindex(repo_id:str,body:RepositoryReindexIn|None=None,db:Session=Depends(ge
  return {'job_id':enqueue(repo_id,True)}
 @app.get('/api/repositories/{repo_id}/status')
 def status(repo_id:str,db:Session=Depends(get_db)):
+ # Polling this endpoint is how a caller learns an index died, so reclaim orphans before reporting.
+ if reconcile_indexing_jobs(db): db.expire_all()
  r=db.get(Repository,repo_id)
  if not r: raise HTTPException(404,'Repository not found')
  return {'status':r.indexing_status,'progress':r.indexing_progress,'error':r.error_message,'indexed_commit_sha':r.indexed_commit_sha}
