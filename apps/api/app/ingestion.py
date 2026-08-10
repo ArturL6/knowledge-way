@@ -36,6 +36,49 @@ def chunks(content,lang):
  return out or [(None,1,len(lines),content)]
 
 
+def _snapshot_code_cards(db, repo_id):
+ """Keep valid derived cards while a deterministic reindex replaces symbol rows.
+
+ Cards are keyed by stable source evidence (path, qualified name, source hash), not
+ transient database symbol IDs.  This makes snapshot refreshes resumable without
+ another billable Gemini request for unchanged code.
+ """
+ rows = db.execute(
+  select(CodeCard, Symbol.qualified_name, File.path)
+  .join(Symbol, CodeCard.symbol_id == Symbol.id)
+  .join(File, Symbol.file_id == File.id)
+  .where(CodeCard.repository_id == repo_id)
+ ).all()
+ return {
+  (path, qualified_name, card.source_hash): {
+   "model": card.model, "prompt_version": card.prompt_version, "status": card.status,
+   "summary": card.summary, "details": card.details,
+   "input_tokens": card.input_tokens, "output_tokens": card.output_tokens,
+   "created_at": card.created_at,
+  }
+  for card, qualified_name, path in rows
+ }
+
+
+def _restore_code_cards(db, repo_id, sha, preserved_cards):
+ """Attach preserved cards to the freshly parsed equivalent symbols."""
+ if not preserved_cards:
+  return 0
+ restored = 0
+ rows = db.execute(
+  select(Symbol, File.path).join(File, Symbol.file_id == File.id)
+  .where(Symbol.repository_id == repo_id)
+ ).all()
+ for symbol, path in rows:
+  source_hash = hashlib.sha256(symbol.source_text.encode()).hexdigest()
+  values = preserved_cards.get((path, symbol.qualified_name, source_hash))
+  if values:
+   db.add(CodeCard(repository_id=repo_id, symbol_id=symbol.id, source_hash=source_hash,
+                   indexed_commit_sha=sha, **values))
+   restored += 1
+ return restored
+
+
 def _parser_symbols_and_chunks(db, repo_id, file, content, lang, sha):
  """Persist parser declarations and return parser reference evidence for one file."""
  facts = analyze_source(content, lang)
@@ -162,7 +205,10 @@ def index_repository(repo_id, full=False):
    try: raw=p.read_text(errors='strict')
    except (UnicodeDecodeError,OSError): continue
    paths.append((p.relative_to(root).as_posix(),raw,p.stat().st_size,language(str(p))))
-  # Every sync rebuilds a consistent graph snapshot; structural cards must never see stale edges.
+  # Preserve valid card payloads before replacing transient symbol IDs below.
+  preserved_cards = _snapshot_code_cards(db, repo_id)
+  # Make deletion explicit so SQLite tests and PostgreSQL have identical semantics.
+  db.execute(delete(CodeCard).where(CodeCard.repository_id == repo_id))
   db.execute(delete(SymbolEdge).where(SymbolEdge.repository_id == repo_id))
   reusable_embeddings = {}
   if full and embedding_provider() is not None:
@@ -184,6 +230,7 @@ def index_repository(repo_id, full=False):
   for f in existing.values(): db.delete(f)
   db.flush()
   _persist_edges(db, repo_id, parser_files)
+  _restore_code_cards(db, repo_id, sha, preserved_cards)
   db.flush()
   refresh_structural_cards(db, repo_id, sha)
   if full:

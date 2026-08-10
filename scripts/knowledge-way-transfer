@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Portable, point-in-time Knowledge Way database export/import.
+# The PostgreSQL dump contains pgvector values, source content, graph data,
+# Code Cards, and workspace metadata. It intentionally does not contain Git
+# working trees, credentials, Redis/RQ queues, or provider credentials.
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  scripts/knowledge-way-transfer export [options]
+  scripts/knowledge-way-transfer import --input FILE --yes [options]
+
+Options:
+  --compose-file FILE  Compose file (default: docker-compose.yml)
+  --project NAME       Compose project name (optional)
+  --output FILE        Destination archive for export (default: workspace-YYYYmmddTHHMMSSZ.dump)
+  --input FILE         Source archive for import
+  --allow-active       Export a consistent point-in-time snapshot even if indexing jobs are active
+  --yes                Confirm destructive import into the target database
+  -h, --help           Show this help
+
+Export creates a PostgreSQL custom-format dump and a SHA-256 sidecar file.
+It includes the complete Knowledge Way database, including all workspaces and
+pgvector embeddings. Import replaces objects in the selected target database;
+use it only with a fresh/disposable local Knowledge Way database.
+EOF
+}
+
+[[ $# -ge 1 ]] || { usage >&2; exit 2; }
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then usage; exit 0; fi
+action=$1; shift
+compose_file=docker-compose.yml
+project=()
+output=""
+input=""
+allow_active=false
+yes=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --compose-file) compose_file=$2; shift 2 ;;
+    --project) project=(--project-name "$2"); shift 2 ;;
+    --output) output=$2; shift 2 ;;
+    --input) input=$2; shift 2 ;;
+    --allow-active) allow_active=true; shift ;;
+    --yes) yes=true; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+compose=(docker compose "${project[@]}" -f "$compose_file")
+psql=("${compose[@]}" exec -T postgres psql -v ON_ERROR_STOP=1 -U knowledgeway -d knowledgeway -At)
+
+[[ -f "$compose_file" ]] || { echo "Compose file not found: $compose_file" >&2; exit 2; }
+"${compose[@]}" exec -T postgres pg_isready -U knowledgeway -d knowledgeway >/dev/null
+
+case "$action" in
+  export)
+    if [[ -z "$output" ]]; then output="workspace-$(date -u +%Y%m%dT%H%M%SZ).dump"; fi
+    [[ ! -e "$output" ]] || { echo "Refusing to overwrite existing archive: $output" >&2; exit 2; }
+    active=$("${psql[@]}" -c "SELECT count(*) FROM indexing_jobs WHERE status IN ('pending','started','running');")
+    if [[ "$active" != "0" && "$allow_active" != true ]]; then
+      echo "Refusing export: $active indexing job(s) are active. Wait for completion, or explicitly pass --allow-active for a consistent resumable snapshot." >&2
+      exit 3
+    fi
+    mkdir -p "$(dirname "$output")"
+    "${compose[@]}" exec -T postgres pg_dump -U knowledgeway -d knowledgeway --format=custom --no-owner --no-privileges > "$output"
+    sha256sum "$output" > "$output.sha256"
+    echo "Exported complete Knowledge Way database to $output"
+    echo "Checksum: $(cut -d' ' -f1 "$output.sha256")"
+    [[ "$active" == "0" ]] || echo "Note: snapshot contains $active active job record(s); import is resumable but does not restore Redis/RQ queue state."
+    ;;
+  import)
+    [[ -n "$input" && -f "$input" ]] || { echo "Import requires an existing --input FILE" >&2; exit 2; }
+    [[ "$yes" == true ]] || { echo "Import is destructive. Re-run with --yes after selecting a fresh/disposable target database." >&2; exit 2; }
+    "${compose[@]}" exec -T postgres pg_restore -U knowledgeway -d knowledgeway --clean --if-exists --no-owner --no-privileges < "$input"
+    echo "Imported complete Knowledge Way database from $input"
+    ;;
+  *) echo "Unknown action: $action" >&2; usage >&2; exit 2 ;;
+esac

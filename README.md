@@ -26,6 +26,26 @@ Open http://localhost:3000. API docs are at http://localhost:8000/docs.
 Before starting the API against a new database, apply the Alembic migrations.
 See [database migration instructions](docs/migrations.md).
 
+## Portable workspace snapshots
+
+A Knowledge Way database snapshot preserves the indexed workspace as-is: repositories,
+files, Tree-sitter symbols, chunks, graph edges, structural cards, Gemini Code Cards,
+and pgvector embeddings. It is a complete PostgreSQL custom-format dump, not a lossy
+UI-graph export. Git working trees, provider credentials, and Redis/RQ queues are not
+included.
+
+```bash
+# Run after indexing is idle (or deliberately add --allow-active for a resumable snapshot).
+./scripts/knowledge-way-transfer export --output ~/knowledge-way-workspace.dump
+
+# On a different machine with a fresh Knowledge Way pgvector database.
+./scripts/knowledge-way-transfer import --input ~/knowledge-way-workspace.dump --yes
+```
+
+The import replaces objects in its target database; do not point it at an existing
+workspace you want to retain. Verify the transferred file before copying it with the
+adjacent `.sha256` checksum file.
+
 ## MCP code-intelligence bridge
 
 The optional read-only stdio MCP server calls the public API rather than the

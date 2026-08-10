@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     vertex_gemini_location: str = "global"
     vertex_gemini_model: str = "gemini-3.5-flash"
     code_card_max_source_characters: int = 12000
+    # Bounded in-flight Gemini requests. Keep this deliberately small to respect quota.
+    code_card_request_concurrency: int = 8
     # Reranking is opt-in per query and runs only over a bounded retrieval candidate set.
     rerank_provider: str = "none"
     rerank_model: str | None = None

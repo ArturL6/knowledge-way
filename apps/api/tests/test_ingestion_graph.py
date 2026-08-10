@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app import ingestion
 from app.db import Base
-from app.models import CodeChunk, File, Repository, Symbol, SymbolEdge
+from app.models import CodeCard, CodeChunk, File, Repository, Symbol, SymbolEdge
 
 
 class _FakeEmbeddingProvider:
@@ -96,6 +96,34 @@ def test_full_reindex_clears_old_edges_before_rebuilding(monkeypatch, tmp_path):
         assert [(edge.target_name, edge.relationship_type) for edge in edges] == [("unknown", "call")]
         assert edges[0].target_symbol_id is None
         assert db.get(Repository, repo.id).error_message is None
+
+
+def test_full_reindex_preserves_unchanged_code_cards(monkeypatch, tmp_path):
+    sessions = _index_with_sqlite(monkeypatch, tmp_path)
+    repo = Repository(name="example", clone_url="unused")
+    with sessions() as db:
+        db.add(repo); db.commit()
+    root = Path(tmp_path) / repo.id
+    root.mkdir()
+    (root / "source.py").write_text("def stable():\n    return 1\n")
+
+    ingestion.index_repository(repo.id, full=False)
+    with sessions() as db:
+        symbol = db.scalars(select(Symbol).where(Symbol.repository_id == repo.id)).one()
+        old_symbol_id = symbol.id
+        db.add(CodeCard(repository_id=repo.id, symbol_id=symbol.id, source_hash=ingestion.hashlib.sha256(symbol.source_text.encode()).hexdigest(), indexed_commit_sha="old", model="test", prompt_version="v1", status="ready", summary="retained", details={"keywords": ["stable"]}, input_tokens=10, output_tokens=5))
+        db.commit()
+
+    ingestion.index_repository(repo.id, full=False)
+
+    with sessions() as db:
+        symbol = db.scalars(select(Symbol).where(Symbol.repository_id == repo.id)).one()
+        cards = db.scalars(select(CodeCard).where(CodeCard.repository_id == repo.id)).all()
+        assert symbol.id != old_symbol_id
+        assert len(cards) == 1
+        assert cards[0].symbol_id == symbol.id
+        assert cards[0].summary == "retained"
+        assert cards[0].input_tokens == 10
 
 
 def test_embedding_prunes_empty_structural_chunks(monkeypatch, tmp_path):
