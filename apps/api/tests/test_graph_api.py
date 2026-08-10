@@ -1,8 +1,11 @@
 from types import SimpleNamespace
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
-from app.db import get_db
+from app.db import Base, get_db
 from app.main import app
 from app.models import Repository, File, Symbol, SymbolEdge
 
@@ -46,17 +49,71 @@ def client():
 def teardown_function(): app.dependency_overrides.clear()
 
 
-def test_symbol_detail_and_direct_navigation_include_evidence_and_are_scoped():
+def test_symbol_detail_is_scoped_and_404s_on_a_foreign_symbol():
     api = client()
     detail = api.get("/api/repositories/repo/symbols/a")
-    callers = api.get("/api/repositories/repo/symbols/a/callers")
-    callees = api.get("/api/repositories/repo/symbols/a/callees")
     assert detail.status_code == 200
     assert detail.json()["qualified_name"] == "pkg.root"
-    assert callers.json()["callers"] == [{"symbol": callers.json()["callers"][0]["symbol"], "edge": {"id": "e1", "source_symbol_id": "b", "target_symbol_id": "a", "target_name": "pkg.root", "type": "calls", "confidence": 95, "resolution": "ambiguous", "line": 11, "source_file_id": "fb"}}]
-    assert callers.json()["callers"][0]["symbol"]["id"] == "b"
-    assert callees.json()["callees"][0]["symbol"]["id"] == "c"
     assert api.get("/api/repositories/repo/symbols/foreign").status_code == 404
+
+
+# --- #33: callers/callees push the direction predicate + pagination into SQL --------------
+
+def _sql_session():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    return sessionmaker(bind=engine)()
+
+
+def _sql_client(db):
+    app.dependency_overrides[get_db] = lambda: db
+    return TestClient(app)
+
+
+def test_callers_and_callees_are_direction_filtered_and_paginated():
+    db = _sql_session()
+    db.add(Repository(id="repo", name="demo", clone_url="https://example.test/demo.git"))
+    db.commit()
+    db.add(File(id="f", repository_id="repo", path="a.py", language="python", content="x",
+                content_hash="h", size_bytes=1, indexed_commit_sha="a" * 40))
+    db.commit()
+    db.add(Symbol(id="root", repository_id="repo", file_id="f", name="root", qualified_name="pkg.root",
+                   symbol_type="function", start_line=1, end_line=1, start_byte=0, end_byte=1, source_text="x"))
+    # 3 real callers of "root" (b0, b1, b2) plus a decoy callee edge (root -> c) and an edge
+    # belonging to another symbol entirely -- these must not leak into either direction's result.
+    for name in ["b0", "b1", "b2", "c"]:
+        db.add(Symbol(id=name, repository_id="repo", file_id="f", name=name, qualified_name=f"pkg.{name}",
+                       symbol_type="function", start_line=1, end_line=1, start_byte=0, end_byte=1, source_text="x"))
+    db.commit()
+    for i, name in enumerate(["b0", "b1", "b2"]):
+        db.add(SymbolEdge(id=f"caller-{name}", repository_id="repo", source_symbol_id=name, target_symbol_id="root",
+                           target_name="pkg.root", relationship_type="calls", source_file_id="f", line_number=i + 1))
+    db.add(SymbolEdge(id="callee-c", repository_id="repo", source_symbol_id="root", target_symbol_id="c",
+                       target_name="pkg.c", relationship_type="calls", source_file_id="f", line_number=1))
+    # An edge with no resolved symbol on the related side must not surface as a caller.
+    db.add(SymbolEdge(id="unresolved", repository_id="repo", source_symbol_id=None, target_symbol_id="root",
+                       target_name="pkg.ghost", relationship_type="calls", source_file_id="f", line_number=9))
+    db.commit()
+
+    api = _sql_client(db)
+    try:
+        callers = api.get("/api/repositories/repo/symbols/root/callers")
+        callees = api.get("/api/repositories/repo/symbols/root/callees")
+        assert callers.status_code == callees.status_code == 200
+        assert [c["symbol"]["id"] for c in callers.json()["callers"]] == ["b0", "b1", "b2"]
+        assert [c["symbol"]["id"] for c in callees.json()["callees"]] == ["c"]
+
+        first_page = api.get("/api/repositories/repo/symbols/root/callers?limit=2&offset=0")
+        second_page = api.get("/api/repositories/repo/symbols/root/callers?limit=2&offset=2")
+        assert [c["symbol"]["id"] for c in first_page.json()["callers"]] == ["b0", "b1"]
+        assert [c["symbol"]["id"] for c in second_page.json()["callers"]] == ["b2"]
+
+        assert api.get("/api/repositories/repo/symbols/root/callers?limit=0").status_code == 422
+        assert api.get("/api/repositories/repo/symbols/root/callers?limit=201").status_code == 422
+        assert api.get("/api/repositories/repo/symbols/root/callers?offset=-1").status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+        db.close()
 
 
 def test_subgraph_is_bounded_deterministic_and_validates_depth():
