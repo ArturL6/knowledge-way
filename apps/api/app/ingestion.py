@@ -167,12 +167,12 @@ def _embed_full_index_chunks(db, repo_id, reusable_embeddings):
   if not chunk.source_text.strip(): db.delete(chunk); continue
   text=_embedding_document(repo,chunk,files[chunk.file_id],symbols.get(chunk.symbol_id),cards.get(chunk.symbol_id),edges); key=hashlib.sha256(text.encode()).hexdigest()
   cached=reusable_embeddings.get((key,provider.model))
-  if cached is not None: chunk.embedding,chunk.embedding_model=cached,provider.model
+  if cached is not None: chunk.embedding,chunk.embedding_model,chunk.embedding_input_hash=cached,provider.model,key
   else: missing.append((chunk,text,key))
  for offset in range(0,len(missing),settings.embedding_batch_size):
   batch=missing[offset:offset+settings.embedding_batch_size]; vectors=asyncio.run(provider.embed_texts([text for _,text,_ in batch]))
   if len(vectors)!=len(batch): raise RuntimeError('embedding provider returned an incomplete embedding batch')
-  for (chunk,_,_),vector in zip(batch,vectors): chunk.embedding,chunk.embedding_model=vector,provider.model
+  for (chunk,_,document_key),vector in zip(batch,vectors): chunk.embedding,chunk.embedding_model,chunk.embedding_input_hash=vector,provider.model,document_key
 
 
 def reembed_repository(repo_id):
@@ -211,10 +211,12 @@ def index_repository(repo_id, full=False):
   db.execute(delete(CodeCard).where(CodeCard.repository_id == repo_id))
   db.execute(delete(SymbolEdge).where(SymbolEdge.repository_id == repo_id))
   reusable_embeddings = {}
+  # Keyed on the hash of the embedded document, not of raw source: a chunk whose code is unchanged
+  # but whose code card or resolved calls moved must be re-embedded, not served a stale vector.
   if full and embedding_provider() is not None:
    for chunk in db.scalars(select(CodeChunk).where(CodeChunk.repository_id==repo_id).where(CodeChunk.embedding.is_not(None))).all():
-    if chunk.embedding_model:
-     reusable_embeddings[(chunk.content_hash, chunk.embedding_model)] = list(chunk.embedding)
+    if chunk.embedding_model and chunk.embedding_input_hash:
+     reusable_embeddings[(chunk.embedding_input_hash, chunk.embedding_model)] = list(chunk.embedding)
   existing={f.path:f for f in db.scalars(select(File).where(File.repository_id==repo_id)).all()}
   parser_files=[]
   for path,content,size,lang in paths:
@@ -237,5 +239,10 @@ def index_repository(repo_id, full=False):
    _embed_full_index_chunks(db, repo_id, reusable_embeddings)
   repo.indexed_commit_sha=sha;repo.indexed_branch=run('git','branch','--show-current',cwd=root) or None;repo.indexing_status='ready';repo.error_message=None;repo.indexing_progress={'phase':'finalizing','files':len(paths)};repo.last_indexed_at=datetime.utcnow();repo.last_sync_at=datetime.utcnow();job.status='ready';job.progress=repo.indexing_progress;job.finished_at=datetime.utcnow();db.commit()
  except Exception as e:
+  # The try block is part-way through a destructive rewrite: the old symbols, chunks and edges
+  # are already deleted and the replacements are incomplete. Committing the failure bookkeeping
+  # on this session would flush that half-written state and publish a corrupt index, so discard
+  # it first and record the failure on a clean transaction.
+  db.rollback()
   repo.indexing_status='failed';repo.error_message=str(e);job.status='failed';job.error_message=str(e);job.finished_at=datetime.utcnow();db.commit();raise
  finally: db.close()

@@ -1,5 +1,7 @@
 from app.config import settings
-from app.providers import VertexEmbeddingProvider, embedding_provider, semantic_capability
+import pytest
+from app.providers import (OpenRouterEmbeddingProvider, VertexEmbeddingProvider,
+                           clamp_embedding_input, embedding_provider, semantic_capability)
 import asyncio
 from app.search import _fuse
 
@@ -109,3 +111,60 @@ def test_hybrid_fusion_is_deterministic():
     first = {"type": "chunk", "file_id": "a", "start_line": 1, "end_line": 2, "score": .2}
     second = {"type": "chunk", "file_id": "b", "start_line": 1, "end_line": 2, "score": .9}
     assert [item["file_id"] for item in _fuse([[first, second], [first]], 2)] == ["a", "b"]
+
+
+class _FakeOpenRouter:
+    """Rejects any input longer than `ceiling` characters, the way the real endpoint rejects any
+    input over its token limit. Records every batch so ordering can be asserted."""
+
+    def __init__(self, ceiling):
+        self.ceiling, self.batches = ceiling, []
+        self.embeddings = self
+
+    def __call__(self, **kwargs):
+        return self
+
+    async def create(self, model, input):
+        from openai import BadRequestError
+
+        self.batches.append(list(input))
+        if any(len(text) > self.ceiling for text in input):
+            raise BadRequestError.__new__(BadRequestError)
+        return type("R", (), {"data": [type("E", (), {"embedding": [float(len(t))]})() for t in input]})()
+
+
+def test_openrouter_clamps_each_input_to_the_configured_budget(monkeypatch):
+    monkeypatch.setattr(settings, "embedding_max_input_characters", 10)
+    assert clamp_embedding_input("x" * 25) == "x" * 10
+    assert clamp_embedding_input("short") == "short"
+    # A budget of zero disables clamping rather than truncating everything to nothing.
+    monkeypatch.setattr(settings, "embedding_max_input_characters", 0)
+    assert clamp_embedding_input("x" * 25) == "x" * 25
+
+
+def test_openrouter_isolates_one_oversized_input_instead_of_failing_the_batch(monkeypatch):
+    monkeypatch.setattr(settings, "embedding_max_input_characters", 0)
+    # Sizes are above the 500-character halving floor, so this exercises the real path.
+    fake = _FakeOpenRouter(ceiling=1000)
+    monkeypatch.setattr("openai.AsyncOpenAI", fake)
+    provider = OpenRouterEmbeddingProvider("key", "model", "https://example.invalid")
+    oversized = "x" * 4000
+
+    result = asyncio.run(provider.embed_texts(["aa", oversized, "bbb"]))
+
+    # Halved 4000 -> 2000 -> 1000, and the innocents come back in their original positions.
+    assert result == [[2.0], [1000.0], [3.0]]
+    assert fake.batches[0] == ["aa", oversized, "bbb"]  # whole batch attempted first
+    assert ["aa"] in fake.batches and ["bbb"] in fake.batches
+
+
+def test_openrouter_raises_rather_than_looping_on_an_unembeddable_input(monkeypatch):
+    monkeypatch.setattr(settings, "embedding_max_input_characters", 0)
+    fake = _FakeOpenRouter(ceiling=0)  # rejects everything, so halving can never succeed
+    monkeypatch.setattr("openai.AsyncOpenAI", fake)
+    provider = OpenRouterEmbeddingProvider("key", "model", "https://example.invalid")
+
+    with pytest.raises(Exception):
+        asyncio.run(provider.embed_texts(["x" * 4000]))
+    # Bounded by the 500-character floor: 4000 -> 2000 -> 1000 -> 500 -> stop.
+    assert len(fake.batches) <= 5
