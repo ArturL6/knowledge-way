@@ -320,7 +320,7 @@ def repository_graph(repo_id:str,max_nodes:int=Query(MAX_GRAPH_NODES,ge=10,le=MA
  graph_nodes += [{'id':f'file:{file.id}','name':file.path,'path':file.path,'kind':'file'} for file_id,file in sorted(files.items(),key=lambda item:item[1].path) if file_id in selected_files]
  graph_nodes += [dict(graph_symbol_out(symbols[symbol_id]),kind=symbols[symbol_id].symbol_type) for symbol_id in selected]
  graph_edges=[]
- for directory in directories:
+ for directory in sorted(directories):
   parent=str(PurePosixPath(directory).parent)
   graph_edges.append({'source':f'directory:{parent}' if parent not in ('', '.') else f'repository:{repo.id}','target':f'directory:{directory}','relationship':'contains','confidence':1})
  for file_id in selected_files:
@@ -340,10 +340,14 @@ def text_search(q:str,mode:str='hybrid',limit:int=30,repository_id:str|None=None
  results, semantic = search_with_capability(db,q,mode,min(max(limit,1),100),repository_id=repository_id,rerank=rerank)
  return {'query':q,'mode':mode,'results':results,'semantic':semantic}
 @app.get('/api/search/symbols')
-def symbol_search(q:str,db:Session=Depends(get_db)): return {'results':search(db,q,'symbols')}
+def symbol_search(q:str,repository_id:str|None=None,db:Session=Depends(get_db)):
+ if repository_id and not db.get(Repository,repository_id): raise HTTPException(404,'Repository not found')
+ return {'results':search(db,q,'symbols',repository_id=repository_id)}
 @app.post('/api/search/semantic')
 def semantic_search(body:dict,db:Session=Depends(get_db)):
- results, semantic = search_with_capability(db,body.get('query',''),'semantic')
+ repository_id=body.get('repository_id')
+ if repository_id and not db.get(Repository,repository_id): raise HTTPException(404,'Repository not found')
+ results, semantic = search_with_capability(db,body.get('query',''),'semantic',repository_id=repository_id)
  return {'results':results,'semantic':semantic}
 @app.post('/api/explanations')
 def explanation(body:ExplanationIn,db:Session=Depends(get_db)):
