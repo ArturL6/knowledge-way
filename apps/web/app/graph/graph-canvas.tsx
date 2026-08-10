@@ -11,10 +11,13 @@ type GraphEndpoint = string | { id?: unknown };
 const shortLabel = (label: string) => label.length > 34 ? `${label.slice(0, 31)}…` : label;
 const endpointId = (endpoint: unknown) => typeof endpoint === 'object' && endpoint !== null ? `${(endpoint as { id?: unknown }).id ?? ''}` : `${endpoint ?? ''}`;
 const nodeRadius = (node: GraphNode) => node.isRoot ? 12 : Math.min(9, 5 + Math.sqrt(node.degree ?? 0));
+const isStructural = (relationship: string) => relationship === 'contains' || relationship === 'defines';
 const relationshipStyle = (link: GraphLink) => {
   if (link.relationship === 'contains') return { color: '#8f7bea', width: 1.5, dash: [3, 3], arrow: 0 };
   if (link.relationship === 'defines') return { color: '#54d2a0', width: 1.8, dash: [5, 2], arrow: 0 };
-  return { color: '#74a7ff', width: (link.confidence ?? 0) >= 0.9 ? 2.4 : 1.5, dash: [], arrow: 5 };
+  // ponytail: width reflects parallel-edge count (log-ish), never `confidence` — that field is a name-uniqueness
+  // fluke, not a signal, and rendering it as stroke thickness previously made the least trustworthy edges loudest.
+  return { color: '#74a7ff', width: Math.min(3, 1.4 + Math.log2(Math.max(1, link.count ?? 1)) * 0.5), dash: [], arrow: 5 };
 };
 
 export default function GraphCanvas({ data, onNodeClick, selectedNodeId }: { data: GraphData; onNodeClick: (node: GraphNode) => void; selectedNodeId?: string }) {
@@ -109,7 +112,12 @@ export default function GraphCanvas({ data, onNodeClick, selectedNodeId }: { dat
         ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
         ctx.fillRect(node.x + radius, node.y - fontSize, ctx.measureText(label).width + 14 / globalScale, fontSize * 2);
       }}
-      linkLabel={(link) => { const item = link as GraphLink; return item.confidence == null ? item.relationship : `${item.relationship} (${Math.round(item.confidence * 100)}%)`; }}
+      linkLabel={(link) => {
+        const item = link as GraphLink;
+        if (isStructural(item.relationship)) return item.relationship;
+        const countSuffix = item.count && item.count > 1 ? ` ×${item.count}` : '';
+        return item.resolution ? `${item.relationship}${countSuffix} · ${item.resolution}` : `${item.relationship}${countSuffix}`;
+      }}
       linkColor={(link) => relationshipStyle(link as GraphLink).color}
       linkLineDash={(link) => relationshipStyle(link as GraphLink).dash}
       linkDirectionalArrowLength={(link) => relationshipStyle(link as GraphLink).arrow}

@@ -56,9 +56,33 @@ def enqueue(repo_id,full=False):
  try: return Queue('indexing',connection=Redis.from_url(settings.redis_url),default_timeout=settings.index_job_timeout).enqueue('app.ingestion.index_repository',repo_id,full).id
  except Exception: return None
 MAX_GRAPH_NODES=100
+MAX_GRAPH_EDGES=500
 def symbol_out(s): return {'id':s.id,'repository_id':s.repository_id,'file_id':s.file_id,'name':s.name,'qualified_name':s.qualified_name,'type':s.symbol_type,'language':s.language,'start_line':s.start_line,'end_line':s.end_line,'start_byte':s.start_byte,'end_byte':s.end_byte,'parent_symbol_id':s.parent_symbol_id,'signature':s.signature,'source_text':s.source_text}
-def edge_out(e): return {'id':e.id,'source_symbol_id':e.source_symbol_id,'target_symbol_id':e.target_symbol_id,'target_name':e.target_name,'type':e.relationship_type,'confidence':e.confidence,'line':e.line_number,'source_file_id':e.source_file_id}
+def graph_symbol_out(s): return {k:v for k,v in symbol_out(s).items() if k!='source_text'}
+def edge_out(e): return {'id':e.id,'source_symbol_id':e.source_symbol_id,'target_symbol_id':e.target_symbol_id,'target_name':e.target_name,'type':e.relationship_type,'confidence':e.confidence,'resolution':'name-match' if e.confidence>=100 else 'ambiguous','line':e.line_number,'source_file_id':e.source_file_id}
 def edge_key(e): return (e.relationship_type,e.source_symbol_id or '',e.target_symbol_id or '',e.target_name,e.line_number,e.id)
+def collapse_code_edges(edge_dicts):
+ groups={}
+ for d in edge_dicts:
+  key=(d['source_symbol_id'],d['target_symbol_id'],d['type'])
+  if key in groups: groups[key]['count']+=1
+  else: groups[key]=dict(d,count=1)
+ return list(groups.values())
+def bfs_selected(symbol_id,edges,available,depth,max_nodes=None):
+ selected={symbol_id}; frontier={symbol_id}
+ for _ in range(depth):
+  candidates=[]
+  for e in edges:
+   if e.source_symbol_id in frontier and e.target_symbol_id in available: candidates.append(e.target_symbol_id)
+   if e.target_symbol_id in frontier and e.source_symbol_id in available: candidates.append(e.source_symbol_id)
+  next_frontier=[]
+  for node_id in sorted(set(candidates),key=lambda i:(available[i].qualified_name,i)):
+   if node_id not in selected:
+    if max_nodes is not None and len(selected)>=max_nodes: break
+    selected.add(node_id); next_frontier.append(node_id)
+  frontier=set(next_frontier)
+  if not frontier: break
+ return selected
 def scoped_symbol(db,repo_id,symbol_id):
  s=next((x for x in db.scalars(select(Symbol).where(Symbol.repository_id==repo_id,Symbol.id==symbol_id)).all() if x.id==symbol_id and x.repository_id==repo_id),None)
  if not s: raise HTTPException(404,'Symbol not found')
@@ -254,30 +278,33 @@ def subgraph(repo_id:str,symbol_id:str,depth:int=Query(1,ge=1,le=2),max_nodes:in
  scoped_symbol(db,repo_id,symbol_id)
  edges=[e for e in scoped_edges(db,repo_id) if e.source_symbol_id and e.target_symbol_id]
  available=scoped_symbols(db,repo_id,{x for e in edges for x in (e.source_symbol_id,e.target_symbol_id)}|{symbol_id})
- selected={symbol_id}; frontier={symbol_id}; truncated=False
- for _ in range(depth):
-  candidates=[]
-  for e in edges:
-   if e.source_symbol_id in frontier and e.target_symbol_id in available: candidates.append(e.target_symbol_id)
-   if e.target_symbol_id in frontier and e.source_symbol_id in available: candidates.append(e.source_symbol_id)
-  next_frontier=[]
-  for node_id in sorted(set(candidates),key=lambda i:(available[i].qualified_name,i)):
-   if node_id not in selected:
-    if len(selected)>=max_nodes: truncated=True; break
-    selected.add(node_id); next_frontier.append(node_id)
-  frontier=set(next_frontier)
-  if not frontier: break
+ full_selected=bfs_selected(symbol_id,edges,available,depth)
+ selected=bfs_selected(symbol_id,edges,available,depth,max_nodes)
+ total_edges=len({(e.source_symbol_id,e.target_symbol_id,e.relationship_type) for e in edges if e.source_symbol_id in full_selected and e.target_symbol_id in full_selected})
  graph_edges=[e for e in edges if e.source_symbol_id in selected and e.target_symbol_id in selected]
- return {'root_symbol_id':symbol_id,'depth':depth,'max_nodes':max_nodes,'truncated':truncated,'nodes':[symbol_out(available[i]) for i in sorted(selected,key=lambda i:(available[i].qualified_name,i))],'edges':[edge_out(e) for e in graph_edges]}
+ collapsed=sorted(collapse_code_edges([edge_out(e) for e in graph_edges]),key=lambda d:-d['count'])
+ edge_budget_hit=len(collapsed)>MAX_GRAPH_EDGES; collapsed=collapsed[:MAX_GRAPH_EDGES]
+ node_cap_hit=len(full_selected)>len(selected)
+ reason='node_cap' if node_cap_hit else 'edge_budget' if edge_budget_hit else None
+ nodes=[graph_symbol_out(available[i]) for i in sorted(selected,key=lambda i:(available[i].qualified_name,i))]
+ return {'root_symbol_id':symbol_id,'depth':depth,'max_nodes':max_nodes,'total_nodes':len(full_selected),'total_edges':total_edges,'returned_nodes':len(nodes),'returned_edges':len(collapsed),'truncated':node_cap_hit or edge_budget_hit,'reason':reason,'nodes':nodes,'edges':collapsed}
 @app.get('/api/repositories/{repo_id}/graph')
 def repository_graph(repo_id:str,max_nodes:int=Query(MAX_GRAPH_NODES,ge=10,le=MAX_GRAPH_NODES),db:Session=Depends(get_db)):
- """Return a bounded repository overview with structural and code relationship nodes."""
+ """Return a bounded repository overview with structural and code relationship nodes.
+ total_/returned_ describe the SYMBOL graph (symbols, distinct (source,target,type) code
+ relationships) so returned<=total always; the nodes/edges arrays additionally carry
+ repository/directory/file scaffolding and structural contains/defines edges for rendering."""
  repo=db.get(Repository,repo_id)
  if not repo: raise HTTPException(404,'Repository not found')
  files=scoped_files(db,repo_id); edges=[e for e in scoped_edges(db,repo_id) if e.source_symbol_id and e.target_symbol_id]
  symbols={s.id:s for s in db.scalars(select(Symbol).where(Symbol.repository_id==repo_id)).all() if s.repository_id==repo_id and s.file_id in files}
- degree={symbol_id:0 for symbol_id in symbols}
+ distinct_edges=[]; seen_relationships=set()
  for edge in edges:
+  relationship_key=(edge.source_symbol_id,edge.target_symbol_id,edge.relationship_type)
+  if relationship_key not in seen_relationships: seen_relationships.add(relationship_key); distinct_edges.append(edge)
+ total_edges=len(distinct_edges)
+ degree={symbol_id:0 for symbol_id in symbols}
+ for edge in distinct_edges:
   if edge.source_symbol_id in degree: degree[edge.source_symbol_id]+=1
   if edge.target_symbol_id in degree: degree[edge.target_symbol_id]+=1
  selected=[]; selected_files=set(); directories=set(); budget=max_nodes-1
@@ -291,7 +318,7 @@ def repository_graph(repo_id:str,max_nodes:int=Query(MAX_GRAPH_NODES,ge=10,le=MA
  graph_nodes=[{'id':f'repository:{repo.id}','name':getattr(repo,'name',repo.id),'kind':'repository'}]
  graph_nodes += [{'id':f'directory:{directory}','name':directory,'kind':'directory'} for directory in sorted(directories)]
  graph_nodes += [{'id':f'file:{file.id}','name':file.path,'path':file.path,'kind':'file'} for file_id,file in sorted(files.items(),key=lambda item:item[1].path) if file_id in selected_files]
- graph_nodes += [dict(symbol_out(symbols[symbol_id]),kind=symbols[symbol_id].symbol_type) for symbol_id in selected]
+ graph_nodes += [dict(graph_symbol_out(symbols[symbol_id]),kind=symbols[symbol_id].symbol_type) for symbol_id in selected]
  graph_edges=[]
  for directory in directories:
   parent=str(PurePosixPath(directory).parent)
@@ -301,8 +328,12 @@ def repository_graph(repo_id:str,max_nodes:int=Query(MAX_GRAPH_NODES,ge=10,le=MA
   graph_edges.append({'source':f'directory:{parent}' if parent not in ('', '.') else f'repository:{repo.id}','target':f'file:{file.id}','relationship':'contains','confidence':1})
  for symbol_id in selected:
   graph_edges.append({'source':f'file:{symbols[symbol_id].file_id}','target':symbol_id,'relationship':'defines','confidence':1})
- graph_edges += [edge_out(edge) for edge in edges if edge.source_symbol_id in selected and edge.target_symbol_id in selected]
- return {'repository_id':repo.id,'max_nodes':max_nodes,'truncated':len(selected)<len(symbols),'nodes':graph_nodes,'edges':graph_edges}
+ code_edges=sorted(collapse_code_edges([edge_out(edge) for edge in edges if edge.source_symbol_id in selected and edge.target_symbol_id in selected]),key=lambda d:-d['count'])
+ edge_budget_hit=len(code_edges)>MAX_GRAPH_EDGES; shown_code_edges=code_edges[:MAX_GRAPH_EDGES]
+ graph_edges += shown_code_edges
+ node_cap_hit=len(selected)<len(symbols)
+ reason='node_cap' if node_cap_hit else 'edge_budget' if edge_budget_hit else None
+ return {'repository_id':repo.id,'max_nodes':max_nodes,'total_nodes':len(symbols),'total_edges':total_edges,'returned_nodes':len(selected),'returned_edges':len(shown_code_edges),'truncated':node_cap_hit or edge_budget_hit,'reason':reason,'nodes':graph_nodes,'edges':graph_edges}
 @app.get('/api/search')
 def text_search(q:str,mode:str='hybrid',limit:int=30,repository_id:str|None=None,rerank:bool=False,db:Session=Depends(get_db)):
  if repository_id and not db.get(Repository,repository_id): raise HTTPException(404,'Repository not found')
