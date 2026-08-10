@@ -14,6 +14,10 @@ export type GraphLink = {
   target: string;
   relationship: string;
   confidence?: number | null;
+  /** 'name-match' | 'ambiguous' for code edges; absent for structural (contains/defines) edges. */
+  resolution?: string | null;
+  /** Parallel edges of the same relationship collapsed into one; >=1. */
+  count?: number;
   [key: string]: unknown;
 };
 

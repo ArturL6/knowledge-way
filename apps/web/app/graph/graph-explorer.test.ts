@@ -9,7 +9,7 @@ describe('mapApiGraph', () => {
         { id: 'sym-1', name: 'Foo', kind: 'class' },
         { id: 'sym-2', qualified_name: 'Bar.baz', type: 'method' },
       ],
-      edges: [{ source: 'sym-1', target: 'sym-2', relationship_type: 'calls', confidence: 0.8 }],
+      edges: [{ source: 'sym-1', target: 'sym-2', relationship_type: 'calls', confidence: 0.8, resolution: 'name-match', count: 3 }],
     };
     const graph = mapApiGraph(payload);
     expect(graph.nodes).toHaveLength(2);
@@ -27,14 +27,26 @@ describe('mapApiGraph', () => {
     expect(other?.kind).toBe('function');
     expect(other?.degree).toBe(1);
 
-    expect(graph.links[0]).toMatchObject({ source: 'sym-1', target: 'sym-2', relationship: 'calls', confidence: 0.8 });
+    expect(graph.links[0]).toMatchObject({ source: 'sym-1', target: 'sym-2', relationship: 'calls', confidence: 0.8, resolution: 'name-match', count: 3 });
   });
 
   it('reads nodes/links nested under a data wrapper', () => {
     const payload = { data: { nodes: [{ id: 'a' }, { id: 'b' }], links: [{ source: 'a', target: 'b' }] } };
     const graph = mapApiGraph(payload);
     expect(graph.nodes.map((n) => n.id)).toEqual(['a', 'b']);
-    expect(graph.links).toEqual([{ source: 'a', target: 'b', relationship: 'related', confidence: null }]);
+    expect(graph.links).toEqual([{ source: 'a', target: 'b', relationship: 'related', confidence: null, resolution: null, count: 1 }]);
+  });
+
+  it('defaults resolution to null and count to 1 when the edge omits them (e.g. structural contains/defines edges)', () => {
+    const payload = { nodes: [{ id: 'a' }, { id: 'b' }], edges: [{ source: 'a', target: 'b', relationship: 'contains' }] };
+    const graph = mapApiGraph(payload);
+    expect(graph.links[0]).toMatchObject({ relationship: 'contains', resolution: null, count: 1 });
+  });
+
+  it('maps a low-confidence ambiguous code edge and preserves its count', () => {
+    const payload = { nodes: [{ id: 'a' }, { id: 'b' }], edges: [{ source: 'a', target: 'b', relationship: 'calls', resolution: 'ambiguous', count: 5 }] };
+    const graph = mapApiGraph(payload);
+    expect(graph.links[0]).toMatchObject({ resolution: 'ambiguous', count: 5 });
   });
 
   it('resolves node ids from symbol_id/node_id fallbacks', () => {
