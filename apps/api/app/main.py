@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from redis import Redis
 from rq import Queue
+from app.code_cards import code_card_model
 from app.config import settings
 from app.git_auth import validate_clone_url
 from app.db import SessionLocal, get_db, verify_migration_ready
@@ -191,7 +192,7 @@ def generate_code_cards(repo_id:str,body:CodeCardRunIn,db:Session=Depends(get_db
  if not settings.code_cards_enabled: raise HTTPException(409,'Code cards are disabled')
  try: job_id=Queue('indexing',connection=Redis.from_url(settings.redis_url),default_timeout=settings.index_job_timeout).enqueue('app.code_cards.generate_code_cards',repo_id,body.limit).id
  except Exception: raise HTTPException(503,'Could not enqueue code-card generation')
- return {'job_id':job_id,'model':settings.vertex_gemini_model,'limit':body.limit}
+ return {'job_id':job_id,'model':code_card_model(),'limit':body.limit}
 @app.get('/api/repositories/{repo_id}/symbols/{symbol_id}/code-card')
 def code_card(repo_id:str,symbol_id:str,db:Session=Depends(get_db)):
  scoped_symbol(db,repo_id,symbol_id)

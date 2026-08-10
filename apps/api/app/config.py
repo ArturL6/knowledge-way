@@ -44,8 +44,12 @@ class Settings(BaseSettings):
     vertex_location: str = "us-central1"
     vertex_embedding_model: str = "text-embedding-005"
     vertex_embedding_dimensions: int = 768
-    # Optional, versioned Gemini summaries of symbols. Explicit opt-in because they incur usage costs.
+    # Optional, versioned LLM summaries of symbols. Explicit opt-in because they incur usage costs.
     code_cards_enabled: bool = False
+    # "vertex" uses ADC and Gemini; "openrouter" reuses OPENROUTER_API_KEY. The model must support
+    # structured outputs, because a card is only persisted if it validates against CodeCardDetails.
+    code_card_provider: str = "openrouter"
+    openrouter_card_model: str = "deepseek/deepseek-v4-flash-0731"
     vertex_gemini_location: str = "global"
     vertex_gemini_model: str = "gemini-3.5-flash"
     code_card_max_source_characters: int = 12000

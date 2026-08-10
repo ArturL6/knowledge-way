@@ -1,6 +1,8 @@
 import asyncio
 from types import SimpleNamespace
 
+import pytest
+
 from app import code_cards
 
 
@@ -114,3 +116,36 @@ def test_code_card_details_accepts_compact_long_identifier_fact():
         '],"dependencies":[],"keywords":[],"confidence":"high"}'
     )
     assert details["side_effects"] == [item]
+
+
+def test_openrouter_payload_disables_reasoning_and_requests_a_strict_schema(monkeypatch):
+    monkeypatch.setattr(code_cards.settings, "code_card_provider", "openrouter")
+    monkeypatch.setattr(code_cards.settings, "openrouter_card_model", "vendor/model")
+    payload = code_cards._build_payload("the prompt")
+
+    # A reasoning model spends max_tokens deliberating and returns content=None, which is how a
+    # 25-symbol run produced zero cards twice before this was set.
+    assert payload["reasoning"] == {"enabled": False}
+    assert payload["response_format"]["json_schema"]["strict"] is True
+    assert payload["model"] == "vendor/model"
+    assert [m["content"] for m in payload["messages"]] == ["the prompt"]
+
+
+def test_openrouter_retry_payload_states_what_was_rejected(monkeypatch):
+    monkeypatch.setattr(code_cards.settings, "code_card_provider", "openrouter")
+    payload = code_cards._build_payload("the prompt", "summary: field required")
+
+    assert len(payload["messages"]) == 2
+    assert "summary: field required" in payload["messages"][1]["content"]
+
+
+def test_null_content_becomes_a_validation_failure_not_an_attribute_error(monkeypatch):
+    monkeypatch.setattr(code_cards.settings, "code_card_provider", "openrouter")
+    body = {"choices": [{"message": {"content": None}}], "usage": {"prompt_tokens": 7}}
+
+    text, input_tokens, output_tokens = code_cards._extract_card(body)
+
+    assert text == ""
+    assert (input_tokens, output_tokens) == (7, None)
+    with pytest.raises(ValueError):
+        code_cards._parse_details(text)

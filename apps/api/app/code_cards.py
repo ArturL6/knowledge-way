@@ -1,4 +1,4 @@
-"""Versioned, citation-safe Gemini summaries for indexed code symbols."""
+"""Versioned, citation-safe LLM summaries for indexed code symbols."""
 import asyncio
 import hashlib
 import json
@@ -65,14 +65,88 @@ def _parse_details(raw_text: str) -> dict:
         raise ValueError(f"invalid code card JSON: {error}") from error
 
 
+def _provider() -> str:
+    return settings.code_card_provider.lower()
+
+
+def code_card_model() -> str:
+    """The model actually used, so a persisted card records its true provenance."""
+    return settings.openrouter_card_model if _provider() == "openrouter" else settings.vertex_gemini_model
+
+
 def _access_token():
+    if _provider() == "openrouter":
+        return settings.openrouter_api_key
     return VertexEmbeddingProvider._refresh_credentials()
 
 
 def _endpoint():
+    if _provider() == "openrouter":
+        return f"{settings.openrouter_base_url.rstrip('/')}/chat/completions"
     location = settings.vertex_gemini_location
     host = "aiplatform.googleapis.com" if location == "global" else f"{location}-aiplatform.googleapis.com"
-    return f"https://{host}/v1/projects/{settings.vertex_project_id}/locations/{location}/publishers/google/models/{settings.vertex_gemini_model}:generateContent"
+    return f"https://{host}/v1/projects/{settings.vertex_project_id}/locations/{location}/publishers/google/models/{code_card_model()}:generateContent"
+
+
+# OpenAI-compatible strict structured output. Deliberately written out rather than derived from
+# CodeCardDetails.model_json_schema(): strict mode rejects maxLength and maxItems, which the pydantic
+# schema carries. Those bounds are still enforced when the response is validated, so dropping them
+# from the wire schema costs nothing but a retry on an over-long answer.
+_CARD_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "code_card",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "summary": {"type": "string"},
+                "inputs": {"type": "array", "items": {"type": "string"}},
+                "outputs": {"type": "array", "items": {"type": "string"}},
+                "side_effects": {"type": "array", "items": {"type": "string"}},
+                "dependencies": {"type": "array", "items": {"type": "string"}},
+                "keywords": {"type": "array", "items": {"type": "string"}},
+                "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+            },
+            "required": ["summary", "inputs", "outputs", "side_effects", "dependencies", "keywords", "confidence"],
+        },
+    },
+}
+
+
+def _build_payload(prompt: str, correction: str | None = None) -> dict:
+    if _provider() == "openrouter":
+        messages = [{"role": "user", "content": prompt}]
+        if correction:
+            # Instructor-style reask: tell the model what was wrong with its last answer rather than
+            # sending the identical prompt and hoping for a different result.
+            messages.append({"role": "user", "content":
+                             f"Your previous response was rejected: {correction}\n"
+                             "Return only the JSON object required by the schema."})
+        return {
+            "model": code_card_model(),
+            "messages": messages,
+            "temperature": 0,
+            "max_tokens": 1024,
+            # A reasoning model spends max_tokens on reasoning first and returns content=None or a
+            # truncated object. A code card needs no deliberation, so switch it off -- the Vertex
+            # path does the same with thinkingConfig.thinkingBudget=0.
+            "reasoning": {"enabled": False},
+            "response_format": _CARD_RESPONSE_FORMAT,
+        }
+    return {"contents": [{"role": "user", "parts": [{"text": prompt}]}], "generationConfig": _generation_config()}
+
+
+def _extract_card(body: dict) -> tuple[str, int | None, int | None]:
+    """Return (raw JSON text, input tokens, output tokens) for either provider's response shape."""
+    if _provider() == "openrouter":
+        usage = body.get("usage") or {}
+        # content is None when a model spends its whole budget on reasoning; "" fails validation
+        # with a readable message instead of raising AttributeError further down.
+        return (body["choices"][0]["message"].get("content") or ""), usage.get("prompt_tokens"), usage.get("completion_tokens")
+    usage = body.get("usageMetadata") or {}
+    return (body["candidates"][0]["content"]["parts"][0].get("text") or ""), usage.get("promptTokenCount"), usage.get("candidatesTokenCount")
 
 
 def _prompt(repo, file, symbol, calls, imports):
@@ -108,7 +182,7 @@ def _retry_delay(response: httpx.Response, attempt: int) -> float:
 
 
 async def _post_with_rate_limit_retries(token, payload):
-    """Post a card request, retrying transient Vertex quota throttling only."""
+    """Post a card request, retrying transient provider quota throttling only."""
     started = time.monotonic()
     for attempt in range(MAX_RATE_LIMIT_RETRIES):
         response = await _post(token, payload)
@@ -137,9 +211,35 @@ async def _post_batch(token, payloads, concurrency: int):
     return await asyncio.gather(*(post_one(payload) for payload in payloads))
 
 
+def _retry_one_card(token, repo, file, symbol, edges, correction=None):
+    """One more attempt for a symbol whose response did not validate.
+
+    Returns (details, input_tokens, output_tokens), or None if it failed again. Deliberately a
+    single retry: a model that malforms the same prompt twice will usually keep doing so, and each
+    attempt is billable.
+    """
+    calls = [e.target_name for e in edges if e.source_symbol_id == symbol.id and e.relationship_type == "call"]
+    imports = [e.target_name for e in edges if e.source_file_id == symbol.file_id and e.relationship_type == "import"]
+    try:
+        response = asyncio.run(_post_with_rate_limit_retries(token, _build_payload(_prompt(repo, file, symbol, calls, imports), correction)))
+        response.raise_for_status()
+        raw_text, input_tokens, output_tokens = _extract_card(response.json())
+        details = _parse_details(raw_text)
+        if not details["summary"].strip():
+            raise ValueError("empty summary")
+        return details, input_tokens, output_tokens
+    except Exception as error:
+        logger.error("code_card_retry outcome=failed symbol=%s error=%s", symbol.qualified_name, type(error).__name__)
+        return None
+
+
 def generate_code_cards(repo_id: str, limit: int | None = None):
-    if not settings.code_cards_enabled or not settings.vertex_project_id:
-        raise RuntimeError("Code cards are disabled or Vertex is unconfigured")
+    if not settings.code_cards_enabled:
+        raise RuntimeError("Code cards are disabled")
+    if _provider() == "openrouter" and not settings.openrouter_api_key:
+        raise RuntimeError("Code cards need OPENROUTER_API_KEY")
+    if _provider() == "vertex" and not settings.vertex_project_id:
+        raise RuntimeError("Code cards need VERTEX_PROJECT_ID")
     db = SessionLocal()
     job = IndexingJob(repository_id=repo_id, kind="code_cards", status="running", started_at=datetime.utcnow(), progress={"phase": "selecting"})
     db.add(job); db.commit()
@@ -154,9 +254,10 @@ def generate_code_cards(repo_id: str, limit: int | None = None):
             targets = targets[:limit]
         job.progress = {"phase": "generating", "total": len(targets), "completed": 0}; db.commit()
         edges = db.scalars(select(SymbolEdge).where(SymbolEdge.repository_id == repo_id)).all()
-        # ADC tokens are valid for the job duration; refreshing per symbol is needless latency.
+        # One token for the whole job: an ADC token stays valid that long, and an API key is static.
         token = _access_token()
         completed = 0
+        skipped = []
         concurrency = settings.code_card_request_concurrency
         if concurrency < 1:
             raise RuntimeError("code_card_request_concurrency must be at least 1")
@@ -167,7 +268,7 @@ def generate_code_cards(repo_id: str, limit: int | None = None):
                 file = db.get(File, symbol.file_id)
                 calls = [e.target_name for e in edges if e.source_symbol_id == symbol.id and e.relationship_type == "call"]
                 imports = [e.target_name for e in edges if e.source_file_id == symbol.file_id and e.relationship_type == "import"]
-                payload = {"contents": [{"role":"user", "parts":[{"text":_prompt(repo, file, symbol, calls, imports)}]}], "generationConfig": _generation_config()}
+                payload = _build_payload(_prompt(repo, file, symbol, calls, imports))
                 prepared.append((symbol, card_started, time.monotonic() - card_started, payload))
             responses = asyncio.run(_post_batch(token, [item[3] for item in prepared], concurrency))
             for (symbol, card_started, context_elapsed, _), (response, provider_elapsed) in zip(prepared, responses):
@@ -176,20 +277,29 @@ def generate_code_cards(repo_id: str, limit: int | None = None):
                 body = response.json()
                 raw_text = ""
                 try:
-                    raw_text = body["candidates"][0]["content"]["parts"][0]["text"]
+                    raw_text, input_tokens, output_tokens = _extract_card(body)
                     details = _parse_details(raw_text)
                     summary = details["summary"].strip()
+                    if not summary:
+                        raise ValueError("empty summary")
                     parse_elapsed = time.monotonic() - parse_started
                 except (KeyError, IndexError, TypeError, ValueError) as error:
-                    # Valid cards from earlier batches are durable; this symbol is retried on resume.
-                    preview = " ".join(raw_text.split())[:240]
+                    # Structured output is a constraint, not a guarantee: a model can still emit a
+                    # malformed object. Aborting the run over one symbol threw away every paid card
+                    # still queued behind it, so retry this symbol once and then skip it. The card
+                    # row is simply absent, and the next run re-targets it because no source_hash
+                    # matches -- the same mechanism that makes an interrupted run resumable.
+                    preview = " ".join((raw_text or "").split())[:240] or "<empty content>"
                     logger.error("code_card_result outcome=invalid symbol=%s elapsed_s=%.3f error=%s response_preview=%r", symbol.qualified_name, time.monotonic() - card_started, type(error).__name__, preview)
-                    raise RuntimeError(f"invalid code-card JSON for {symbol.qualified_name}; resumable retry required") from error
-                if not summary:
-                    logger.error("code_card_result outcome=empty_summary symbol=%s elapsed_s=%.3f", symbol.qualified_name, time.monotonic() - card_started)
-                    raise RuntimeError(f"empty code-card summary for {symbol.qualified_name}; resumable retry required")
-                usage = body.get("usageMetadata", {})
-                values = dict(repository_id=repo_id, source_hash=hashlib.sha256(symbol.source_text.encode()).hexdigest(), indexed_commit_sha=repo.indexed_commit_sha or "", model=settings.vertex_gemini_model, prompt_version=PROMPT_VERSION, status="ready", summary=summary, details=details, input_tokens=usage.get("promptTokenCount"), output_tokens=usage.get("candidatesTokenCount"))
+                    retried = _retry_one_card(token, repo, db.get(File, symbol.file_id), symbol, edges, str(error)[:400])
+                    if retried is None:
+                        skipped.append(symbol.qualified_name)
+                        continue
+                    details, input_tokens, output_tokens = retried
+                    summary = details["summary"].strip()
+                    parse_elapsed = time.monotonic() - parse_started
+                    logger.warning("code_card_result outcome=recovered_on_retry symbol=%s", symbol.qualified_name)
+                values = dict(repository_id=repo_id, source_hash=hashlib.sha256(symbol.source_text.encode()).hexdigest(), indexed_commit_sha=repo.indexed_commit_sha or "", model=code_card_model(), prompt_version=PROMPT_VERSION, status="ready", summary=summary, details=details, input_tokens=input_tokens, output_tokens=output_tokens)
                 card = cards.get(symbol.id)
                 if card:
                     for key, value in values.items(): setattr(card, key, value)
@@ -202,8 +312,12 @@ def generate_code_cards(repo_id: str, limit: int | None = None):
         db.commit()
         from app.ingestion import reembed_repository
         reembed_repository(repo_id)
-        job.status="ready"; job.finished_at=datetime.utcnow(); db.commit()
-        return {"total": len(targets), "completed": completed, "model": settings.vertex_gemini_model}
+        job.status="ready"; job.finished_at=datetime.utcnow()
+        job.progress = {"phase":"done", "total":len(targets), "completed":completed, "skipped":len(skipped)}
+        db.commit()
+        if skipped:
+            logger.warning("code_card_run skipped=%s symbols=%r", len(skipped), skipped[:20])
+        return {"total": len(targets), "completed": completed, "skipped": len(skipped), "model": code_card_model()}
     except Exception as exc:
         job.status="failed"; job.error_message=str(exc); job.finished_at=datetime.utcnow(); db.commit(); raise
     finally:
