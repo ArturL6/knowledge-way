@@ -53,7 +53,7 @@ def test_symbol_detail_and_direct_navigation_include_evidence_and_are_scoped():
     callees = api.get("/api/repositories/repo/symbols/a/callees")
     assert detail.status_code == 200
     assert detail.json()["qualified_name"] == "pkg.root"
-    assert callers.json()["callers"] == [{"symbol": callers.json()["callers"][0]["symbol"], "edge": {"id": "e1", "source_symbol_id": "b", "target_symbol_id": "a", "target_name": "pkg.root", "type": "calls", "confidence": 95, "line": 11, "source_file_id": "fb"}}]
+    assert callers.json()["callers"] == [{"symbol": callers.json()["callers"][0]["symbol"], "edge": {"id": "e1", "source_symbol_id": "b", "target_symbol_id": "a", "target_name": "pkg.root", "type": "calls", "confidence": 95, "resolution": "ambiguous", "line": 11, "source_file_id": "fb"}}]
     assert callers.json()["callers"][0]["symbol"]["id"] == "b"
     assert callees.json()["callees"][0]["symbol"]["id"] == "c"
     assert api.get("/api/repositories/repo/symbols/foreign").status_code == 404
