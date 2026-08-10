@@ -9,6 +9,10 @@ import httpx
 from app.config import settings
 
 
+# Floor for the halving retry below, so a genuinely un-embeddable input raises instead of looping.
+MIN_EMBEDDING_INPUT_CHARACTERS = 500
+
+
 class EmbeddingProvider(Protocol):
     model: str
 
@@ -56,12 +60,42 @@ class OpenRouterEmbeddingProvider:
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        from openai import AsyncOpenAI
+        from openai import AsyncOpenAI, BadRequestError
 
         client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
-        response = await client.embeddings.create(model=self.model, input=texts)
+        clamped = [clamp_embedding_input(text) for text in texts]
+        try:
+            response = await client.embeddings.create(model=self.model, input=clamped)
+        except BadRequestError:
+            # An oversized member used to fail the whole batch and abort the entire index run.
+            if len(texts) > 1:
+                # Isolate the offender rather than guess which one it was. Ordering is preserved.
+                midpoint = len(texts) // 2
+                return await self.embed_texts(texts[:midpoint]) + await self.embed_texts(texts[midpoint:])
+            # A lone input the provider still rejects: the character budget is only a proxy for a
+            # token limit, and the true ratio varies with how densely the source tokenizes. Halve
+            # and retry so the limit is discovered instead of assumed. Bounded by the text length.
+            shortened = clamped[0][: len(clamped[0]) // 2]
+            if len(shortened) < MIN_EMBEDDING_INPUT_CHARACTERS:
+                raise
+            return await self.embed_texts([shortened])
         embeddings = [list(item.embedding) for item in response.data]
         return _validate_embeddings(embeddings, len(texts))
+
+
+def clamp_embedding_input(text: str) -> str:
+    """Bound one embedding input to the provider's per-input token ceiling.
+
+    ponytail: characters, not tokens, so no tokenizer dependency and no per-model table. The
+    default is deliberately conservative for source code, which tokenizes far worse than prose.
+    A clamped chunk loses its tail from the vector while `source_text` keeps the full body, so
+    citations stay complete and only recall on the tail suffers. Swap in a real tokenizer if
+    that recall loss ever shows up in evaluation.
+    """
+    budget = settings.embedding_max_input_characters
+    if budget <= 0 or len(text) <= budget:
+        return text
+    return text[:budget]
 
 
 class VertexEmbeddingProvider:

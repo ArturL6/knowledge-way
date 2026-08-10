@@ -1,8 +1,30 @@
+from pathlib import Path
+
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# A bare ".env" resolves against the working directory, so it found nothing whenever a script or
+# pytest ran from anywhere but the repository root and every setting silently fell back to its
+# default. Search upward for the file instead of assuming a depth: the image lays the package out
+# as /app/app, the repository as apps/api/app. None means "no file", which is correct in Docker
+# where compose injects the values as real environment variables -- and those win over any file.
+_ENV_FILE = next(
+    (parent / ".env" for parent in Path(__file__).resolve().parents if (parent / ".env").is_file()),
+    None,
+)
+
+# Also load it into os.environ, so code that reads the environment directly rather than through
+# Settings sees the same values (alembic's env.py, GOOGLE_APPLICATION_CREDENTIALS, any script).
+# override=False keeps a real environment variable authoritative, which is what makes the compose
+# `env_file:` injection win inside Docker.
+if _ENV_FILE:
+    load_dotenv(_ENV_FILE, override=False)
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore"
+    )
 
     database_url: str = "postgresql+psycopg://knowledgeway:knowledgeway@localhost:5432/knowledgeway"
     redis_url: str = "redis://localhost:6379/0"
@@ -14,6 +36,9 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = None
     openrouter_embedding_model: str = "openai/text-embedding-3-small"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    # text-embedding-3-small rejects any input over 8192 tokens. Source code runs near three
+    # characters per token, so this keeps the worst case inside the ceiling with margin.
+    embedding_max_input_characters: int = 20_000
     # Vertex uses Google Application Default Credentials; mount them read-only in Docker.
     vertex_project_id: str | None = None
     vertex_location: str = "us-central1"
