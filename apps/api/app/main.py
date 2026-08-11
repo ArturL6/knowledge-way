@@ -13,10 +13,11 @@ from app.code_cards import code_card_model
 from app.config import settings
 from app.git_auth import validate_clone_url
 from app.db import SessionLocal, get_db, verify_migration_ready
-from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, CodeCard, StructuralCard, IndexingJob, Conversation, Message
+from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, CodeCard, StructuralCard, RetrievalDocument, IndexingJob, Conversation, Message
 from app.reconcile import reconcile_indexing_jobs
 from app.search import search, search_with_capability
 from app.providers import semantic_capability
+from app.retrieval_documents import KINDS, document_out, rebuild_repository_documents
 
 app=FastAPI(title='knowledge-way API',version='0.1.0')
 app.add_middleware(CORSMiddleware,allow_origins=settings.cors_origins.split(','),allow_methods=['*'],allow_headers=['*'])
@@ -246,6 +247,26 @@ def structural_card(repo_id:str,kind:str,path:str='',db:Session=Depends(get_db))
  if not card: raise HTTPException(404,'Structural card not found')
  return {'repository_id':repo_id,'kind':card.kind,'path':card.path,'facts':card.facts,'indexed_commit_sha':card.indexed_commit_sha,'content_fingerprint':card.content_fingerprint,'provenance_fingerprint':card.provenance_fingerprint,'schema_version':card.schema_version}
 def like_escape(value): return value.replace('\\','\\\\').replace('%','\\%').replace('_','\\_')
+@app.post('/api/repositories/{repo_id}/retrieval-documents/rebuild',status_code=201)
+def rebuild_retrieval_documents(repo_id:str,db:Session=Depends(get_db)):
+ repo=db.get(Repository,repo_id)
+ if not repo: raise HTTPException(404,'Repository not found')
+ if not repo.indexed_commit_sha: raise HTTPException(409,'Repository has no indexed commit')
+ rows=rebuild_repository_documents(db,repo); db.commit()
+ return {'repository_id':repo_id,'indexed_commit_sha':repo.indexed_commit_sha,'documents':[document_out(row) for row in rows]}
+@app.get('/api/repositories/{repo_id}/retrieval-documents')
+def retrieval_documents(repo_id:str,kind:str|None=None,limit:int=Query(50,ge=1,le=100),db:Session=Depends(get_db)):
+ if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
+ if kind and kind not in KINDS: raise HTTPException(422,'Invalid retrieval document kind')
+ query=select(RetrievalDocument).where(RetrievalDocument.repository_id==repo_id)
+ if kind: query=query.where(RetrievalDocument.kind==kind)
+ rows=db.scalars(query.order_by(RetrievalDocument.created_at.desc(),RetrievalDocument.id.desc()).limit(limit)).all()
+ return {'repository_id':repo_id,'documents':[document_out(row) for row in rows]}
+@app.get('/api/repositories/{repo_id}/retrieval-documents/{document_id}/preview')
+def retrieval_document_preview(repo_id:str,document_id:str,db:Session=Depends(get_db)):
+ row=db.scalar(select(RetrievalDocument).where(RetrievalDocument.repository_id==repo_id,RetrievalDocument.id==document_id))
+ if not row: raise HTTPException(404,'Retrieval document not found')
+ return document_out(row,preview=True)
 @app.get('/api/repositories/{repo_id}/tree')
 def tree(repo_id:str,path:str='',db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
