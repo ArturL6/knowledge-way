@@ -96,11 +96,42 @@ class KnowledgeWayClient:
     def list_repositories(self) -> Any:
         return self._get("/api/repositories")
 
-    def search_code(self, query: str, mode: str = "hybrid", limit: int = 20) -> Any:
+    def search_code(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        limit: int = 20,
+        repository_id: str | None = None,
+        workspace_id: str | None = None,
+    ) -> Any:
         query = _bounded_text(query, "query", MAX_QUERY_LENGTH)
-        if mode not in {"hybrid", "lexical", "symbols", "semantic"}:
-            raise InputError("mode must be one of hybrid, lexical, symbols, or semantic")
-        return self._get("/api/search", {"q": query, "mode": mode, "limit": _bounded_int(limit, "limit", 1, MAX_RESULTS)})
+        # The REST API calls its lexical modes text/exact. Do not accept the
+        # historical MCP-only "lexical" spelling: it silently produced no hits.
+        if mode not in {"hybrid", "text", "exact", "symbols", "semantic"}:
+            raise InputError("mode must be one of hybrid, text, exact, symbols, or semantic")
+        limit = _bounded_int(limit, "limit", 1, MAX_RESULTS)
+        if repository_id is not None and workspace_id is not None:
+            raise InputError("repository_id and workspace_id are mutually exclusive")
+        if repository_id is not None:
+            return self._get("/api/search", {"q": query, "mode": mode, "limit": limit,
+                                             "repository_id": _bounded_text(repository_id, "repository_id", MAX_ID_LENGTH)})
+        if workspace_id is None:
+            return self._get("/api/search", {"q": query, "mode": mode, "limit": limit})
+        workspace_id = _bounded_text(workspace_id, "workspace_id", MAX_ID_LENGTH)
+        members = self._get(f"/api/workspaces/{quote(workspace_id, safe='')}/repositories")
+        # The API has repository-scoped search but no workspace endpoint. Fan out
+        # only to declared members; do not claim a cross-repository rank.
+        return {
+            "query": query,
+            "mode": mode,
+            "workspace_id": workspace_id,
+            "scope": "declared_workspace_members",
+            "results_by_repository": [
+                self._get("/api/search", {"q": query, "mode": mode, "limit": limit,
+                                          "repository_id": _bounded_text(member["id"], "repository_id", MAX_ID_LENGTH)})
+                for member in members
+            ],
+        }
 
     def get_symbol(self, repository_id: str, symbol_id: str) -> Any:
         return self._get(self._symbol_path(repository_id, symbol_id))

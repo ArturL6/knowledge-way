@@ -23,9 +23,14 @@ def list_repositories() -> list[dict]:
 
 
 @mcp.tool()
-def search_code(query: str, mode: str = "hybrid", limit: int = 20) -> dict:
-    """Search indexed code. query is capped at 1000 chars; limit is 1..50."""
-    return client().search_code(query, mode, limit)
+def search_code(query: str, mode: str = "hybrid", limit: int = 20, repository_id: str | None = None, workspace_id: str | None = None) -> dict:
+    """Search code globally, in one repository, or across declared workspace members.
+
+    mode is hybrid, text, exact, symbols, or semantic. repository_id and
+    workspace_id are mutually exclusive; workspace results remain grouped by
+    repository because the API does not compute a combined rank.
+    """
+    return client().search_code(query, mode, limit, repository_id, workspace_id)
 
 
 @mcp.tool()
