@@ -63,6 +63,7 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
     q, terms = parse_query(raw), query_terms(parse_query(raw).text)
     repos = {r.id: r for r in db.scalars(select(Repository)).all()}
     lexical, symbols, semantic = [], [], []
+    exact_lexical_match = False
     # Repo scope is metadata-only (few rows) so it's cheap to resolve in Python, but the
     # resulting id set is pushed into SQL as a WHERE ... IN (...) on every retrieval query,
     # BEFORE that query's LIMIT -- otherwise an arbitrary LIMIT window can be filled entirely
@@ -80,6 +81,7 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
     if mode in ('hybrid', 'text', 'exact') and q.text:
         for chunk, file in db.execute(chunk_stmt().where(CodeChunk.source_text.ilike(f'%{q.text}%')).limit(limit * 2)):
             lexical.append(result('chunk', 1.0, repos[chunk.repository_id], file, chunk))
+        exact_lexical_match = bool(lexical)
     if not lexical and mode in ('hybrid', 'text') and terms:
         clauses = [CodeChunk.source_text.ilike(f'%{term}%') for term in terms]
         for chunk, file in db.execute(chunk_stmt().where(or_(*clauses)).limit(limit * 8)):
@@ -94,7 +96,9 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
             symbols.append(result('symbol', 1.0 if symbol.name.lower() in terms or symbol.qualified_name.lower() in terms else .85, repos[symbol.repository_id], file, symbol))
     capability = semantic_capability()
     provider = embedding_provider()
-    if mode in ('hybrid', 'semantic') and q.text and provider is not None:
+    # Exact lexical source hits are already precise evidence. In hybrid mode, avoid a billable
+    # embedding round-trip for that fast path; broad token matches still receive semantic recall.
+    if mode in ('hybrid', 'semantic') and q.text and provider is not None and (mode == 'semantic' or not exact_lexical_match):
         try:
             query_vector = asyncio.run(provider.embed_texts([q.text]))[0]
             # Python cosine is portable to SQLite tests and pgvector production; only matching
