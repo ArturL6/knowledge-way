@@ -105,8 +105,8 @@ export default function SearchClient() {
   return <>
     <h2>Global code search</h2>
     <form className="row" onSubmit={go}>
-      <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="auth repo:backend lang:python" />
-      <select value={mode} onChange={(event) => setMode(event.target.value)}><option>hybrid</option><option>text</option><option>symbols</option><option>semantic</option></select>
+      <label className="visually-hidden" htmlFor="search-query">Search query</label><input id="search-query" value={q} onChange={(event) => setQ(event.target.value)} placeholder="auth repo:backend lang:python" />
+      <label className="visually-hidden" htmlFor="search-mode">Search mode</label><select id="search-mode" value={mode} onChange={(event) => setMode(event.target.value)}><option>hybrid</option><option>text</option><option>symbols</option><option>semantic</option></select>
       <label className="muted"><input type="checkbox" checked={rerank} disabled={mode !== 'hybrid'} onChange={(event) => setRerank(event.target.checked)} /> Reranker verwenden</label>
       <button disabled={loading}>{loading ? 'Searching…' : 'Search'}</button>
     </form>
