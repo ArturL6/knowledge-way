@@ -14,10 +14,11 @@ MAX_CODE_CARD_EXCERPTS = 12
 MAX_KEYWORDS = 20
 
 
-def _module_rows(db, repo_id):
+def _module_rows(db, repo_id, indexed_commit_sha):
     cards = db.scalars(
         select(StructuralCard).where(
             StructuralCard.repository_id == repo_id,
+            StructuralCard.indexed_commit_sha == indexed_commit_sha,
             StructuralCard.kind.in_(("package", "directory")),
         )
     ).all()
@@ -42,16 +43,39 @@ def _module_rows(db, repo_id):
 
 
 def build_repository_card(db, repo: Repository):
-    files = db.scalars(select(File).where(File.repository_id == repo.id)).all()
+    # The repository's indexed commit is the snapshot boundary. Never blend stale
+    # projection rows into a card that claims current snapshot provenance.
+    snapshot = repo.indexed_commit_sha
+    files = db.scalars(
+        select(File).where(File.repository_id == repo.id, File.indexed_commit_sha == snapshot)
+    ).all()
     files_by_id = {file.id: file for file in files}
-    symbols = db.scalars(select(Symbol).where(Symbol.repository_id == repo.id)).all()
+    symbols = db.scalars(
+        select(Symbol).join(File, File.id == Symbol.file_id).where(
+            Symbol.repository_id == repo.id,
+            File.repository_id == repo.id,
+            File.indexed_commit_sha == snapshot,
+        )
+    ).all()
     ready_card_count = db.scalar(
-        select(func.count(CodeCard.id)).where(CodeCard.repository_id == repo.id, CodeCard.status == "ready")
+        select(func.count(CodeCard.id)).where(
+            CodeCard.repository_id == repo.id,
+            CodeCard.status == "ready",
+            CodeCard.indexed_commit_sha == snapshot,
+        )
     ) or 0
     cards = db.execute(
         select(CodeCard, Symbol)
         .join(Symbol, Symbol.id == CodeCard.symbol_id)
-        .where(CodeCard.repository_id == repo.id, CodeCard.status == "ready", Symbol.repository_id == repo.id)
+        .join(File, File.id == Symbol.file_id)
+        .where(
+            CodeCard.repository_id == repo.id,
+            CodeCard.status == "ready",
+            CodeCard.indexed_commit_sha == snapshot,
+            Symbol.repository_id == repo.id,
+            File.repository_id == repo.id,
+            File.indexed_commit_sha == snapshot,
+        )
         .order_by(Symbol.qualified_name, Symbol.id)
         .limit(MAX_CODE_CARD_EXCERPTS)
     ).all()
@@ -71,7 +95,7 @@ def build_repository_card(db, repo: Repository):
             "summary": card.summary,
             "indexed_commit_sha": card.indexed_commit_sha,
         })
-    modules = _module_rows(db, repo.id)
+    modules = _module_rows(db, repo.id, snapshot)
     facts = {
         "file_count": len(files),
         "symbol_count": len(symbols),
