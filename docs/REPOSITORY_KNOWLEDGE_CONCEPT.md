@@ -26,6 +26,12 @@ For Python, JavaScript, JSX, TypeScript, and TSX, Tree-sitter extracts declarati
 
 This is intentionally conservative. A stored edge is not a claim of full static analysis; dynamic dispatch, reflection, generated code, runtime configuration, and cross-language resolution remain incomplete.
 
+### Evidence-backed local change impact
+
+`GET /api/repositories/{repository_id}/symbols/{symbol_id}/impact` provides a bounded, reverse-only traversal over **resolved local `call` edges**. It answers the narrow, auditable question: “Which indexed symbols directly or transitively call this symbol?”
+
+Each returned impact item contains the affected symbol, its traversal distance, the relationship record, confidence, and the source file/path/line that evidences that relationship. The response is repository- and indexed-commit-scoped, reports node-cap truncation, and explicitly says that it excludes unresolved edges, other repositories, and runtime-only effects. It is therefore a drill-down step after retrieval, not a claim of complete change safety.
+
 ### Retrieval document and embeddings
 
 For every code chunk, the embedding input contains deterministic metadata (repository, path, language, symbol, signature), local static calls/imports, then the original source code. If a Code Card exists, its summary and keywords are added before the code. The original code remains the primary evidence.

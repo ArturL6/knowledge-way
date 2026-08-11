@@ -86,6 +86,7 @@ def bfs_selected(symbol_id,edges,available,depth,max_nodes=None):
   frontier=set(next_frontier)
   if not frontier: break
  return selected
+
 def scoped_symbol(db,repo_id,symbol_id):
  s=next((x for x in db.scalars(select(Symbol).where(Symbol.repository_id==repo_id,Symbol.id==symbol_id)).all() if x.id==symbol_id and x.repository_id==repo_id),None)
  if not s: raise HTTPException(404,'Symbol not found')
@@ -299,6 +300,33 @@ def callers(repo_id:str,symbol_id:str,limit:int=Query(50,ge=1,le=200),offset:int
 @app.get('/api/repositories/{repo_id}/symbols/{symbol_id}/callees')
 def callees(repo_id:str,symbol_id:str,limit:int=Query(50,ge=1,le=200),offset:int=Query(0,ge=0),db:Session=Depends(get_db)):
  items,total,truncated=neighbors(repo_id,symbol_id,'callees',db,limit,offset); return {'symbol_id':symbol_id,'callees':items,'total':total,'limit':limit,'offset':offset,'truncated':truncated}
+@app.get('/api/repositories/{repo_id}/symbols/{symbol_id}/impact')
+def change_impact(repo_id:str,symbol_id:str,depth:int=Query(1,ge=1,le=2),max_nodes:int=Query(MAX_GRAPH_NODES,ge=1,le=MAX_GRAPH_NODES),db:Session=Depends(get_db)):
+ repo=db.get(Repository,repo_id)
+ if not repo: raise HTTPException(404,'Repository not found')
+ scoped_symbol(db,repo_id,symbol_id)
+ # The response cap must also bound database and Python work.  We fetch only the next
+ # reverse frontier, joining the caller symbol and source file needed as evidence; no
+ # whole-repository graph/file hydration is permitted on this browser-facing route.
+ selected={symbol_id}; frontier={symbol_id}; items=[]; truncated=False
+ for distance in range(1,depth+1):
+  remaining=max_nodes-len(items)
+  if remaining<=0: truncated=True; break
+  stmt=(select(SymbolEdge,Symbol,File).join(Symbol,Symbol.id==SymbolEdge.source_symbol_id).join(File,File.id==SymbolEdge.source_file_id)
+        .where(SymbolEdge.repository_id==repo_id,SymbolEdge.relationship_type=='call',SymbolEdge.target_symbol_id.in_(frontier),SymbolEdge.source_symbol_id.is_not(None),Symbol.repository_id==repo_id,File.repository_id==repo_id)
+        .order_by(Symbol.qualified_name,Symbol.id,SymbolEdge.line_number,SymbolEdge.id)
+        # selected can contain at most max_nodes callers plus the root, so this detects a
+        # further unique candidate without permitting an unbounded query.
+        .limit(remaining+len(selected)+1))
+  next_frontier=[]
+  for edge,symbol,source_file in db.execute(stmt):
+   if symbol.id in selected: continue
+   if len(next_frontier)>=remaining: truncated=True; break
+   selected.add(symbol.id); next_frontier.append(symbol.id)
+   items.append({'symbol':graph_symbol_out(symbol),'distance':distance,'evidence':dict(edge_out(edge),path=source_file.path,indexed_commit_sha=source_file.indexed_commit_sha)})
+  frontier=set(next_frontier)
+  if truncated or not frontier: break
+ return {'root_symbol_id':symbol_id,'direction':'reverse_callers','depth':depth,'max_nodes':max_nodes,'scope':{'repository_id':repo.id,'indexed_commit_sha':repo.indexed_commit_sha},'returned_nodes':len(items),'truncated':truncated,'reason':'node_cap' if truncated else None,'impact':items,'limitations':{'repository_local_only':True,'resolved_call_edges_only':True,'unresolved_edges_not_included':True,'runtime_completeness_not_claimed':True}}
 @app.get('/api/repositories/{repo_id}/symbols/{symbol_id}/subgraph')
 def subgraph(repo_id:str,symbol_id:str,depth:int=Query(1,ge=1,le=2),max_nodes:int=Query(MAX_GRAPH_NODES,ge=1,le=MAX_GRAPH_NODES),db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')

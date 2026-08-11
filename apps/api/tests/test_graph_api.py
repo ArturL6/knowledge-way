@@ -116,6 +116,51 @@ def test_callers_and_callees_are_direction_filtered_and_paginated():
         db.close()
 
 
+def test_change_impact_uses_scoped_resolved_call_edges_and_a_bounded_sql_frontier():
+    db = _sql_session()
+    db.add_all([
+        Repository(id="repo", name="demo", clone_url="https://example.test/demo.git", indexed_commit_sha="a" * 40),
+        Repository(id="other", name="other", clone_url="https://example.test/other.git"),
+    ])
+    db.commit()
+    db.add_all([
+        File(id="f-root", repository_id="repo", path="root.py", language="python", content="x", content_hash="hr", size_bytes=1, indexed_commit_sha="a" * 40),
+        File(id="f-b", repository_id="repo", path="b.py", language="python", content="x", content_hash="hb", size_bytes=1, indexed_commit_sha="a" * 40),
+        File(id="f-d", repository_id="repo", path="d.py", language="python", content="x", content_hash="hd", size_bytes=1, indexed_commit_sha="a" * 40),
+        File(id="f-other", repository_id="other", path="other.py", language="python", content="x", content_hash="ho", size_bytes=1, indexed_commit_sha="b" * 40),
+    ])
+    db.commit()
+    for symbol_id, repo_id, file_id in [("root", "repo", "f-root"), ("b", "repo", "f-b"), ("d", "repo", "f-d"), ("foreign", "other", "f-other")]:
+        db.add(Symbol(id=symbol_id, repository_id=repo_id, file_id=file_id, name=symbol_id, qualified_name=f"pkg.{symbol_id}", symbol_type="function", start_line=1, end_line=1, start_byte=0, end_byte=1, source_text="x"))
+    db.commit()
+    db.add_all([
+        SymbolEdge(id="b-calls-root", repository_id="repo", source_symbol_id="b", target_symbol_id="root", target_name="root", relationship_type="call", source_file_id="f-b", line_number=7, confidence=100),
+        SymbolEdge(id="d-calls-b", repository_id="repo", source_symbol_id="d", target_symbol_id="b", target_name="b", relationship_type="call", source_file_id="f-d", line_number=9, confidence=100),
+        SymbolEdge(id="b-reference-root", repository_id="repo", source_symbol_id="b", target_symbol_id="root", target_name="root", relationship_type="reference", source_file_id="f-b", line_number=8, confidence=100),
+        SymbolEdge(id="unresolved", repository_id="repo", source_symbol_id=None, target_symbol_id="root", target_name="ghost", relationship_type="call", source_file_id="f-b", line_number=10, confidence=20),
+        SymbolEdge(id="foreign-calls-root", repository_id="other", source_symbol_id="foreign", target_symbol_id="root", target_name="root", relationship_type="call", source_file_id="f-other", line_number=1, confidence=100),
+    ])
+    db.commit()
+    api = _sql_client(db)
+    try:
+        response = api.get("/api/repositories/repo/symbols/root/impact?depth=2&max_nodes=2")
+        capped = api.get("/api/repositories/repo/symbols/root/impact?depth=2&max_nodes=1")
+        assert response.status_code == capped.status_code == 200
+        impact = response.json()
+        assert [(item["symbol"]["id"], item["distance"]) for item in impact["impact"]] == [("b", 1), ("d", 2)]
+        assert impact["truncated"] is False
+        assert [item["symbol"]["id"] for item in capped.json()["impact"]] == ["b"]
+        assert capped.json()["truncated"] is True
+        evidence = impact["impact"][0]["evidence"]
+        assert (evidence["id"], evidence["path"], evidence["line"], evidence["type"]) == ("b-calls-root", "b.py", 7, "call")
+        assert impact["limitations"]["resolved_call_edges_only"] is True
+        assert api.get("/api/repositories/repo/symbols/foreign/impact").status_code == 404
+        assert api.get("/api/repositories/repo/symbols/root/impact?depth=0").status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+        db.close()
+
+
 def test_subgraph_is_bounded_deterministic_and_validates_depth():
     api = client()
     response = api.get("/api/repositories/repo/symbols/a/subgraph?depth=2&max_nodes=2")
