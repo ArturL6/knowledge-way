@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../lib/api';
@@ -60,19 +60,21 @@ export default function SearchClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
+  const searchRequestVersion = useRef(0);
 
   async function runSearch(query: string, searchMode: string, useRerank: boolean) {
-    setLoading(true);
-    setError('');
+    const version = ++searchRequestVersion.current;
+    setLoading(true); setError(''); setResults([]); setSearched(false);
     try {
       const response = await api<{ results: Result[] }>(`/search?q=${encodeURIComponent(query)}&mode=${encodeURIComponent(searchMode)}&rerank=${useRerank}`);
+      if (version !== searchRequestVersion.current) return;
       setResults(response.results ?? []);
     } catch (cause) {
+      if (version !== searchRequestVersion.current) return;
       setResults([]);
       setError(cause instanceof Error ? cause.message : 'Unable to search code.');
     } finally {
-      setLoading(false);
-      setSearched(true);
+      if (version === searchRequestVersion.current) { setLoading(false); setSearched(true); }
     }
   }
 
