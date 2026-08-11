@@ -38,11 +38,36 @@ def test_symbol_routes_quote_identifiers_and_map_to_public_endpoints(monkeypatch
     ]
 
 
+def test_search_modes_and_scopes_match_api_contract(monkeypatch):
+    client = KnowledgeWayClient("http://localhost:8000")
+    captured = []
+
+    def get(path, params=None):
+        captured.append((path, params))
+        if path == "/api/workspaces/team%2Fa/repositories":
+            return [{"id": "one"}, {"id": "two"}]
+        return {"results": []}
+
+    monkeypatch.setattr(client, "_get", get)
+    client.search_code("needle", mode="text", limit=7, repository_id="repo/a")
+    workspace = client.search_code("needle", mode="exact", workspace_id="team/a")
+
+    assert workspace["scope"] == "declared_workspace_members"
+    assert captured == [
+        ("/api/search", {"q": "needle", "mode": "text", "limit": 7, "repository_id": "repo/a"}),
+        ("/api/workspaces/team%2Fa/repositories", None),
+        ("/api/search", {"q": "needle", "mode": "exact", "limit": 20, "repository_id": "one"}),
+        ("/api/search", {"q": "needle", "mode": "exact", "limit": 20, "repository_id": "two"}),
+    ]
+
+
 @pytest.mark.parametrize("call", [
     lambda c: c.search_code("", limit=1),
     lambda c: c.search_code("x" * 1001),
+    lambda c: c.search_code("ok", mode="lexical"),
     lambda c: c.search_code("ok", mode="anything"),
     lambda c: c.search_code("ok", limit=51),
+    lambda c: c.search_code("ok", repository_id="r", workspace_id="w"),
     lambda c: c.get_symbol("r", "s" * 257),
     lambda c: c.get_subgraph("r", "s", depth=3),
     lambda c: c.get_subgraph("r", "s", max_nodes=101),
