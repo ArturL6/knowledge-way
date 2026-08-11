@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Measure whether versioned Gemini Code Cards improve retrieval for a pinned, fully indexed Starlette snapshot. Each case records the expected implementation definition; documentation or test chunks may appear above it and are reported separately.",
+  "repository": {
+    "id": "9c4be994-2e19-433e-82bd-d10f90bec532",
+    "name": "Fork fixture: Starlette",
+    "indexed_commit_sha": "4f250d6b814587e20c5365f0a5f0c4d42bcb929f"
+  },
+  "cases": [
+    {
+      "id": "body-limit-streaming",
+      "query": "Where does Starlette reject a streaming HTTP request body after it exceeds the configured size limit?",
+      "expected": {"path": "starlette/middleware/body_limit.py", "symbol": "RequestBodyLimitResponder.receive_with_limit"},
+      "intent": "Behavioral question; avoids the implementation identifier and distinguishes an incremental body-size check from a simple Content-Length check."
+    },
+    {
+      "id": "background-after-response",
+      "query": "Wie führt Starlette mehrere Hintergrundaufgaben nacheinander aus, nachdem eine Response gesendet wurde?",
+      "expected": {"path": "starlette/background.py", "symbol": "BackgroundTasks.__call__"},
+      "intent": "German behavioral wording; expects execution semantics rather than the class name."
+    },
+    {
+      "id": "client-disconnect-probe",
+      "query": "How can a request handler detect whether the HTTP client disconnected without waiting for a full request body?",
+      "expected": {"path": "starlette/requests.py", "symbol": "Request.is_disconnected"},
+      "intent": "Conceptual async-server question with no target identifier."
+    },
+    {
+      "id": "range-response-parser",
+      "query": "Which Starlette implementation parses a Range header to serve a byte interval from a file response?",
+      "expected": {"path": "starlette/responses.py", "symbol": "FileResponse._parse_range_header"},
+      "intent": "HTTP behavior and internal responsibility rather than an exact method-name query."
+    },
+    {
+      "id": "cors-preflight",
+      "query": "Wo wird eine CORS Preflight OPTIONS-Anfrage beantwortet und die erlaubten Header erzeugt?",
+      "expected": {"path": "starlette/middleware/cors.py", "symbol": "CORSMiddleware.preflight_response"},
+      "intent": "German framework question; may have strong lexical evidence, so it is a control case as well as a semantic case."
+    },
+    {
+      "id": "static-not-modified",
+      "query": "How does static-file serving decide that a browser cache validator means the file has not changed?",
+      "expected": {"path": "starlette/staticfiles.py", "symbol": "StaticFiles.is_not_modified"},
+      "intent": "Describes conditional caching semantics without using ETag or method names."
+    },
+    {
+      "id": "authentication-scope",
+      "query": "Welche Middleware schreibt nach erfolgreicher Authentifizierung Benutzer und Berechtigungen in den ASGI Scope?",
+      "expected": {"path": "starlette/middleware/authentication.py", "symbol": "AuthenticationMiddleware.__call__"},
+      "intent": "German data-flow question, targeting authenticated scope population."
+    },
+    {
+      "id": "lifespan-state",
+      "query": "Where is state returned by an application lifespan context copied into the ASGI scope during startup?",
+      "expected": {"path": "starlette/routing.py", "symbol": "Router.lifespan"},
+      "intent": "Lifecycle behavior, not router-name lookup."
+    },
+    {
+      "id": "host-header-defense",
+      "query": "Which middleware rejects requests whose Host header is not in an allowed host list?",
+      "expected": {"path": "starlette/middleware/trustedhost.py", "symbol": "TrustedHostMiddleware.__call__"},
+      "intent": "Security behavior; target is an implementation definition, not documentation."
+    },
+    {
+      "id": "multipart-file-cap",
+      "query": "Wie erzwingt der Multipart-Parser die maximale Zahl hochgeladener Dateien in einer Anfrage?",
+      "expected": {"path": "starlette/formparsers.py", "symbol": "MultiPartParser.on_headers_finished"},
+      "intent": "German parser-limit question with terminology that differs from the method name."
+    },
+    {
+      "id": "websocket-denial",
+      "query": "How is an ordinary HTTP denial response adapted so it can be sent while handling a WebSocket connection?",
+      "expected": {"path": "starlette/responses.py", "symbol": "Response._wrap_websocket_denial_send"},
+      "intent": "Protocol-adaptation behavior without source identifiers."
+    },
+    {
+      "id": "threadpool-iterator",
+      "query": "Welche Funktion iteriert synchronen Code schrittweise in einem Threadpool, damit er asynchron konsumiert werden kann?",
+      "expected": {"path": "starlette/concurrency.py", "symbol": "iterate_in_threadpool"},
+      "intent": "German concurrency behavior; likely benefits from semantically descriptive card text."
+    }
+  ],
+  "card_spot_check_symbols": [
+    {"path": "starlette/middleware/body_limit.py", "symbol": "RequestBodyLimitResponder.receive_with_limit"},
+    {"path": "starlette/background.py", "symbol": "BackgroundTasks.__call__"},
+    {"path": "starlette/responses.py", "symbol": "Response._wrap_websocket_denial_send"},
+    {"path": "starlette/routing.py", "symbol": "Router.lifespan"},
+    {"path": "starlette/staticfiles.py", "symbol": "StaticFiles.is_not_modified"}
+  ]
+}
