@@ -51,6 +51,9 @@ def live_progress(r): return {} if r.indexing_status=='ready' else r.indexing_pr
 def repo_out(r): return {'id':r.id,'name':r.name,'clone_url':r.clone_url,'requested_revision':r.requested_revision,'default_branch':r.default_branch,'indexed_branch':r.indexed_branch,'indexed_commit_sha':r.indexed_commit_sha,'latest_detected_commit_sha':r.latest_detected_commit_sha,'indexing_status':r.indexing_status,'indexing_progress':live_progress(r),'error_message':r.error_message,'last_indexed_at':r.last_indexed_at,'last_sync_at':r.last_sync_at,'created_at':r.created_at}
 def workspace_out(w): return {'id':w.id,'name':w.name,'description':w.description,'created_at':w.created_at,'updated_at':w.updated_at}
 def workspace_dependency_out(d): return {'id':d.id,'workspace_id':d.workspace_id,'source_repository_id':d.source_repository_id,'target_repository_id':d.target_repository_id,'package_name':d.package_name,'import_path':d.import_path,'reason':d.reason,'note':d.note,'created_at':d.created_at,'updated_at':d.updated_at}
+def workspace_member_ids(db,workspace_id):
+ if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
+ return set(db.scalars(select(WorkspaceRepository.repository_id).where(WorkspaceRepository.workspace_id==workspace_id)).all())
 def validate_dependency_membership(db,workspace_id,source_repository_id,target_repository_id):
  if source_repository_id==target_repository_id: raise HTTPException(422,'Source and target repositories must differ')
  members=set(db.scalars(select(WorkspaceRepository.repository_id).where(WorkspaceRepository.workspace_id==workspace_id)).all())
@@ -362,20 +365,26 @@ def repository_graph(repo_id:str,max_nodes:int=Query(MAX_GRAPH_NODES,ge=10,le=MA
  reason='node_cap' if node_cap_hit else 'edge_budget' if edge_budget_hit else None
  return {'repository_id':repo.id,'max_nodes':max_nodes,'total_nodes':len(symbols),'total_edges':total_edges,'returned_nodes':len(selected),'returned_edges':len(shown_code_edges),'truncated':node_cap_hit or edge_budget_hit,'reason':reason,'nodes':graph_nodes,'edges':graph_edges}
 @app.get('/api/search')
-def text_search(q:str,mode:Literal['hybrid','text','exact','symbols','semantic']='hybrid',limit:int=Query(30,ge=1,le=100),repository_id:str|None=None,rerank:bool=False,db:Session=Depends(get_db)):
+def text_search(q:str,mode:Literal['hybrid','text','exact','symbols','semantic']='hybrid',limit:int=Query(30,ge=1,le=100),repository_id:str|None=None,workspace_id:str|None=None,rerank:bool=False,db:Session=Depends(get_db)):
  if repository_id and not db.get(Repository,repository_id): raise HTTPException(404,'Repository not found')
- results, semantic = search_with_capability(db,q,mode,limit,repository_id=repository_id,rerank=rerank)
- return {'query':q,'mode':mode,'results':results,'semantic':semantic}
+ member_ids=workspace_member_ids(db,workspace_id) if workspace_id else None
+ if member_ids is not None and repository_id and repository_id not in member_ids: raise HTTPException(422,'Repository is not a member of this workspace')
+ results, semantic = search_with_capability(db,q,mode,limit,repository_id=repository_id,repository_ids=member_ids,rerank=rerank)
+ return {'query':q,'mode':mode,'workspace_id':workspace_id,'results':results,'semantic':semantic}
 @app.get('/api/search/symbols')
-def symbol_search(q:str,repository_id:str|None=None,db:Session=Depends(get_db)):
+def symbol_search(q:str,repository_id:str|None=None,workspace_id:str|None=None,db:Session=Depends(get_db)):
  if repository_id and not db.get(Repository,repository_id): raise HTTPException(404,'Repository not found')
- return {'results':search(db,q,'symbols',repository_id=repository_id)}
+ member_ids=workspace_member_ids(db,workspace_id) if workspace_id else None
+ if member_ids is not None and repository_id and repository_id not in member_ids: raise HTTPException(422,'Repository is not a member of this workspace')
+ return {'workspace_id':workspace_id,'results':search(db,q,'symbols',repository_id=repository_id,repository_ids=member_ids)}
 @app.post('/api/search/semantic')
 def semantic_search(body:dict,db:Session=Depends(get_db)):
- repository_id=body.get('repository_id')
+ repository_id=body.get('repository_id'); workspace_id=body.get('workspace_id')
  if repository_id and not db.get(Repository,repository_id): raise HTTPException(404,'Repository not found')
- results, semantic = search_with_capability(db,body.get('query',''),'semantic',repository_id=repository_id)
- return {'results':results,'semantic':semantic}
+ member_ids=workspace_member_ids(db,workspace_id) if workspace_id else None
+ if member_ids is not None and repository_id and repository_id not in member_ids: raise HTTPException(422,'Repository is not a member of this workspace')
+ results, semantic = search_with_capability(db,body.get('query',''),'semantic',repository_id=repository_id,repository_ids=member_ids)
+ return {'workspace_id':workspace_id,'results':results,'semantic':semantic}
 @app.post('/api/explanations')
 def explanation(body:ExplanationIn,db:Session=Depends(get_db)):
  repo=db.get(Repository,body.repository_id)

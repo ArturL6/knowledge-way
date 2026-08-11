@@ -59,17 +59,20 @@ def _fuse(result_sets, limit):
     return sorted(combined.values(), key=lambda x: (-x['score'], _key(x)))[:limit]
 
 
-def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id: str | None = None, rerank: bool = False):
+def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id: str | None = None,
+                           repository_ids: set[str] | None = None, rerank: bool = False):
     q, terms = parse_query(raw), query_terms(parse_query(raw).text)
     repos = {r.id: r for r in db.scalars(select(Repository)).all()}
     lexical, symbols, semantic = [], [], []
     exact_lexical_match = False
-    # Repo scope is metadata-only (few rows) so it's cheap to resolve in Python, but the
-    # resulting id set is pushed into SQL as a WHERE ... IN (...) on every retrieval query,
-    # BEFORE that query's LIMIT -- otherwise an arbitrary LIMIT window can be filled entirely
-    # by rows from repos outside scope, starving the scoped query to zero results.
+    # The allowed IDs are resolved server-side and pushed into every retrieval statement
+    # before LIMIT. `repository_ids` is the workspace boundary; repository_id only narrows it.
+    if repository_ids is not None and repository_id is not None and repository_id not in repository_ids:
+        raise ValueError('Repository is not a member of this workspace')
     allowed_ids = {rid for rid, r in repos.items()
-                   if (not repository_id or rid == repository_id) and (not q.repo or q.repo.lower() in r.name.lower())}
+                   if (repository_ids is None or rid in repository_ids)
+                   and (not repository_id or rid == repository_id)
+                   and (not q.repo or q.repo.lower() in r.name.lower())}
     def chunk_stmt():
         stmt = (select(CodeChunk, File).join(File, CodeChunk.file_id == File.id)
                  .where(CodeChunk.repository_id.in_(allowed_ids))
@@ -134,5 +137,6 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
     return results[:limit], capability
 
 
-def search(db, raw: str, mode='hybrid', limit=30, repository_id: str | None = None):
-    return search_with_capability(db, raw, mode, limit, repository_id)[0]
+def search(db, raw: str, mode='hybrid', limit=30, repository_id: str | None = None,
+           repository_ids: set[str] | None = None):
+    return search_with_capability(db, raw, mode, limit, repository_id, repository_ids)[0]

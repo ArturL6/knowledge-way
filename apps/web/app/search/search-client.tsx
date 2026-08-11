@@ -62,11 +62,12 @@ export default function SearchClient() {
   const [searched, setSearched] = useState(false);
   const searchRequestVersion = useRef(0);
 
-  async function runSearch(query: string, searchMode: string, useRerank: boolean) {
+  async function runSearch(query: string, searchMode: string, useRerank: boolean, workspaceId: string | null) {
     const version = ++searchRequestVersion.current;
     setLoading(true); setError(''); setResults([]); setSearched(false);
     try {
-      const response = await api<{ results: Result[] }>(`/search?q=${encodeURIComponent(query)}&mode=${encodeURIComponent(searchMode)}&rerank=${useRerank}`);
+      const workspace = workspaceId ? `&workspace_id=${encodeURIComponent(workspaceId)}` : '';
+      const response = await api<{ results: Result[] }>(`/search?q=${encodeURIComponent(query)}&mode=${encodeURIComponent(searchMode)}&rerank=${useRerank}${workspace}`);
       if (version !== searchRequestVersion.current) return;
       setResults(response.results ?? []);
     } catch (cause) {
@@ -82,11 +83,12 @@ export default function SearchClient() {
   // Back/Forward, and our own router.push on submit, all through the same path.
   useEffect(() => {
     const state = parseSearchState(searchParams);
+    const workspaceId = searchParams.get('workspace');
     setQ(state.q);
     setMode(state.mode);
     setRerank(state.rerank);
     if (state.q.trim()) {
-      void runSearch(state.q, state.mode, state.rerank);
+      void runSearch(state.q, state.mode, state.rerank, workspaceId);
     } else {
       setResults([]);
       setSearched(false);
@@ -97,13 +99,18 @@ export default function SearchClient() {
   function go(event: FormEvent) {
     event.preventDefault();
     if (!q.trim()) return;
-    router.push(buildSearchUrl(q, mode, rerank));
+    const url = new URL(buildSearchUrl(q, mode, rerank), window.location.origin);
+    const workspaceId = searchParams.get('workspace');
+    if (workspaceId) url.searchParams.set('workspace', workspaceId);
+    router.push(`${url.pathname}${url.search}`);
   }
 
+  const workspaceId = searchParams.get('workspace');
   const view = searchView(searched, results.length, Boolean(error));
 
   return <>
-    <h2>Global code search</h2>
+    <h2>{workspaceId ? 'Workspace code search' : 'Global code search'}</h2>
+    {workspaceId && <p className="muted">Results are restricted to the selected workspace. <Link href="/workspaces">Change workspace</Link></p>}
     <form className="row" onSubmit={go}>
       <label className="visually-hidden" htmlFor="search-query">Search query</label><input id="search-query" value={q} onChange={(event) => setQ(event.target.value)} placeholder="auth repo:backend lang:python" />
       <label className="visually-hidden" htmlFor="search-mode">Search mode</label><select id="search-mode" value={mode} onChange={(event) => setMode(event.target.value)}><option>hybrid</option><option>text</option><option>symbols</option><option>semantic</option></select>

@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -84,6 +85,22 @@ def test_repository_scope_is_applied_before_the_sql_limit():
 
     unscoped, _ = search_with_capability(db, "needle", mode="text", limit=10)
     assert {r["repository_id"] for r in unscoped} == {"repo-a", "repo-b"}
+
+
+def test_workspace_repository_set_scopes_before_limit_and_rejects_outside_narrowing():
+    """Workspace scope is a server-derived allow-list, never a post-limit UI filter."""
+    db = _session()
+    _repo(db, "repo-a", "alpha")
+    _repo(db, "repo-b", "beta")
+    file_a = _file(db, "file-a", "repo-a", "aaa/file.py")
+    file_b = _file(db, "file-b", "repo-b", "zzz/file.py")
+    for i in range(5): _chunk(db, f"chunk-a-{i}", "repo-a", "file-a", i + 1)
+    _chunk(db, "chunk-b", "repo-b", "file-b", 1)
+
+    results, _ = search_with_capability(db, "needle", mode="text", limit=1, repository_ids={"repo-b"})
+    assert [result["repository_id"] for result in results] == ["repo-b"]
+    with pytest.raises(ValueError, match="not a member"):
+        search_with_capability(db, "needle", mode="text", repository_id="repo-a", repository_ids={"repo-b"})
 
 
 def test_hybrid_exact_lexical_hit_skips_embedding_request(monkeypatch):

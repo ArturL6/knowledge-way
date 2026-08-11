@@ -5,6 +5,7 @@ import {usePathname} from 'next/navigation';
 
 const items = [
   {href: '/', label: 'Dashboard'},
+  {href: '/workspaces', label: 'Workspaces'},
   {href: '/search', label: 'Search'},
   {href: '/graph', label: 'Code graph'},
   {href: '/chat', label: 'AI Chat'},
