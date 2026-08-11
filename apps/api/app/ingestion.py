@@ -117,6 +117,11 @@ def _legacy_symbols_and_chunks(db, repo_id, file, content, lang, sha):
   db.add(CodeChunk(repository_id=repo_id,file_id=file.id,symbol_id=sym.id if sym else None,language=lang,chunk_type='function' if name else 'text',symbol_name=name,qualified_symbol_name=name,start_line=start,end_line=end,source_text=text,content_hash=hashlib.sha256(text.encode()).hexdigest(),indexed_commit_sha=sha))
 
 
+def _existing_parser_symbols(db, file):
+ """Map persisted parser symbols for an unchanged file without replacing their IDs."""
+ return {symbol.qualified_name: symbol for symbol in db.scalars(select(Symbol).where(Symbol.file_id == file.id)).all()}
+
+
 def _persist_edges(db, repo_id, parser_files):
  """Resolve only a unique declaration name inside this repository."""
  all_symbols = db.scalars(select(Symbol).where(Symbol.repository_id == repo_id)).all()
@@ -205,10 +210,10 @@ def index_repository(repo_id, full=False):
    try: raw=p.read_text(errors='strict')
    except (UnicodeDecodeError,OSError): continue
    paths.append((p.relative_to(root).as_posix(),raw,p.stat().st_size,language(str(p))))
-  # Preserve valid card payloads before replacing transient symbol IDs below.
+  # Preserve cards only when their source file will actually be replaced.
   preserved_cards = _snapshot_code_cards(db, repo_id)
-  # Make deletion explicit so SQLite tests and PostgreSQL have identical semantics.
-  db.execute(delete(CodeCard).where(CodeCard.repository_id == repo_id))
+  # Edge resolution is repository-wide. Rebuild edges below from both changed files
+  # and persisted symbols in skipped files, without rebuilding their durable rows.
   db.execute(delete(SymbolEdge).where(SymbolEdge.repository_id == repo_id))
   reusable_embeddings = {}
   # Keyed on the hash of the embedded document, not of raw source: a chunk whose code is unchanged
@@ -219,17 +224,28 @@ def index_repository(repo_id, full=False):
      reusable_embeddings[(chunk.embedding_input_hash, chunk.embedding_model)] = list(chunk.embedding)
   existing={f.path:f for f in db.scalars(select(File).where(File.repository_id==repo_id)).all()}
   parser_files=[]
+  replaced_paths=set()
   for path,content,size,lang in paths:
    digest=hashlib.sha256(content.encode()).hexdigest(); f=existing.pop(path,None)
-   if f and f.content_hash==digest: f.indexed_commit_sha=sha
-   if f: db.execute(delete(Symbol).where(Symbol.file_id==f.id)); db.execute(delete(CodeChunk).where(CodeChunk.file_id==f.id)); f.content=content;f.content_hash=digest;f.size_bytes=size;f.language=lang;f.indexed_commit_sha=sha
+   if f and f.content_hash==digest and not full:
+    f.indexed_commit_sha=sha
+    if lang in PARSER_LANGUAGES:
+     parser_files.append((f, analyze_source(content, lang), _existing_parser_symbols(db, f)))
+    continue
+   if f:
+    replaced_paths.add(path)
+    db.execute(delete(CodeCard).where(CodeCard.symbol_id.in_(select(Symbol.id).where(Symbol.file_id == f.id))))
+    db.execute(delete(Symbol).where(Symbol.file_id==f.id)); db.execute(delete(CodeChunk).where(CodeChunk.file_id==f.id)); f.content=content;f.content_hash=digest;f.size_bytes=size;f.language=lang;f.indexed_commit_sha=sha
    else: f=File(repository_id=repo_id,path=path,content=content,content_hash=digest,size_bytes=size,language=lang,indexed_commit_sha=sha);db.add(f);db.flush()
    if lang in PARSER_LANGUAGES:
     facts, symbols = _parser_symbols_and_chunks(db, repo_id, f, content, lang, sha)
     parser_files.append((f, facts, symbols))
    else:
     _legacy_symbols_and_chunks(db, repo_id, f, content, lang, sha)
-  for f in existing.values(): db.delete(f)
+  for f in existing.values():
+   replaced_paths.add(f.path)
+   db.delete(f)
+  preserved_cards = {key: values for key, values in preserved_cards.items() if key[0] in replaced_paths}
   db.flush()
   _persist_edges(db, repo_id, parser_files)
   _restore_code_cards(db, repo_id, sha, preserved_cards)

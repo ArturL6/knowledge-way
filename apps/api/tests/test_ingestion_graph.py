@@ -120,7 +120,9 @@ def test_full_reindex_preserves_unchanged_code_cards(monkeypatch, tmp_path):
     with sessions() as db:
         symbol = db.scalars(select(Symbol).where(Symbol.repository_id == repo.id)).one()
         cards = db.scalars(select(CodeCard).where(CodeCard.repository_id == repo.id)).all()
-        assert symbol.id != old_symbol_id
+        # A byte-identical sync must retain the existing durable rows rather than
+        # delete/recreate them (which would invalidate cards, edges and vectors).
+        assert symbol.id == old_symbol_id
         assert len(cards) == 1
         assert cards[0].symbol_id == symbol.id
         assert cards[0].summary == "retained"
