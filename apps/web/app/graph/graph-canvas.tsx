@@ -26,6 +26,7 @@ export default function GraphCanvas({ data, onNodeClick, selectedNodeId }: { dat
   const hasFitRef = useRef(false);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [dimensions, setDimensions] = useState({ width: 760, height: 540 });
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   const graphData = useMemo<GraphData>(() => ({
     nodes: data.nodes.map((node) => ({ ...node })),
@@ -45,13 +46,20 @@ export default function GraphCanvas({ data, onNodeClick, selectedNodeId }: { dat
   }, []);
 
   useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReducedMotion(query.matches);
+    update(); query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
     const graph = graphRef.current;
     if (!graph) return;
     graph.d3Force('charge')?.strength(-180);
     graph.d3Force('link')?.distance((link: GraphLink) => link.relationship === 'contains' ? 54 : 86);
   }, [graphData]);
 
-  return <div className="graph-canvas" ref={containerRef}>
+  return <div className="graph-canvas" ref={containerRef} role="group" aria-label="Interactive code graph and accessible node list">
     <ForceGraph2D
       ref={graphRef}
       graphData={graphData}
@@ -125,11 +133,15 @@ export default function GraphCanvas({ data, onNodeClick, selectedNodeId }: { dat
       linkWidth={(link) => relationshipStyle(link as GraphLink).width}
       d3AlphaDecay={0.028}
       d3VelocityDecay={0.34}
-      cooldownTicks={220}
-      onEngineStop={() => { if (!hasFitRef.current) { graphRef.current?.zoomToFit(450, 80); hasFitRef.current = true; } }}
+      cooldownTicks={reducedMotion ? 1 : 220}
+      onEngineStop={() => { if (!hasFitRef.current) { graphRef.current?.zoomToFit(reducedMotion ? 0 : 450, 80); hasFitRef.current = true; } }}
       onNodeHover={(node) => setHoveredNodeId(node ? (node as GraphNode).id : null)}
       onNodeClick={(node) => onNodeClick(node as GraphNode)}
       onNodeDragEnd={(node) => { const item = node as PositionedNode; item.fx = item.x; item.fy = item.y; }}
     />
+    <div className="graph-node-list" aria-label="Graph nodes">
+      <h3>Graph nodes</h3>
+      <ul>{graphData.nodes.map((node) => <li key={node.id}><button type="button" aria-pressed={selectedNodeId === node.id} onClick={() => onNodeClick(node)}>{node.label} <span className="muted">({nodeStyles[node.kind]?.label ?? nodeStyles.unknown.label})</span></button></li>)}</ul>
+    </div>
   </div>;
 }
