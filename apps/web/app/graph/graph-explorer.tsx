@@ -1,8 +1,8 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../lib/api';
 import { apiErrorMessage } from '../../lib/repositories';
 import { graphNodeKind, nodeStyles } from './graph-model';
@@ -85,6 +85,29 @@ const SYMBOL_HIT_LIMIT = 15;
 const MIN_QUERY_LENGTH = 3;
 const hitKey = (hit: SymbolHit) => `${hit.file_id}:${hit.start_line}:${hit.symbol ?? ''}`;
 
+/** Serializes the deep-link-able graph view state; the default depth is omitted to keep an all-default URL as plain `/graph`. */
+export function buildGraphUrl(repositoryId: string, symbolId: string, depth: string): string {
+  const params = new URLSearchParams();
+  if (repositoryId) params.set('repository', repositoryId);
+  if (symbolId) params.set('symbol', symbolId);
+  if (depth && depth !== '2') params.set('depth', depth);
+  const query = params.toString();
+  return query ? `/graph?${query}` : '/graph';
+}
+
+export function normalizeGraphDepth(value: string | null): string {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 2 ? String(parsed) : '2';
+}
+
+export function parseGraphState(params: { get(key: string): string | null }): { repositoryId: string; symbolId: string; depth: string } {
+  return {
+    repositoryId: params.get('repository') ?? '',
+    symbolId: params.get('symbol') ?? '',
+    depth: normalizeGraphDepth(params.get('depth')),
+  };
+}
+
 /** Picks the file symbol behind a search hit; the hit carries a qualified name and start line but no UUID. */
 export function matchFileSymbol(symbols: FileSymbol[], hit: SymbolHit): FileSymbol | null {
   const named = hit.symbol ? symbols.filter((symbol) => symbol.qualified_name === hit.symbol || symbol.name === hit.symbol) : [];
@@ -95,16 +118,17 @@ export function matchFileSymbol(symbols: FileSymbol[], hit: SymbolHit): FileSymb
 }
 
 export default function GraphExplorer() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialRepositoryId = searchParams.get('repository') ?? '';
-  const initialSymbolId = searchParams.get('symbol') ?? '';
-  const [repositoryId, setRepositoryId] = useState(initialRepositoryId); const [symbolId, setSymbolId] = useState(initialSymbolId); const [depth, setDepth] = useState('2');
+  const initialState = parseGraphState(searchParams);
+  const [repositoryId, setRepositoryId] = useState(initialState.repositoryId); const [symbolId, setSymbolId] = useState(initialState.symbolId); const [depth, setDepth] = useState(initialState.depth);
   const [repositories, setRepositories] = useState<RepositoryOption[]>([]);
   const [graph, setGraph] = useState<GraphData>({ nodes: [], links: [] }); const [source, setSource] = useState<'fixture' | 'api' | 'empty'>('empty');
   const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const [selected, setSelected] = useState<GraphNode | null>(null);
   const [relationship, setRelationship] = useState('all');
   const [symbolQuery, setSymbolQuery] = useState(''); const [hits, setHits] = useState<SymbolHit[] | null>(null); const [symbolLabel, setSymbolLabel] = useState('');
   const [resolving, setResolving] = useState(''); const [searching, setSearching] = useState(false); const [stats, setStats] = useState<GraphStats>(emptyStats);
+  const graphRequestVersion = useRef(0);
   const relationshipTypes = useMemo(() => [...new Set(graph.links.map((link) => link.relationship))].sort(), [graph]);
   const presentKinds = useMemo(() => [...new Set(graph.nodes.map((node) => node.kind))].filter((kind) => kind !== 'unknown'), [graph]);
   const filteredGraph = useMemo(() => {
@@ -113,16 +137,18 @@ export default function GraphExplorer() {
     return { links, nodes: graph.nodes.filter((node) => connected.has(node.id) || graph.links.length === 0) };
   }, [graph, relationship]);
 
-  async function requestGraph(repository = repositoryId, symbol = symbolId) {
-    setError(''); setSelected(null);
+  async function requestGraph(repository = repositoryId, symbol = symbolId, requestedDepth = depth) {
+    const version = ++graphRequestVersion.current;
+    setError(''); setSelected(null); setGraph({ nodes: [], links: [] });
     if (!repository.trim() || !symbol.trim()) { setError('Enter both a repository ID and a symbol ID to load the API graph, or use the fixture demo.'); return; }
     setLoading(true);
     try {
-      const boundedDepth = String(Math.max(1, Math.min(2, Number(depth) || 1)));
+      const boundedDepth = String(Math.max(1, Math.min(2, Number(requestedDepth) || 1)));
       const response = await api<unknown>(`/repositories/${encodeURIComponent(repository.trim())}/symbols/${encodeURIComponent(symbol.trim())}/subgraph?depth=${boundedDepth}`);
+      if (version !== graphRequestVersion.current) return;
       setGraph(mapApiGraph(response)); setStats(graphStats(response)); setSource('api'); setRelationship('all');
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to load graph data.'); }
-    finally { setLoading(false); }
+    } catch (cause) { if (version === graphRequestVersion.current) setError(cause instanceof Error ? cause.message : 'Unable to load graph data.'); }
+    finally { if (version === graphRequestVersion.current) setLoading(false); }
   }
   async function findSymbols(event: FormEvent) {
     event.preventDefault(); setError(''); setHits(null); setSymbolId(''); setSymbolLabel('');
@@ -151,15 +177,30 @@ export default function GraphExplorer() {
     } catch (cause) { setError(apiErrorMessage(cause)); }
     finally { setResolving(''); }
   }
-  useEffect(() => { api<RepositoryOption[]>('/repositories').then((items) => { const ready = items.filter((item) => item.indexing_status === 'ready'); setRepositories(ready); if (!repositoryId && ready[0]) setRepositoryId(ready[0].id); }).catch(() => {}); }, []);
-  useEffect(() => { if (initialRepositoryId && initialSymbolId) void requestGraph(initialRepositoryId, initialSymbolId); else if (initialRepositoryId) void requestOverview(); }, [initialRepositoryId, initialSymbolId]);
-  async function requestOverview() {
-    setError(''); setSelected(null);
-    if (!repositoryId.trim()) { setError('Choose an indexed repository first.'); return; }
+  useEffect(() => { api<RepositoryOption[]>('/repositories').then((items) => { setRepositories(items.filter((item) => item.indexing_status === 'ready')); }).catch(() => {}); }, []);
+  // The URL is authoritative. This applies shared links and browser Back/Forward as well as in-app navigation.
+  useEffect(() => {
+    const state = parseGraphState(searchParams);
+    setRepositoryId(state.repositoryId); setSymbolId(state.symbolId); setDepth(state.depth); setSymbolLabel('');
+    if (state.repositoryId && state.symbolId) void requestGraph(state.repositoryId, state.symbolId, state.depth);
+    else if (state.repositoryId) void requestOverview(state.repositoryId);
+    else { setGraph({ nodes: [], links: [] }); setSource('empty'); setStats(emptyStats); setSelected(null); }
+  }, [searchParams]);
+  function navigateGraph(nextRepositoryId: string, nextSymbolId: string, nextDepth: string) {
+    router.push(buildGraphUrl(nextRepositoryId, nextSymbolId, nextDepth), { scroll: false });
+  }
+  async function requestOverview(repository = repositoryId) {
+    const version = ++graphRequestVersion.current;
+    setError(''); setSelected(null); setGraph({ nodes: [], links: [] });
+    if (!repository.trim()) { setError('Choose an indexed repository first.'); return; }
     setLoading(true);
-    try { const response = await api<unknown>(`/repositories/${encodeURIComponent(repositoryId.trim())}/graph?max_nodes=100`); setGraph(mapApiGraph(response)); setStats(graphStats(response)); setSource('api'); setRelationship('all'); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to load repository graph data.'); }
-    finally { setLoading(false); }
+    try {
+      const response = await api<unknown>(`/repositories/${encodeURIComponent(repository.trim())}/graph?max_nodes=100`);
+      if (version !== graphRequestVersion.current) return;
+      setGraph(mapApiGraph(response)); setStats(graphStats(response)); setSource('api'); setRelationship('all');
+    }
+    catch (cause) { if (version === graphRequestVersion.current) setError(cause instanceof Error ? cause.message : 'Unable to load repository graph data.'); }
+    finally { if (version === graphRequestVersion.current) setLoading(false); }
   }
   function loadFixture() { setGraph(fixture); setSource('fixture'); setError(''); setSelected(null); setRelationship('all'); setStats(emptyStats); }
 
@@ -171,13 +212,13 @@ export default function GraphExplorer() {
   return <>
     <div className="page-heading"><div><h2>Code graph</h2><p className="muted">Explore repository structure and symbol relationships. Hover labels, drag any node to pin it, click for details.</p></div></div>
     <form className="card graph-controls" onSubmit={findSymbols}>
-      <label>Repository<select value={repositoryId} onChange={(event) => setRepositoryId(event.target.value)} required><option value="">Choose an indexed repository</option>{repositories.map((repository) => <option key={repository.id} value={repository.id}>{repository.name}</option>)}</select></label>
+      <label>Repository<select value={repositoryId} onChange={(event) => navigateGraph(event.target.value, '', depth)} required><option value="">Choose an indexed repository</option>{repositories.map((repository) => <option key={repository.id} value={repository.id}>{repository.name}</option>)}</select></label>
       <label>Symbol<input value={symbolQuery} onChange={(event) => setSymbolQuery(event.target.value)} placeholder="search by name, e.g. Agent" autoComplete="off" /></label>
-      <label>Depth<input type="number" min="1" max="2" value={depth} onChange={(event) => setDepth(event.target.value)} /></label>
-      <div className="graph-actions"><button type="button" onClick={() => void requestOverview()} disabled={loading}>{loading ? 'Loading…' : 'Repository map'}</button><button type="submit" className="secondary-button" disabled={searching || !symbolQuery.trim()}>{searching ? 'Searching…' : 'Find symbol'}</button><button type="button" className="secondary-button" onClick={() => void requestGraph()} disabled={loading || !symbolId}>Focus symbol</button><button type="button" className="secondary-button" onClick={loadFixture} disabled={loading}>Fixture</button></div>
+      <label>Depth<input type="number" min="1" max="2" value={depth} onChange={(event) => navigateGraph(repositoryId, symbolId, event.target.value)} /></label>
+      <div className="graph-actions"><button type="button" onClick={() => navigateGraph(repositoryId, '', depth)} disabled={loading}>{loading ? 'Loading…' : 'Repository map'}</button><button type="submit" className="secondary-button" disabled={searching || !symbolQuery.trim()}>{searching ? 'Searching…' : 'Find symbol'}</button><button type="button" className="secondary-button" onClick={() => navigateGraph(repositoryId, symbolId, depth)} disabled={loading || !symbolId}>Focus symbol</button><button type="button" className="secondary-button" onClick={loadFixture} disabled={loading}>Fixture</button></div>
     </form>
     {error && <div className="graph-message graph-error" role="alert">{error}</div>}
-    {symbolId !== '' && <div className="card symbol-selected"><span>Anchored on <strong>{symbolLabel || 'the linked symbol'}</strong> <code className="citation">{symbolId}</code></span><button type="button" className="secondary-button" onClick={() => { setSymbolId(''); setSymbolLabel(''); }}>Clear</button></div>}
+    {symbolId !== '' && <div className="card symbol-selected"><span>Anchored on <strong>{symbolLabel || 'the linked symbol'}</strong> <code className="citation">{symbolId}</code></span><button type="button" className="secondary-button" onClick={() => navigateGraph(repositoryId, '', depth)}>Clear</button></div>}
     {hits !== null && <div className="card symbol-hits" aria-live="polite">{hits.length === 0 ? <p className="muted">No indexed symbol matched that name in this repository.</p> : <ul>{hits.map((hit) => <li key={hitKey(hit)}><button type="button" className="symbol-hit" disabled={resolving !== ''} onClick={() => void chooseSymbol(hit)}><span className="symbol-hit-name">{hit.symbol ?? hit.path}</span><span className="muted">{hit.path}:{hit.start_line}{resolving === hitKey(hit) ? ' · resolving…' : ''}</span></button></li>)}</ul>}</div>}
     <section className="card graph-card">
       <div className="graph-summary">{presentKinds.map((kind) => <span key={kind}><i className="legend-dot" style={{ background: nodeStyles[kind].color }} />{nodeStyles[kind].label}</span>)}<span className="muted">{source === 'fixture' ? 'Demo (illustrative)' : source === 'api' ? 'API result' : 'No graph loaded'} · {summaryCounts}</span></div>

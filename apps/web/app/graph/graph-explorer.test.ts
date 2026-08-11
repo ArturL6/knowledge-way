@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mapApiGraph, matchFileSymbol } from './graph-explorer';
+import { buildGraphUrl, mapApiGraph, matchFileSymbol, normalizeGraphDepth, parseGraphState } from './graph-explorer';
 
 describe('mapApiGraph', () => {
   it('maps a nodes/edges payload into GraphData with computed degree', () => {
@@ -142,5 +142,47 @@ describe('matchFileSymbol', () => {
   it('matches purely by line range when the hit has no symbol name', () => {
     const hit = { repository_id: 'r', file_id: 'f', path: 'p', start_line: 30, end_line: 40, symbol: null };
     expect(matchFileSymbol(symbols, hit)).toEqual(symbols[1]);
+  });
+});
+
+describe('parseGraphState', () => {
+  it('restores a linked graph selection and depth', () => {
+    const params = new URLSearchParams('repository=repo-1&symbol=sym-1&depth=1');
+    expect(parseGraphState(params)).toEqual({ repositoryId: 'repo-1', symbolId: 'sym-1', depth: '1' });
+  });
+
+  it('uses empty/default values for the bare graph route', () => {
+    expect(parseGraphState(new URLSearchParams())).toEqual({ repositoryId: '', symbolId: '', depth: '2' });
+  });
+
+  it('normalizes malformed deep-link depths before they reach the API', () => {
+    expect(normalizeGraphDepth('999')).toBe('2');
+    expect(normalizeGraphDepth('1.5')).toBe('2');
+  });
+});
+
+describe('buildGraphUrl', () => {
+  it('returns the bare path when nothing is selected', () => {
+    expect(buildGraphUrl('', '', '2')).toBe('/graph');
+  });
+
+  it('includes only the repository when no symbol is chosen', () => {
+    expect(buildGraphUrl('repo-1', '', '2')).toBe('/graph?repository=repo-1');
+  });
+
+  it('includes both repository and symbol', () => {
+    expect(buildGraphUrl('repo-1', 'sym-1', '2')).toBe('/graph?repository=repo-1&symbol=sym-1');
+  });
+
+  it('omits depth when it is the default', () => {
+    expect(buildGraphUrl('repo-1', 'sym-1', '2')).not.toContain('depth');
+  });
+
+  it('includes a non-default depth', () => {
+    expect(buildGraphUrl('repo-1', 'sym-1', '1')).toBe('/graph?repository=repo-1&symbol=sym-1&depth=1');
+  });
+
+  it('percent-encodes ids that need it', () => {
+    expect(buildGraphUrl('repo one', '', '2')).toBe('/graph?repository=repo+one');
   });
 });

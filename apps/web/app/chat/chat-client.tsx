@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { api } from '../../lib/api';
 
 type Repository = { id: string; name: string; indexed_commit_sha?: string | null; indexing_status: string };
@@ -21,6 +22,6 @@ export default function ChatClient() {
   return <section className="chat"><h2>Grounded code questions</h2><p className="muted">Retrieval is repository- and commit-scoped. Answers are evidence summaries, not unverified model claims.</p>
     <form onSubmit={ask}><label>Repository<select value={repositoryId} onChange={(event) => setRepositoryId(event.target.value)} required><option value="">Choose an indexed repository</option>{repositories.map((repository) => <option key={repository.id} value={repository.id}>{repository.name}{repository.indexed_commit_sha ? ` · ${repository.indexed_commit_sha.slice(0, 12)}` : ''}</option>)}</select></label><textarea rows={4} value={q} onChange={(event) => setQ(event.target.value)} placeholder="Where is authentication implemented?"/><p><button disabled={loading || !repositoryId}>{loading ? 'Retrieving…' : 'Ask codebase'}</button></p></form>
     {error && <div className="graph-message graph-error" role="alert">{error}</div>}
-    {items.map((item, index) => <div className="message assistant" key={index}><p>{item.answer}</p><p className="muted">{item.grounded ? `Grounded retrieval · commit ${item.scope.indexed_commit_sha?.slice(0, 12) ?? 'unknown'}` : 'Not sufficiently evidenced by the indexed repository.'}</p>{item.citations.map((citation, citationIndex) => <a className="citation" key={citationIndex} href={`/files/${citation.file_id}#L${citation.start_line}`}>{citation.repository}/{citation.path}:{citation.start_line}-{citation.end_line}{citation.indexed_commit_sha ? ` · ${citation.indexed_commit_sha.slice(0, 12)}` : ''}</a>)}</div>)}
+    {items.map((item, index) => <div className="message assistant" key={index}><p>{item.answer}</p><p className="muted">{item.grounded ? `Grounded retrieval · commit ${item.scope.indexed_commit_sha?.slice(0, 12) ?? 'unknown'}` : 'Not sufficiently evidenced by the indexed repository.'}</p>{item.citations.map((citation, citationIndex) => <Link className="citation" key={citationIndex} href={`/files/${citation.file_id}#L${citation.start_line}`}>{citation.repository}/{citation.path}:{citation.start_line}-{citation.end_line}{citation.indexed_commit_sha ? ` · ${citation.indexed_commit_sha.slice(0, 12)}` : ''}</Link>)}</div>)}
   </section>;
 }
