@@ -1,4 +1,6 @@
 from pathlib import PurePosixPath
+import hashlib
+import json
 from typing import Literal
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Query
@@ -13,7 +15,7 @@ from app.code_cards import code_card_model
 from app.config import settings
 from app.git_auth import validate_clone_url
 from app.db import SessionLocal, get_db, verify_migration_ready
-from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, CodeCard, StructuralCard, IndexingJob, Conversation, Message
+from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, WorkspaceSnapshot, WorkspaceSnapshotRepository, File, Symbol, SymbolEdge, CodeChunk, CodeCard, StructuralCard, IndexingJob, Conversation, Message
 from app.reconcile import reconcile_indexing_jobs
 from app.search import search, search_with_capability
 from app.providers import semantic_capability
@@ -38,6 +40,10 @@ class WorkspaceDependencyIn(BaseModel):
  source_repository_id:str; target_repository_id:str; package_name:str|None=Field(default=None,max_length=512); import_path:str|None=Field(default=None,max_length=1024); reason:str|None=Field(default=None,max_length=10000); note:str|None=Field(default=None,max_length=10000)
 class WorkspaceDependencyUpdate(BaseModel):
  package_name:str|None=Field(default=None,max_length=512); import_path:str|None=Field(default=None,max_length=1024); reason:str|None=Field(default=None,max_length=10000); note:str|None=Field(default=None,max_length=10000)
+class WorkspaceSnapshotPinIn(BaseModel):
+ repository_id:str; indexed_commit_sha:str=Field(pattern=r'^[0-9a-f]{40}$')
+class WorkspaceSnapshotIn(BaseModel):
+ repository_pins:list[WorkspaceSnapshotPinIn]=Field(min_length=1,max_length=100)
 class ChatIn(BaseModel):
  question:str=Field(min_length=1,max_length=8000); repository_id:str|None=None; conversation_id:str|None=None
 class ExplanationIn(BaseModel):
@@ -51,6 +57,12 @@ def live_progress(r): return {} if r.indexing_status=='ready' else r.indexing_pr
 def repo_out(r): return {'id':r.id,'name':r.name,'clone_url':r.clone_url,'requested_revision':r.requested_revision,'default_branch':r.default_branch,'indexed_branch':r.indexed_branch,'indexed_commit_sha':r.indexed_commit_sha,'latest_detected_commit_sha':r.latest_detected_commit_sha,'indexing_status':r.indexing_status,'indexing_progress':live_progress(r),'error_message':r.error_message,'last_indexed_at':r.last_indexed_at,'last_sync_at':r.last_sync_at,'created_at':r.created_at}
 def workspace_out(w): return {'id':w.id,'name':w.name,'description':w.description,'created_at':w.created_at,'updated_at':w.updated_at}
 def workspace_dependency_out(d): return {'id':d.id,'workspace_id':d.workspace_id,'source_repository_id':d.source_repository_id,'target_repository_id':d.target_repository_id,'package_name':d.package_name,'import_path':d.import_path,'reason':d.reason,'note':d.note,'created_at':d.created_at,'updated_at':d.updated_at}
+def workspace_snapshot_out(db,snapshot):
+ pins=db.scalars(select(WorkspaceSnapshotRepository).where(WorkspaceSnapshotRepository.snapshot_id==snapshot.id).order_by(WorkspaceSnapshotRepository.repository_id)).all()
+ return {'id':snapshot.id,'workspace_id':snapshot.workspace_id,'schema_version':snapshot.schema_version,'manifest_hash':snapshot.manifest_hash,'repository_pins':[{'repository_id':pin.repository_id,'indexed_commit_sha':pin.indexed_commit_sha} for pin in pins],'created_at':snapshot.created_at}
+def workspace_snapshot_manifest_hash(workspace_id,pins):
+ manifest={'schema_version':'workspace-snapshot-v1','workspace_id':workspace_id,'repository_pins':sorted(pins,key=lambda pin:pin['repository_id'])}
+ return hashlib.sha256(json.dumps(manifest,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 def validate_dependency_membership(db,workspace_id,source_repository_id,target_repository_id):
  if source_repository_id==target_repository_id: raise HTTPException(422,'Source and target repositories must differ')
  members=set(db.scalars(select(WorkspaceRepository.repository_id).where(WorkspaceRepository.workspace_id==workspace_id)).all())
@@ -127,6 +139,30 @@ def delete_workspace(workspace_id:str,db:Session=Depends(get_db)):
  w=db.get(Workspace,workspace_id)
  if not w: raise HTTPException(404,'Workspace not found')
  db.execute(delete(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace_id)); db.execute(delete(WorkspaceRepository).where(WorkspaceRepository.workspace_id==workspace_id)); db.delete(w); db.commit()
+@app.get('/api/workspaces/{workspace_id}/snapshots')
+def workspace_snapshots(workspace_id:str,db:Session=Depends(get_db)):
+ if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
+ return [workspace_snapshot_out(db,snapshot) for snapshot in db.scalars(select(WorkspaceSnapshot).where(WorkspaceSnapshot.workspace_id==workspace_id).order_by(WorkspaceSnapshot.created_at.desc(),WorkspaceSnapshot.id.desc())).all()]
+@app.get('/api/workspaces/{workspace_id}/snapshots/{snapshot_id}')
+def workspace_snapshot(workspace_id:str,snapshot_id:str,db:Session=Depends(get_db)):
+ snapshot=db.scalar(select(WorkspaceSnapshot).where(WorkspaceSnapshot.workspace_id==workspace_id,WorkspaceSnapshot.id==snapshot_id))
+ if not snapshot: raise HTTPException(404,'Workspace snapshot not found')
+ return workspace_snapshot_out(db,snapshot)
+@app.post('/api/workspaces/{workspace_id}/snapshots',status_code=201)
+def create_workspace_snapshot(workspace_id:str,body:WorkspaceSnapshotIn,db:Session=Depends(get_db)):
+ if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
+ pins=[pin.model_dump() for pin in body.repository_pins]; pin_ids=[pin['repository_id'] for pin in pins]
+ if len(set(pin_ids))!=len(pin_ids): raise HTTPException(422,'Repository pins must not contain duplicates')
+ members=set(db.scalars(select(WorkspaceRepository.repository_id).where(WorkspaceRepository.workspace_id==workspace_id)).all())
+ if set(pin_ids)!=members: raise HTTPException(422,'Repository pins must match workspace membership exactly')
+ repositories={repo.id:repo for repo in db.scalars(select(Repository).where(Repository.id.in_(members))).all()}
+ if any(repositories[pin['repository_id']].indexed_commit_sha!=pin['indexed_commit_sha'] for pin in pins): raise HTTPException(422,'Repository pin must match its currently indexed commit')
+ manifest_hash=workspace_snapshot_manifest_hash(workspace_id,pins)
+ existing=db.scalar(select(WorkspaceSnapshot).where(WorkspaceSnapshot.workspace_id==workspace_id,WorkspaceSnapshot.manifest_hash==manifest_hash))
+ if existing: return workspace_snapshot_out(db,existing)
+ snapshot=WorkspaceSnapshot(workspace_id=workspace_id,manifest_hash=manifest_hash,schema_version='workspace-snapshot-v1'); db.add(snapshot); db.flush()
+ db.add_all([WorkspaceSnapshotRepository(snapshot_id=snapshot.id,**pin) for pin in pins]); db.commit(); db.refresh(snapshot)
+ return workspace_snapshot_out(db,snapshot)
 @app.get('/api/workspaces/{workspace_id}/dependencies')
 def workspace_dependencies(workspace_id:str,db:Session=Depends(get_db)):
  if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
@@ -198,6 +234,7 @@ def delete_repository(repo_id:str,db:Session=Depends(get_db)):
  r=db.get(Repository,repo_id)
  if not r: raise HTTPException(404,'Repository not found')
  if r.indexing_status=='indexing': raise HTTPException(409,'Cannot delete a repository while it is indexing')
+ if db.scalar(select(WorkspaceSnapshotRepository.id).where(WorkspaceSnapshotRepository.repository_id==repo_id).limit(1)): raise HTTPException(409,'Cannot delete a repository referenced by a workspace snapshot')
  db.execute(delete(WorkspaceDependency).where((WorkspaceDependency.source_repository_id==repo_id)|(WorkspaceDependency.target_repository_id==repo_id))); db.execute(delete(WorkspaceRepository).where(WorkspaceRepository.repository_id==repo_id)); db.delete(r);db.commit()
 @app.post('/api/repositories/{repo_id}/sync',status_code=202)
 def sync(repo_id:str,db:Session=Depends(get_db)):

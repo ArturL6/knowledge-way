@@ -9,7 +9,7 @@ API_DIR = Path(__file__).resolve().parents[1]
 
 def test_migrations_have_expected_head():
     script = ScriptDirectory.from_config(Config(str(API_DIR / "alembic.ini")))
-    assert script.get_heads() == ["20260810_0010"]
+    assert script.get_heads() == ["20260812_0011"]
 
 
 def test_initial_migration_creates_pgvector_extension_and_all_model_tables():
