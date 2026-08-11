@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.models import Repository, File, CodeChunk
+from app import search as search_module
 from app.search import parse_query, query_terms, result, search_with_capability, _fuse
 
 
@@ -83,6 +84,49 @@ def test_repository_scope_is_applied_before_the_sql_limit():
 
     unscoped, _ = search_with_capability(db, "needle", mode="text", limit=10)
     assert {r["repository_id"] for r in unscoped} == {"repo-a", "repo-b"}
+
+
+def test_hybrid_exact_lexical_hit_skips_embedding_request(monkeypatch):
+    """#54: an exact source match is already precise; hybrid must not pay a provider RTT."""
+    db = _session()
+    _repo(db, "repo", "demo")
+    file = _file(db, "file", "repo", "source.py")
+    _chunk(db, "chunk", "repo", "file", 1, "def exact_handler():\n    return 'ok'")
+
+    class Provider:
+        model = "test:embedding"
+        calls = 0
+        async def embed_texts(self, texts):
+            self.calls += 1
+            return [[0.0, 1.0]]
+
+    provider = Provider()
+    monkeypatch.setattr(search_module, "embedding_provider", lambda: provider)
+    results, capability = search_with_capability(db, "exact_handler", mode="hybrid", limit=10)
+
+    assert [item["result_id"] for item in results] == ["chunk"]
+    assert provider.calls == 0
+    assert capability["state"] == "enabled"
+
+
+def test_hybrid_partial_term_match_still_uses_semantic_retrieval(monkeypatch):
+    """The fast path is deliberately limited to exact phrase matches, not broad token hits."""
+    db = _session()
+    _repo(db, "repo", "demo")
+    file = _file(db, "file", "repo", "source.py")
+    _chunk(db, "chunk", "repo", "file", 1, "def exact_handler():\n    return 'ok'")
+
+    class Provider:
+        model = "test:embedding"
+        calls = 0
+        async def embed_texts(self, texts):
+            self.calls += 1
+            return [[0.0, 1.0]]
+
+    provider = Provider()
+    monkeypatch.setattr(search_module, "embedding_provider", lambda: provider)
+    search_with_capability(db, "handler missing context", mode="hybrid", limit=10)
+    assert provider.calls == 1
 
 
 def test_scope_to_nonexistent_repository_returns_empty_not_everything():
