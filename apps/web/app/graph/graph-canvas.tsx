@@ -11,10 +11,13 @@ type GraphEndpoint = string | { id?: unknown };
 const shortLabel = (label: string) => label.length > 34 ? `${label.slice(0, 31)}…` : label;
 const endpointId = (endpoint: unknown) => typeof endpoint === 'object' && endpoint !== null ? `${(endpoint as { id?: unknown }).id ?? ''}` : `${endpoint ?? ''}`;
 const nodeRadius = (node: GraphNode) => node.isRoot ? 12 : Math.min(9, 5 + Math.sqrt(node.degree ?? 0));
+const isStructural = (relationship: string) => relationship === 'contains' || relationship === 'defines';
 const relationshipStyle = (link: GraphLink) => {
   if (link.relationship === 'contains') return { color: '#8f7bea', width: 1.5, dash: [3, 3], arrow: 0 };
   if (link.relationship === 'defines') return { color: '#54d2a0', width: 1.8, dash: [5, 2], arrow: 0 };
-  return { color: '#74a7ff', width: (link.confidence ?? 0) >= 0.9 ? 2.4 : 1.5, dash: [], arrow: 5 };
+  // ponytail: width reflects parallel-edge count (log-ish), never `confidence` — that field is a name-uniqueness
+  // fluke, not a signal, and rendering it as stroke thickness previously made the least trustworthy edges loudest.
+  return { color: '#74a7ff', width: Math.min(3, 1.4 + Math.log2(Math.max(1, link.count ?? 1)) * 0.5), dash: [], arrow: 5 };
 };
 
 export default function GraphCanvas({ data, onNodeClick, selectedNodeId }: { data: GraphData; onNodeClick: (node: GraphNode) => void; selectedNodeId?: string }) {
@@ -23,6 +26,7 @@ export default function GraphCanvas({ data, onNodeClick, selectedNodeId }: { dat
   const hasFitRef = useRef(false);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [dimensions, setDimensions] = useState({ width: 760, height: 540 });
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   const graphData = useMemo<GraphData>(() => ({
     nodes: data.nodes.map((node) => ({ ...node })),
@@ -42,13 +46,20 @@ export default function GraphCanvas({ data, onNodeClick, selectedNodeId }: { dat
   }, []);
 
   useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReducedMotion(query.matches);
+    update(); query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
     const graph = graphRef.current;
     if (!graph) return;
     graph.d3Force('charge')?.strength(-180);
     graph.d3Force('link')?.distance((link: GraphLink) => link.relationship === 'contains' ? 54 : 86);
   }, [graphData]);
 
-  return <div className="graph-canvas" ref={containerRef}>
+  return <div className="graph-canvas" ref={containerRef} role="group" aria-label="Interactive code graph and accessible node list">
     <ForceGraph2D
       ref={graphRef}
       graphData={graphData}
@@ -109,7 +120,12 @@ export default function GraphCanvas({ data, onNodeClick, selectedNodeId }: { dat
         ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
         ctx.fillRect(node.x + radius, node.y - fontSize, ctx.measureText(label).width + 14 / globalScale, fontSize * 2);
       }}
-      linkLabel={(link) => { const item = link as GraphLink; return item.confidence == null ? item.relationship : `${item.relationship} (${Math.round(item.confidence * 100)}%)`; }}
+      linkLabel={(link) => {
+        const item = link as GraphLink;
+        if (isStructural(item.relationship)) return item.relationship;
+        const countSuffix = item.count && item.count > 1 ? ` ×${item.count}` : '';
+        return item.resolution ? `${item.relationship}${countSuffix} · ${item.resolution}` : `${item.relationship}${countSuffix}`;
+      }}
       linkColor={(link) => relationshipStyle(link as GraphLink).color}
       linkLineDash={(link) => relationshipStyle(link as GraphLink).dash}
       linkDirectionalArrowLength={(link) => relationshipStyle(link as GraphLink).arrow}
@@ -117,11 +133,15 @@ export default function GraphCanvas({ data, onNodeClick, selectedNodeId }: { dat
       linkWidth={(link) => relationshipStyle(link as GraphLink).width}
       d3AlphaDecay={0.028}
       d3VelocityDecay={0.34}
-      cooldownTicks={220}
-      onEngineStop={() => { if (!hasFitRef.current) { graphRef.current?.zoomToFit(450, 80); hasFitRef.current = true; } }}
+      cooldownTicks={reducedMotion ? 1 : 220}
+      onEngineStop={() => { if (!hasFitRef.current) { graphRef.current?.zoomToFit(reducedMotion ? 0 : 450, 80); hasFitRef.current = true; } }}
       onNodeHover={(node) => setHoveredNodeId(node ? (node as GraphNode).id : null)}
       onNodeClick={(node) => onNodeClick(node as GraphNode)}
       onNodeDragEnd={(node) => { const item = node as PositionedNode; item.fx = item.x; item.fy = item.y; }}
     />
+    <div className="graph-node-list" aria-label="Graph nodes">
+      <h3>Graph nodes</h3>
+      <ul>{graphData.nodes.map((node) => <li key={node.id}><button type="button" aria-pressed={selectedNodeId === node.id} onClick={() => onNodeClick(node)}>{node.label} <span className="muted">({nodeStyles[node.kind]?.label ?? nodeStyles.unknown.label})</span></button></li>)}</ul>
+    </div>
   </div>;
 }
