@@ -213,7 +213,7 @@ def index_repository(repo_id, full=False):
   reusable_embeddings = {}
   # Keyed on the hash of the embedded document, not of raw source: a chunk whose code is unchanged
   # but whose code card or resolved calls moved must be re-embedded, not served a stale vector.
-  if full and embedding_provider() is not None:
+  if embedding_provider() is not None:
    for chunk in db.scalars(select(CodeChunk).where(CodeChunk.repository_id==repo_id).where(CodeChunk.embedding.is_not(None))).all():
     if chunk.embedding_model and chunk.embedding_input_hash:
      reusable_embeddings[(chunk.embedding_input_hash, chunk.embedding_model)] = list(chunk.embedding)
@@ -235,8 +235,7 @@ def index_repository(repo_id, full=False):
   _restore_code_cards(db, repo_id, sha, preserved_cards)
   db.flush()
   refresh_structural_cards(db, repo_id, sha)
-  if full:
-   _embed_full_index_chunks(db, repo_id, reusable_embeddings)
+  _embed_full_index_chunks(db, repo_id, reusable_embeddings)
   repo.indexed_commit_sha=sha;repo.indexed_branch=run('git','branch','--show-current',cwd=root) or None;repo.indexing_status='ready';repo.error_message=None;repo.indexing_progress={'phase':'finalizing','files':len(paths)};repo.last_indexed_at=datetime.utcnow();repo.last_sync_at=datetime.utcnow();job.status='ready';job.progress=repo.indexing_progress;job.finished_at=datetime.utcnow();db.commit()
  except Exception as e:
   # The try block is part-way through a destructive rewrite: the old symbols, chunks and edges

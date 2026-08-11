@@ -215,7 +215,8 @@ def status(repo_id:str,db:Session=Depends(get_db)):
  if reconcile_indexing_jobs(db): db.expire_all()
  r=db.get(Repository,repo_id)
  if not r: raise HTTPException(404,'Repository not found')
- return {'status':r.indexing_status,'progress':live_progress(r),'error':r.error_message,'indexed_commit_sha':r.indexed_commit_sha}
+ total_chunks, embedded_chunks = db.execute(select(func.count(CodeChunk.id), func.count(CodeChunk.embedding)).where(CodeChunk.repository_id==repo_id)).one()
+ return {'status':r.indexing_status,'progress':live_progress(r),'error':r.error_message,'indexed_commit_sha':r.indexed_commit_sha,'total_chunks':total_chunks,'embedded_chunks':embedded_chunks}
 @app.post('/api/repositories/{repo_id}/code-cards',status_code=202)
 def generate_code_cards(repo_id:str,body:CodeCardRunIn,db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
