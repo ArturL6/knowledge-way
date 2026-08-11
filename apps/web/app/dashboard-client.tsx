@@ -6,6 +6,7 @@ import {apiErrorMessage, cloneUrlError, progressLabel, Repository} from '../lib/
 
 type Props = {initialRepos: Repository[]};
 type Status = Pick<Repository, 'indexing_status' | 'indexing_progress' | 'indexed_commit_sha' | 'error_message'>;
+type Capability = {semantic?: {state?: string; provider?: string; model?: string | null; reranking?: {state?: string; applied?: boolean}}};
 
 export default function DashboardClient({initialRepos}: Props) {
   const [repos, setRepos] = useState(initialRepos);
@@ -15,6 +16,7 @@ export default function DashboardClient({initialRepos}: Props) {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Repository | null>(null);
+  const [capability, setCapability] = useState<Capability | null>(null);
   const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
   const repositoriesHeadingRef = useRef<HTMLHeadingElement | null>(null);
@@ -49,6 +51,23 @@ export default function DashboardClient({initialRepos}: Props) {
   async function refresh() {
     setRepos(await api<Repository[]>('/repositories'));
   }
+
+  useEffect(() => {
+    let cancelled = false;
+    api<Capability>('/capabilities').then((value) => { if (!cancelled) setCapability(value); }).catch(() => {});
+    const poll = async () => {
+      const active = repos.filter((repo) => ['pending', 'indexing'].includes(repo.indexing_status));
+      if (!active.length) return;
+      const updates = await Promise.all(active.map(async (repo) => [repo.id, await api<Status>(`/repositories/${encodeURIComponent(repo.id)}/status`)] as const));
+      if (!cancelled) setRepos((current) => current.map((repo) => {
+        const status = updates.find(([id]) => id === repo.id)?.[1];
+        return status ? {...repo, ...status} : repo;
+      }));
+    };
+    void poll();
+    const interval = window.setInterval(() => { void poll(); }, 3000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [repos]);
 
   async function addRepository(event: FormEvent) {
     event.preventDefault();
@@ -93,6 +112,7 @@ export default function DashboardClient({initialRepos}: Props) {
       <div className="card"><div className="metric">{repos.filter((repo) => repo.indexing_status === 'ready').length}</div>Ready</div>
       <div className="card"><div className="metric">{repos.filter((repo) => repo.indexing_status === 'indexing').length}</div>Indexing</div>
     </section>
+    {capability?.semantic && <p className="muted" role="status">Semantic search: {capability.semantic.state}{capability.semantic.provider ? ` · ${capability.semantic.provider}` : ''}{capability.semantic.model ? ` / ${capability.semantic.model}` : ''} · Reranking: {capability.semantic.reranking?.state ?? 'unknown'}</p>}
 
     <section className="card repository-form-card" aria-labelledby="add-repository-heading">
       <h3 id="add-repository-heading">Connect a repository</h3>
@@ -109,7 +129,7 @@ export default function DashboardClient({initialRepos}: Props) {
     <section className="grid">
       {repos.map((repo) => <article className="card repository-card" key={repo.id}>
         <div className="repository-title"><div><b>{repo.name}</b><p className="muted clone-url">{repo.clone_url}</p></div><span className={`status status-${repo.indexing_status}`}>{repo.indexing_status}</span></div>
-        <dl className="repository-details"><div><dt>Progress</dt><dd>{progressLabel(repo.indexing_progress)}</dd></div><div><dt>Current commit</dt><dd><code>{repo.indexed_commit_sha?.slice(0, 12) || 'Not indexed'}</code></dd></div></dl>
+        <dl className="repository-details"><div><dt>Progress</dt><dd>{progressLabel(repo.indexing_progress)}</dd></div><div><dt>Indexed branch</dt><dd>{repo.indexed_branch || 'Not indexed'}</dd></div><div><dt>Current commit</dt><dd><code>{repo.indexed_commit_sha?.slice(0, 12) || 'Not indexed'}</code></dd></div><div><dt>Latest detected</dt><dd>{repo.latest_detected_commit_sha ? <code>{repo.latest_detected_commit_sha.slice(0, 12)}{repo.indexed_commit_sha && repo.latest_detected_commit_sha !== repo.indexed_commit_sha ? ' · Stale' : ''}</code> : 'Unknown'}</dd></div></dl>
         {repo.error_message && <p className="form-message form-error">{repo.error_message}</p>}
         <div className="repository-actions">
           <button type="button" className="secondary-button" disabled={busy !== null} onClick={() => runAction(repo, 'sync')}>Sync</button>
