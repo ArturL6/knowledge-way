@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "purpose": "Measure whether versioned Gemini Code Cards improve retrieval for a pinned, fully indexed Starlette snapshot. Each case records the expected implementation definition; documentation or test chunks may appear above it and are reported separately.",
+  "purpose": "Measure whether versioned Gemini Code Cards improve retrieval for a pinned, fully indexed Starlette snapshot. The 50 cases balance middleware, request/response, routing, WebSocket, concurrency, static files, authentication, templating, forms, and exception handling. Each case records the expected implementation definition; documentation or test chunks may appear above it and are reported separately.",
   "repository": {
     "id": "9c4be994-2e19-433e-82bd-d10f90bec532",
     "name": "Fork fixture: Starlette",
@@ -10,81 +10,474 @@
     {
       "id": "body-limit-streaming",
       "query": "Where does Starlette reject a streaming HTTP request body after it exceeds the configured size limit?",
-      "expected": {"path": "starlette/middleware/body_limit.py", "symbol": "RequestBodyLimitResponder.receive_with_limit"},
+      "expected": {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "RequestBodyLimitResponder.receive_with_limit"
+      },
       "intent": "Behavioral question; avoids the implementation identifier and distinguishes an incremental body-size check from a simple Content-Length check."
     },
     {
       "id": "background-after-response",
-      "query": "Wie führt Starlette mehrere Hintergrundaufgaben nacheinander aus, nachdem eine Response gesendet wurde?",
-      "expected": {"path": "starlette/background.py", "symbol": "BackgroundTasks.__call__"},
+      "query": "Wie f\u00fchrt Starlette mehrere Hintergrundaufgaben nacheinander aus, nachdem eine Response gesendet wurde?",
+      "expected": {
+        "path": "starlette/background.py",
+        "symbol": "BackgroundTasks.__call__"
+      },
       "intent": "German behavioral wording; expects execution semantics rather than the class name."
     },
     {
       "id": "client-disconnect-probe",
       "query": "How can a request handler detect whether the HTTP client disconnected without waiting for a full request body?",
-      "expected": {"path": "starlette/requests.py", "symbol": "Request.is_disconnected"},
+      "expected": {
+        "path": "starlette/requests.py",
+        "symbol": "Request.is_disconnected"
+      },
       "intent": "Conceptual async-server question with no target identifier."
     },
     {
       "id": "range-response-parser",
       "query": "Which Starlette implementation parses a Range header to serve a byte interval from a file response?",
-      "expected": {"path": "starlette/responses.py", "symbol": "FileResponse._parse_range_header"},
+      "expected": {
+        "path": "starlette/responses.py",
+        "symbol": "FileResponse._parse_range_header"
+      },
       "intent": "HTTP behavior and internal responsibility rather than an exact method-name query."
     },
     {
       "id": "cors-preflight",
       "query": "Wo wird eine CORS Preflight OPTIONS-Anfrage beantwortet und die erlaubten Header erzeugt?",
-      "expected": {"path": "starlette/middleware/cors.py", "symbol": "CORSMiddleware.preflight_response"},
+      "expected": {
+        "path": "starlette/middleware/cors.py",
+        "symbol": "CORSMiddleware.preflight_response"
+      },
       "intent": "German framework question; may have strong lexical evidence, so it is a control case as well as a semantic case."
     },
     {
       "id": "static-not-modified",
       "query": "How does static-file serving decide that a browser cache validator means the file has not changed?",
-      "expected": {"path": "starlette/staticfiles.py", "symbol": "StaticFiles.is_not_modified"},
+      "expected": {
+        "path": "starlette/staticfiles.py",
+        "symbol": "StaticFiles.is_not_modified"
+      },
       "intent": "Describes conditional caching semantics without using ETag or method names."
     },
     {
       "id": "authentication-scope",
       "query": "Welche Middleware schreibt nach erfolgreicher Authentifizierung Benutzer und Berechtigungen in den ASGI Scope?",
-      "expected": {"path": "starlette/middleware/authentication.py", "symbol": "AuthenticationMiddleware.__call__"},
+      "expected": {
+        "path": "starlette/middleware/authentication.py",
+        "symbol": "AuthenticationMiddleware.__call__"
+      },
       "intent": "German data-flow question, targeting authenticated scope population."
     },
     {
       "id": "lifespan-state",
       "query": "Where is state returned by an application lifespan context copied into the ASGI scope during startup?",
-      "expected": {"path": "starlette/routing.py", "symbol": "Router.lifespan"},
+      "expected": {
+        "path": "starlette/routing.py",
+        "symbol": "Router.lifespan"
+      },
       "intent": "Lifecycle behavior, not router-name lookup."
     },
     {
       "id": "host-header-defense",
       "query": "Which middleware rejects requests whose Host header is not in an allowed host list?",
-      "expected": {"path": "starlette/middleware/trustedhost.py", "symbol": "TrustedHostMiddleware.__call__"},
+      "expected": {
+        "path": "starlette/middleware/trustedhost.py",
+        "symbol": "TrustedHostMiddleware.__call__"
+      },
       "intent": "Security behavior; target is an implementation definition, not documentation."
     },
     {
       "id": "multipart-file-cap",
       "query": "Wie erzwingt der Multipart-Parser die maximale Zahl hochgeladener Dateien in einer Anfrage?",
-      "expected": {"path": "starlette/formparsers.py", "symbol": "MultiPartParser.on_headers_finished"},
+      "expected": {
+        "path": "starlette/formparsers.py",
+        "symbol": "MultiPartParser.on_headers_finished"
+      },
       "intent": "German parser-limit question with terminology that differs from the method name."
     },
     {
       "id": "websocket-denial",
       "query": "How is an ordinary HTTP denial response adapted so it can be sent while handling a WebSocket connection?",
-      "expected": {"path": "starlette/responses.py", "symbol": "Response._wrap_websocket_denial_send"},
+      "expected": {
+        "path": "starlette/responses.py",
+        "symbol": "Response._wrap_websocket_denial_send"
+      },
       "intent": "Protocol-adaptation behavior without source identifiers."
     },
     {
       "id": "threadpool-iterator",
       "query": "Welche Funktion iteriert synchronen Code schrittweise in einem Threadpool, damit er asynchron konsumiert werden kann?",
-      "expected": {"path": "starlette/concurrency.py", "symbol": "iterate_in_threadpool"},
+      "expected": {
+        "path": "starlette/concurrency.py",
+        "symbol": "iterate_in_threadpool"
+      },
       "intent": "German concurrency behavior; likely benefits from semantically descriptive card text."
+    },
+    {
+      "id": "gzip-negotiation",
+      "query": "Where does Starlette decide whether an HTTP response should use gzip based on the request's accepted encodings?",
+      "expected": {
+        "path": "starlette/middleware/gzip.py",
+        "symbol": "GZipMiddleware.__call__"
+      },
+      "intent": "Middleware negotiation behavior; distinguishes responder selection from the compression algorithm itself."
+    },
+    {
+      "id": "gzip-stream-headers",
+      "query": "Wie passt Starlette bei komprimierten Streaming-Responses Content-Encoding, Content-Length und Vary an?",
+      "expected": {
+        "path": "starlette/middleware/gzip.py",
+        "symbol": "IdentityResponder.send_with_compression"
+      },
+      "intent": "German middleware question targeting delayed header emission and streaming compression bookkeeping."
+    },
+    {
+      "id": "signed-session-persistence",
+      "query": "How are signed cookie sessions loaded into the connection scope and written back only when accessed or modified?",
+      "expected": {
+        "path": "starlette/middleware/sessions.py",
+        "symbol": "SessionMiddleware.__call__"
+      },
+      "intent": "Session middleware data-flow question covering signature validation, scope population, and response cookies."
+    },
+    {
+      "id": "secure-scheme-redirect",
+      "query": "Wo werden unsichere HTTP- und WebSocket-Verbindungen auf HTTPS beziehungsweise WSS umgeleitet?",
+      "expected": {
+        "path": "starlette/middleware/httpsredirect.py",
+        "symbol": "HTTPSRedirectMiddleware.__call__"
+      },
+      "intent": "German middleware behavior; expects scheme conversion and default-port normalization."
+    },
+    {
+      "id": "request-stream-consumption",
+      "query": "How does Starlette expose request-body chunks while preventing the incoming stream from being consumed twice?",
+      "expected": {
+        "path": "starlette/requests.py",
+        "symbol": "Request.stream"
+      },
+      "intent": "Request streaming semantics without naming the implementation method."
+    },
+    {
+      "id": "response-header-autofill",
+      "query": "Where are Content-Length and a text media type's charset automatically added to an outgoing response?",
+      "expected": {
+        "path": "starlette/responses.py",
+        "symbol": "Response.init_headers"
+      },
+      "intent": "Response construction behavior; distinguishes automatic headers from later mutable-header access."
+    },
+    {
+      "id": "response-cookie-serialization",
+      "query": "Which response logic serializes cookie attributes such as SameSite, HttpOnly, Secure, expiry, and partitioning?",
+      "expected": {
+        "path": "starlette/responses.py",
+        "symbol": "Response.set_cookie"
+      },
+      "intent": "Cookie serialization question phrased through supported attributes rather than the method identifier."
+    },
+    {
+      "id": "streaming-disconnect-compat",
+      "query": "How does a streaming response handle client disconnects differently for older and newer ASGI specification versions?",
+      "expected": {
+        "path": "starlette/responses.py",
+        "symbol": "StreamingResponse.__call__"
+      },
+      "intent": "Protocol-version behavior involving task-group cancellation versus send failures."
+    },
+    {
+      "id": "multipart-byte-ranges",
+      "query": "Wo sendet eine Datei-Response mehrere angeforderte Bytebereiche als multipart/byteranges mit Boundary?",
+      "expected": {
+        "path": "starlette/responses.py",
+        "symbol": "FileResponse._handle_multiple_ranges"
+      },
+      "intent": "German response question targeting transmission of multiple ranges rather than header parsing."
+    },
+    {
+      "id": "route-pattern-compilation",
+      "query": "Which routing code turns typed path parameters into a regular expression, a reverse-format string, and converters?",
+      "expected": {
+        "path": "starlette/routing.py",
+        "symbol": "compile_path"
+      },
+      "intent": "Route-pattern construction question that avoids the function name."
+    },
+    {
+      "id": "reverse-route-param-encoding",
+      "query": "Wie werden Parameter beim Reverse Routing mithilfe ihrer Konverter in einen URL-Pfad eingesetzt?",
+      "expected": {
+        "path": "starlette/routing.py",
+        "symbol": "replace_params"
+      },
+      "intent": "German reverse-routing behavior focused on converter serialization and consumed parameters."
+    },
+    {
+      "id": "method-partial-route-match",
+      "query": "Where does an HTTP route report a partial match when the path fits but the request method is not allowed?",
+      "expected": {
+        "path": "starlette/routing.py",
+        "symbol": "Route.matches"
+      },
+      "intent": "Routing classification question distinguishing path matching from 405 response handling."
+    },
+    {
+      "id": "mounted-reverse-lookup",
+      "query": "How does reverse URL lookup traverse a named mounted application and prepend its path prefix?",
+      "expected": {
+        "path": "starlette/routing.py",
+        "symbol": "Mount.url_path_for"
+      },
+      "intent": "Nested routing question involving mount-name prefixes and delegation to child routes."
+    },
+    {
+      "id": "slash-redirect-routing",
+      "query": "Wo pr\u00fcft der Router eine alternative URL mit hinzugef\u00fcgtem oder entferntem Schr\u00e4gstrich und sendet dann einen Redirect?",
+      "expected": {
+        "path": "starlette/routing.py",
+        "symbol": "Router.app"
+      },
+      "intent": "German routing fallback question targeting slash normalization after full and partial matching fail."
+    },
+    {
+      "id": "websocket-handshake-wait",
+      "query": "How does Starlette accept a WebSocket when the initial connection event has not yet been received?",
+      "expected": {
+        "path": "starlette/websockets.py",
+        "symbol": "WebSocket.accept"
+      },
+      "intent": "WebSocket handshake sequencing without using the target's qualified identifier."
+    },
+    {
+      "id": "websocket-json-mode",
+      "query": "Where is incoming WebSocket JSON decoded from either a text frame or UTF-8 binary frame?",
+      "expected": {
+        "path": "starlette/websockets.py",
+        "symbol": "WebSocket.receive_json"
+      },
+      "intent": "WebSocket payload decoding question that distinguishes low-level convenience handling from endpoint dispatch."
+    },
+    {
+      "id": "websocket-iterator-disconnect",
+      "query": "Welche asynchrone Iteration \u00fcber WebSocket-Textnachrichten endet still, sobald die Gegenstelle trennt?",
+      "expected": {
+        "path": "starlette/websockets.py",
+        "symbol": "WebSocket.iter_text"
+      },
+      "intent": "German WebSocket iteration behavior focused on disconnect suppression."
+    },
+    {
+      "id": "websocket-send-state",
+      "query": "Which implementation validates outgoing WebSocket ASGI message types and updates connection state after accept, close, or denial-response events?",
+      "expected": {
+        "path": "starlette/websockets.py",
+        "symbol": "WebSocket.send"
+      },
+      "intent": "WebSocket state-machine question rather than a simple frame-sending lookup."
+    },
+    {
+      "id": "websocket-endpoint-decoding",
+      "query": "Wo erzwingt ein klassenbasierter WebSocket-Endpunkt sein konfiguriertes Text-, Bytes- oder JSON-Format und schlie\u00dft bei falschen Daten?",
+      "expected": {
+        "path": "starlette/endpoints.py",
+        "symbol": "WebSocketEndpoint.decode"
+      },
+      "intent": "German class-based endpoint question targeting encoding validation and malformed-data closure."
+    },
+    {
+      "id": "blocking-call-worker",
+      "query": "How can Starlette execute a synchronous callable with positional and keyword arguments without blocking the event loop?",
+      "expected": {
+        "path": "starlette/concurrency.py",
+        "symbol": "run_in_threadpool"
+      },
+      "intent": "Concurrency question describing worker-thread delegation without copying the function identifier."
+    },
+    {
+      "id": "first-task-cancels-rest",
+      "query": "Welche Hilfsfunktion startet mehrere Coroutinen gleichzeitig und bricht die \u00fcbrigen ab, sobald die erste fertig ist?",
+      "expected": {
+        "path": "starlette/concurrency.py",
+        "symbol": "run_until_first_complete"
+      },
+      "intent": "German concurrency semantics targeting first-completion cancellation."
+    },
+    {
+      "id": "stop-iteration-translation",
+      "query": "Where is iterator exhaustion translated to a custom exception so it can safely cross a worker-thread boundary?",
+      "expected": {
+        "path": "starlette/concurrency.py",
+        "symbol": "_next"
+      },
+      "intent": "Internal concurrency behavior distinguishing exhaustion translation from asynchronous iteration."
+    },
+    {
+      "id": "static-html-index",
+      "query": "How does static-file serving resolve directory index pages, canonicalize missing trailing slashes, and fall back to a custom 404 page?",
+      "expected": {
+        "path": "starlette/staticfiles.py",
+        "symbol": "StaticFiles.get_response"
+      },
+      "intent": "Static HTML-mode behavior covering its response-selection workflow."
+    },
+    {
+      "id": "static-path-containment",
+      "query": "Wo wird verhindert, dass absolute Pfade, \u00fcbergeordnete Verzeichnisse oder Symlinks aus einem freigegebenen Static-Verzeichnis ausbrechen?",
+      "expected": {
+        "path": "starlette/staticfiles.py",
+        "symbol": "StaticFiles.lookup_path"
+      },
+      "intent": "German static-file security question targeting filesystem containment checks."
+    },
+    {
+      "id": "static-package-directories",
+      "query": "Which code resolves static asset directories supplied either directly or through installed Python packages?",
+      "expected": {
+        "path": "starlette/staticfiles.py",
+        "symbol": "StaticFiles.get_directories"
+      },
+      "intent": "Static configuration question distinguishing directory discovery from request-time lookup."
+    },
+    {
+      "id": "static-config-validation",
+      "query": "Where is the one-time asynchronous check that the configured static path exists and is a directory or symbolic link?",
+      "expected": {
+        "path": "starlette/staticfiles.py",
+        "symbol": "StaticFiles.check_config"
+      },
+      "intent": "Static-file startup validation rather than missing-file request handling."
+    },
+    {
+      "id": "authorization-decorator",
+      "query": "How does Starlette protect HTTP and WebSocket endpoints by required permission scopes, including optional login redirects?",
+      "expected": {
+        "path": "starlette/authentication.py",
+        "symbol": "requires"
+      },
+      "intent": "Authentication authorization flow across synchronous, asynchronous, and WebSocket endpoints."
+    },
+    {
+      "id": "auth-scope-all-required",
+      "query": "Welche Pr\u00fcfung stellt sicher, dass jede geforderte Berechtigung in den Anmeldedaten einer Verbindung vorhanden ist?",
+      "expected": {
+        "path": "starlette/authentication.py",
+        "symbol": "has_required_scope"
+      },
+      "intent": "German authorization predicate question emphasizing all-scope semantics."
+    },
+    {
+      "id": "auth-default-failure-response",
+      "query": "Where is an authentication backend failure converted by default into a plain-text HTTP 400 response?",
+      "expected": {
+        "path": "starlette/middleware/authentication.py",
+        "symbol": "AuthenticationMiddleware.default_on_error"
+      },
+      "intent": "Authentication error fallback distinct from middleware scope population."
+    },
+    {
+      "id": "template-context-processors",
+      "query": "How are request-aware context processors merged before a Jinja template is rendered into an HTML response?",
+      "expected": {
+        "path": "starlette/templating.py",
+        "symbol": "Jinja2Templates.TemplateResponse"
+      },
+      "intent": "Template response construction focused on context assembly and rendering."
+    },
+    {
+      "id": "template-debug-extension",
+      "query": "Wo sendet eine Template-Response vor dem eigentlichen HTTP-Ergebnis zus\u00e4tzliche Debug-Informationen \u00fcber Vorlage und Kontext?",
+      "expected": {
+        "path": "starlette/templating.py",
+        "symbol": "_TemplateResponse.__call__"
+      },
+      "intent": "German templating question targeting the ASGI debug extension behavior."
+    },
+    {
+      "id": "template-url-global",
+      "query": "Which setup code injects a request-aware reverse-URL helper into the Jinja environment without overwriting an existing global?",
+      "expected": {
+        "path": "starlette/templating.py",
+        "symbol": "Jinja2Templates._setup_env_defaults"
+      },
+      "intent": "Template environment configuration involving route URL generation."
+    },
+    {
+      "id": "urlencoded-form-decoding",
+      "query": "How are streamed application/x-www-form-urlencoded fields accumulated, percent-decoded, and returned as form data?",
+      "expected": {
+        "path": "starlette/formparsers.py",
+        "symbol": "FormParser.parse"
+      },
+      "intent": "Form parsing question distinguishing URL-encoded fields from multipart uploads."
+    },
+    {
+      "id": "multipart-stream-file-write",
+      "query": "Wo werden Multipart-Upload-Bl\u00f6cke asynchron in tempor\u00e4re Dateien geschrieben, zur\u00fcckgespult und bei Fehlern geschlossen?",
+      "expected": {
+        "path": "starlette/formparsers.py",
+        "symbol": "MultiPartParser.parse"
+      },
+      "intent": "German multipart lifecycle question covering nonblocking writes and cleanup."
+    },
+    {
+      "id": "urlencoded-field-limit",
+      "query": "Which callback counts completed URL-encoded form fields and rejects the request after the configured maximum?",
+      "expected": {
+        "path": "starlette/formparsers.py",
+        "symbol": "FormParser.on_field_end"
+      },
+      "intent": "Form-limit behavior distinct from the existing multipart uploaded-file cap."
+    },
+    {
+      "id": "exception-mro-lookup",
+      "query": "How does Starlette choose a registered handler for an exception by walking its class inheritance hierarchy?",
+      "expected": {
+        "path": "starlette/_exception_handler.py",
+        "symbol": "_lookup_exception_handler"
+      },
+      "intent": "Exception dispatch question focused on superclass fallback."
+    },
+    {
+      "id": "handled-after-start-guard",
+      "query": "Where does Starlette reject handling an exception after response headers were already sent and run synchronous handlers in a worker thread?",
+      "expected": {
+        "path": "starlette/_exception_handler.py",
+        "symbol": "wrap_app_handling_exceptions"
+      },
+      "intent": "Exception-wrapper behavior combining response-start safety with sync-handler execution."
+    },
+    {
+      "id": "debug-error-content-negotiation",
+      "query": "Wie entscheidet die Serverfehler-Behandlung anhand des Accept-Headers zwischen einer HTML-Traceback-Seite und reinem Text?",
+      "expected": {
+        "path": "starlette/middleware/errors.py",
+        "symbol": "ServerErrorMiddleware.debug_response"
+      },
+      "intent": "German exception-handling question targeting debug response content negotiation."
     }
   ],
   "card_spot_check_symbols": [
-    {"path": "starlette/middleware/body_limit.py", "symbol": "RequestBodyLimitResponder.receive_with_limit"},
-    {"path": "starlette/background.py", "symbol": "BackgroundTasks.__call__"},
-    {"path": "starlette/responses.py", "symbol": "Response._wrap_websocket_denial_send"},
-    {"path": "starlette/routing.py", "symbol": "Router.lifespan"},
-    {"path": "starlette/staticfiles.py", "symbol": "StaticFiles.is_not_modified"}
+    {
+      "path": "starlette/middleware/body_limit.py",
+      "symbol": "RequestBodyLimitResponder.receive_with_limit"
+    },
+    {
+      "path": "starlette/background.py",
+      "symbol": "BackgroundTasks.__call__"
+    },
+    {
+      "path": "starlette/responses.py",
+      "symbol": "Response._wrap_websocket_denial_send"
+    },
+    {
+      "path": "starlette/routing.py",
+      "symbol": "Router.lifespan"
+    },
+    {
+      "path": "starlette/staticfiles.py",
+      "symbol": "StaticFiles.is_not_modified"
+    }
   ]
 }
