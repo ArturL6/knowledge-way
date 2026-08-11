@@ -30,6 +30,7 @@ services:
     env_file: .env
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /root/.config/gcloud/application_default_credentials.json
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
     ports: ["127.0.0.1:8000:8000"]
     volumes: ["./data:/data", "${HOME}/.config/gcloud:/root/.config/gcloud:ro"]
     depends_on:
@@ -46,10 +47,13 @@ services:
       migrate: {condition: service_completed_successfully}
       redis: {condition: service_started}
   web:
-    build: ./apps/web
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:8000/api
     environment:
-      # Browser requests use localhost; server-rendered Next.js requests use Docker DNS.
-      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+      # Browser requests use the published loopback address; SSR uses Docker DNS.
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:8000/api
       API_INTERNAL_URL: http://api:8000/api
     ports: ["127.0.0.1:3000:3000"]
     depends_on: [api]
