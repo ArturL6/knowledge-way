@@ -5,7 +5,7 @@ import {api} from '../lib/api';
 import {apiErrorMessage, cloneUrlError, progressLabel, Repository} from '../lib/repositories';
 
 type Props = {initialRepos: Repository[]};
-type Status = Pick<Repository, 'indexing_status' | 'indexing_progress' | 'indexed_commit_sha' | 'error_message'>;
+type Status = {status: Repository['indexing_status']; progress: Repository['indexing_progress']; error: Repository['error_message']; indexed_commit_sha: Repository['indexed_commit_sha']};
 type Capability = {semantic?: {state?: string; provider?: string; model?: string | null; reranking?: {state?: string; applied?: boolean}}};
 
 export default function DashboardClient({initialRepos}: Props) {
@@ -61,7 +61,7 @@ export default function DashboardClient({initialRepos}: Props) {
       const updates = await Promise.all(active.map(async (repo) => [repo.id, await api<Status>(`/repositories/${encodeURIComponent(repo.id)}/status`)] as const));
       if (!cancelled) setRepos((current) => current.map((repo) => {
         const status = updates.find(([id]) => id === repo.id)?.[1];
-        return status ? {...repo, ...status} : repo;
+        return status ? {...repo, indexing_status: status.status, indexing_progress: status.progress, indexed_commit_sha: status.indexed_commit_sha, error_message: status.error} : repo;
       }));
     };
     void poll();
