@@ -5,6 +5,8 @@ export type Repository = {
   indexing_status: string;
   indexing_progress?: Record<string, unknown> | null;
   indexed_commit_sha?: string | null;
+  latest_detected_commit_sha?: string | null;
+  indexed_branch?: string | null;
   error_message?: string | null;
   last_indexed_at?: string | null;
 };

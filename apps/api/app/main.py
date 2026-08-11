@@ -16,6 +16,7 @@ from app.db import SessionLocal, get_db, verify_migration_ready
 from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, CodeCard, StructuralCard, IndexingJob, Conversation, Message
 from app.reconcile import reconcile_indexing_jobs
 from app.search import search, search_with_capability
+from app.providers import semantic_capability
 
 app=FastAPI(title='knowledge-way API',version='0.1.0')
 app.add_middleware(CORSMiddleware,allow_origins=settings.cors_origins.split(','),allow_methods=['*'],allow_headers=['*'])
@@ -103,6 +104,8 @@ def result_citation(db,repo,result):
  return {'repository_id':repo.id,'repository':repo.name,'indexed_commit_sha':result.get('indexed_commit_sha') or repo.indexed_commit_sha,'file_id':result['file_id'],'path':result['path'],'start_line':max(1,result['start_line']),'end_line':max(max(1,result['start_line']),result['end_line']),'symbol_id':result.get('symbol_id')}
 @app.get('/health')
 def health(): return {'status':'ok'}
+@app.get('/api/capabilities')
+def capabilities(): return {'semantic':semantic_capability()}
 @app.get('/api/workspaces')
 def workspaces(db:Session=Depends(get_db)): return [workspace_out(w) for w in db.scalars(select(Workspace).order_by(Workspace.created_at.desc())).all()]
 @app.post('/api/workspaces',status_code=201)
