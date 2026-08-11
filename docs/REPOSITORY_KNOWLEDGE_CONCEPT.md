@@ -2,7 +2,9 @@
 
 ## Purpose
 
-Knowledge Way turns multiple Git repositories into a navigable, evidence-backed knowledge base for people and coding agents. It answers two distinct questions:
+Knowledge Way turns multiple Git repositories into a navigable, evidence-backed knowledge base for people and coding agents.
+
+The agreed product journey, evidence-first architecture, efficient incremental-indexing policy, snapshot/provenance boundary, and cross-repository impact semantics are specified in [`CROSS_REPO_KNOWLEDGE_ARCHITECTURE.md`](CROSS_REPO_KNOWLEDGE_ARCHITECTURE.md). This document defines the concrete repository-knowledge model and roadmap that implement that target. It answers two distinct questions:
 
 1. **Retrieval:** Which code, symbol, file, test, or dependency is relevant?
 2. **Explanation:** What does that evidence mean in the architecture?
