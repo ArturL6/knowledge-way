@@ -102,6 +102,13 @@ def test_hybrid_exact_lexical_hit_skips_embedding_request(monkeypatch):
 
     provider = Provider()
     monkeypatch.setattr(search_module, "embedding_provider", lambda: provider)
+    # The mock provider is intentionally independent of process environment; make the
+    # returned capability describe that configured test double rather than CI settings.
+    monkeypatch.setattr(
+        search_module,
+        "semantic_capability",
+        lambda: {"state": "enabled", "enabled": True, "reranking": {"state": "disabled"}},
+    )
     results, capability = search_with_capability(db, "exact_handler", mode="hybrid", limit=10)
 
     assert [item["result_id"] for item in results] == ["chunk"]
