@@ -127,6 +127,43 @@ def test_full_reindex_preserves_unchanged_code_cards(monkeypatch, tmp_path):
         assert cards[0].input_tokens == 10
 
 
+def test_sync_preserves_or_rebuilds_embedding_coverage(monkeypatch, tmp_path):
+    sessions = _index_with_sqlite(monkeypatch, tmp_path)
+
+    class Provider:
+        model = "test:embedding"
+        calls = 0
+
+        async def embed_texts(self, texts):
+            self.calls += 1
+            return [[0.25, 0.75] for _ in texts]
+
+    provider = Provider()
+    monkeypatch.setattr(ingestion, "embedding_provider", lambda: provider)
+    repo = Repository(name="example", clone_url="unused")
+    with sessions() as db:
+        db.add(repo); db.commit()
+    root = Path(tmp_path) / repo.id
+    root.mkdir()
+    (root / "source.py").write_text("def stable():\n    return 1\n")
+
+    ingestion.index_repository(repo.id, full=True)
+    first_provider_calls = provider.calls
+    with sessions() as db:
+        assert all(chunk.embedding is not None for chunk in db.scalars(select(CodeChunk).where(CodeChunk.repository_id == repo.id)).all())
+
+    ingestion.index_repository(repo.id, full=False)
+
+    with sessions() as db:
+        chunks = db.scalars(select(CodeChunk).where(CodeChunk.repository_id == repo.id)).all()
+        assert chunks
+        assert all(chunk.embedding is not None for chunk in chunks)
+        assert all(chunk.embedding_model == provider.model for chunk in chunks)
+    # An unchanged sync reuses documents by their exact embedding input hash rather than billing
+    # another provider call, while still leaving a complete vector index.
+    assert provider.calls == first_provider_calls
+
+
 def test_embedding_prunes_empty_structural_chunks(monkeypatch, tmp_path):
     sessions = _index_with_sqlite(monkeypatch, tmp_path)
     monkeypatch.setattr(ingestion, "embedding_provider", lambda: _FakeEmbeddingProvider())
