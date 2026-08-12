@@ -9,6 +9,7 @@ from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceSnap
 
 
 def test_workspace_snapshot_is_membership_validated_commit_pinned_and_immutable():
+    assert next(iter(WorkspaceSnapshot.__table__.foreign_keys)).ondelete == 'RESTRICT'
     engine=create_engine('sqlite://',connect_args={'check_same_thread':False},poolclass=StaticPool)
     for table in (Repository.__table__,Workspace.__table__,WorkspaceRepository.__table__,WorkspaceSnapshot.__table__,WorkspaceSnapshotRepository.__table__): table.create(engine)
     db=sessionmaker(bind=engine)()

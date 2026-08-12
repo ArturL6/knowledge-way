@@ -15,7 +15,7 @@ depends_on = None
 def upgrade():
     op.create_table('workspace_snapshots',
         sa.Column('id', sa.String(length=36), primary_key=True),
-        sa.Column('workspace_id', sa.String(length=36), sa.ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('workspace_id', sa.String(length=36), sa.ForeignKey('workspaces.id', ondelete='RESTRICT'), nullable=False),
         sa.Column('manifest_hash', sa.String(length=64), nullable=False),
         sa.Column('schema_version', sa.String(length=64), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=False),
