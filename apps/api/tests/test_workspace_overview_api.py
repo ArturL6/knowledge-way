@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.db import Base, get_db
 from app.main import app
-from app.models import CodeChunk, File, Repository, Workspace, WorkspaceDependency, WorkspaceRepository
+from app.models import CodeChunk, File, Repository, Workspace, WorkspaceDependency, WorkspaceRepository, WorkspaceSnapshot, WorkspaceSnapshotRepository
 
 
 def test_workspace_overview_only_exposes_declared_edges_and_repository_provenance():
@@ -19,6 +19,9 @@ def test_workspace_overview_only_exposes_declared_edges_and_repository_provenanc
         Workspace(id="workspace", name="Demo"),
         WorkspaceRepository(workspace_id="workspace", repository_id="api"),
         WorkspaceRepository(workspace_id="workspace", repository_id="client"),
+        WorkspaceSnapshot(id="snapshot", workspace_id="workspace", schema_version="workspace-snapshot-v1", manifest_hash="d" * 64),
+        WorkspaceSnapshotRepository(snapshot_id="snapshot", repository_id="api", indexed_commit_sha="a" * 40),
+        WorkspaceSnapshotRepository(snapshot_id="snapshot", repository_id="client", indexed_commit_sha="b" * 40),
     ])
     db.commit()
     db.add(File(id="file", repository_id="api", path="api.py", language="python", content="x", content_hash="h", size_bytes=1, indexed_commit_sha="a" * 40))
@@ -31,7 +34,7 @@ def test_workspace_overview_only_exposes_declared_edges_and_repository_provenanc
     db.commit()
     app.dependency_overrides[get_db] = lambda: db
     try:
-        response = TestClient(app).get("/api/workspaces/workspace/overview")
+        response = TestClient(app).get("/api/workspaces/workspace/overview?snapshot_id=snapshot")
         assert response.status_code == 200
         overview = response.json()
         assert [repo["id"] for repo in overview["repositories"]] == ["api", "client"]
@@ -42,7 +45,9 @@ def test_workspace_overview_only_exposes_declared_edges_and_repository_provenanc
         }]
         assert overview["provenance"]["cross_repository_resolution"] == "not_performed"
         assert overview["provenance"]["edge_evidence"] == "declared_workspace_dependency_only"
-        assert TestClient(app).get("/api/workspaces/missing/overview").status_code == 404
+        assert overview["snapshot"]["id"] == "snapshot"
+        assert TestClient(app).get("/api/workspaces/workspace/overview").status_code == 422
+        assert TestClient(app).get("/api/workspaces/missing/overview?snapshot_id=snapshot").status_code == 404
     finally:
         app.dependency_overrides.clear()
         db.close()

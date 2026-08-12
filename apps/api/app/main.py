@@ -63,6 +63,18 @@ def workspace_snapshot_out(db,snapshot):
 def workspace_snapshot_manifest_hash(workspace_id,pins):
  manifest={'schema_version':'workspace-snapshot-v1','workspace_id':workspace_id,'repository_pins':sorted(pins,key=lambda pin:pin['repository_id'])}
  return hashlib.sha256(json.dumps(manifest,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+def workspace_overview(db,workspace,snapshot):
+ pins=db.scalars(select(WorkspaceSnapshotRepository).where(WorkspaceSnapshotRepository.snapshot_id==snapshot.id).order_by(WorkspaceSnapshotRepository.repository_id)).all()
+ pin_by_repository={pin.repository_id:pin for pin in pins}
+ members=db.scalars(select(Repository).where(Repository.id.in_(pin_by_repository)).order_by(Repository.id)).all()
+ declarations=db.scalars(select(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace.id).order_by(WorkspaceDependency.id)).all()
+ edges=[dict(workspace_dependency_out(declaration),evidence_kind='declared_workspace_dependency') for declaration in declarations if declaration.source_repository_id in pin_by_repository and declaration.target_repository_id in pin_by_repository]
+ repositories=[]
+ for member in members:
+  total_chunks,embedded_chunks=db.execute(select(func.count(CodeChunk.id),func.count(CodeChunk.embedding)).where(CodeChunk.repository_id==member.id)).one()
+  indexed_commit_sha=pin_by_repository[member.id].indexed_commit_sha
+  repositories.append({'id':member.id,'name':member.name,'indexed_commit_sha':indexed_commit_sha,'indexing_status':member.indexing_status,'vector_provenance':{'indexed_commit_sha':indexed_commit_sha,'total_chunks':total_chunks,'embedded_chunks':embedded_chunks,'coverage_complete':total_chunks==embedded_chunks}})
+ return {'workspace':workspace_out(workspace),'snapshot':workspace_snapshot_out(db,snapshot),'repositories':repositories,'edges':edges,'provenance':{'repository_commit_pins':[{ 'repository_id':member['id'],'indexed_commit_sha':member['indexed_commit_sha']} for member in repositories],'vector_provenance_is_per_repository':True,'cross_repository_resolution':'not_performed','edge_evidence':'declared_workspace_dependency_only'}}
 def validate_dependency_membership(db,workspace_id,source_repository_id,target_repository_id):
  if source_repository_id==target_repository_id: raise HTTPException(422,'Source and target repositories must differ')
  members=set(db.scalars(select(WorkspaceRepository.repository_id).where(WorkspaceRepository.workspace_id==workspace_id)).all())
@@ -164,6 +176,13 @@ def create_workspace_snapshot(workspace_id:str,body:WorkspaceSnapshotIn,db:Sessi
  snapshot=WorkspaceSnapshot(workspace_id=workspace_id,manifest_hash=manifest_hash,schema_version='workspace-snapshot-v1'); db.add(snapshot); db.flush()
  db.add_all([WorkspaceSnapshotRepository(snapshot_id=snapshot.id,**pin) for pin in pins]); db.commit(); db.refresh(snapshot)
  return workspace_snapshot_out(db,snapshot)
+@app.get('/api/workspaces/{workspace_id}/overview')
+def get_workspace_overview(workspace_id:str,snapshot_id:str=Query(min_length=1),db:Session=Depends(get_db)):
+ workspace=db.get(Workspace,workspace_id)
+ if not workspace: raise HTTPException(404,'Workspace not found')
+ snapshot=db.scalar(select(WorkspaceSnapshot).where(WorkspaceSnapshot.workspace_id==workspace_id,WorkspaceSnapshot.id==snapshot_id))
+ if not snapshot: raise HTTPException(404,'Workspace snapshot not found')
+ return workspace_overview(db,workspace,snapshot)
 @app.get('/api/workspaces/{workspace_id}/dependencies')
 def workspace_dependencies(workspace_id:str,db:Session=Depends(get_db)):
  if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
