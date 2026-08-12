@@ -59,7 +59,7 @@ def _fuse(result_sets, limit):
     return sorted(combined.values(), key=lambda x: (-x['score'], _key(x)))[:limit]
 
 
-def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id: str | None = None, rerank: bool = False):
+def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id: str | None = None, rerank: bool = False, indexed_commit_sha: str | None = None):
     q, terms = parse_query(raw), query_terms(parse_query(raw).text)
     repos = {r.id: r for r in db.scalars(select(Repository)).all()}
     lexical, symbols, semantic = [], [], []
@@ -73,6 +73,7 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
         stmt = (select(CodeChunk, File).join(File, CodeChunk.file_id == File.id)
                  .where(CodeChunk.repository_id.in_(allowed_ids))
                  .order_by(File.path, CodeChunk.start_line, CodeChunk.id))
+        if indexed_commit_sha: stmt = stmt.where(File.indexed_commit_sha == indexed_commit_sha)
         if q.language: stmt = stmt.where(CodeChunk.language == q.language)
         if q.path: stmt = stmt.where(File.path.ilike(f'%{q.path}%'))
         return stmt
@@ -88,6 +89,7 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
         symbol_stmt = (select(Symbol, File).join(File, Symbol.file_id == File.id)
                         .where(Symbol.repository_id.in_(allowed_ids)).where(or_(*clauses))
                         .order_by(File.path, Symbol.start_line, Symbol.id).limit(limit * 3))
+        if indexed_commit_sha: symbol_stmt = symbol_stmt.where(File.indexed_commit_sha == indexed_commit_sha)
         for symbol, file in db.execute(symbol_stmt):
             symbols.append(result('symbol', 1.0 if symbol.name.lower() in terms or symbol.qualified_name.lower() in terms else .85, repos[symbol.repository_id], file, symbol))
     capability = semantic_capability()

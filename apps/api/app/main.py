@@ -184,6 +184,27 @@ def get_workspace_overview(workspace_id:str,snapshot_id:str=Query(min_length=1),
  snapshot=db.scalar(select(WorkspaceSnapshot).where(WorkspaceSnapshot.workspace_id==workspace_id,WorkspaceSnapshot.id==snapshot_id))
  if not snapshot: raise HTTPException(404,'Workspace snapshot not found')
  return workspace_overview(db,workspace,snapshot)
+@app.get('/api/workspaces/{workspace_id}/snapshots/{snapshot_id}/relevant-repositories')
+def relevant_workspace_repositories(workspace_id:str,snapshot_id:str,q:str=Query(min_length=1,max_length=1000),limit:int=Query(8,ge=1,le=20),db:Session=Depends(get_db)):
+ workspace=db.get(Workspace,workspace_id)
+ if not workspace: raise HTTPException(404,'Workspace not found')
+ snapshot=db.scalar(select(WorkspaceSnapshot).where(WorkspaceSnapshot.workspace_id==workspace_id,WorkspaceSnapshot.id==snapshot_id))
+ if not snapshot: raise HTTPException(404,'Workspace snapshot not found')
+ pins=db.scalars(select(WorkspaceSnapshotRepository).where(WorkspaceSnapshotRepository.snapshot_id==snapshot.id).order_by(WorkspaceSnapshotRepository.repository_id)).all()
+ repositories={repo.id:repo for repo in db.scalars(select(Repository).where(Repository.id.in_([pin.repository_id for pin in pins]))).all()}
+ declarations=db.scalars(select(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace_id)).all()
+ ranked=[]; unknown=[]
+ for pin in pins:
+  repo=repositories[pin.repository_id]
+  if repo.indexed_commit_sha!=pin.indexed_commit_sha:
+   unknown.append({'repository_id':repo.id,'repository':repo.name,'indexed_commit_sha':pin.indexed_commit_sha,'evidence_kind':'unknown','reason':"The snapshot commit is not the repository's currently indexed commit, so local evidence for this pin is unavailable."})
+   continue
+  results,_=search_with_capability(db,q,'hybrid',min(limit,10),repository_id=repo.id,indexed_commit_sha=pin.indexed_commit_sha)
+  if not results: continue
+  declared=[workspace_dependency_out(d) for d in declarations if d.source_repository_id==repo.id or d.target_repository_id==repo.id]
+  ranked.append({'repository_id':repo.id,'repository':repo.name,'indexed_commit_sha':pin.indexed_commit_sha,'score':round(sum(result['score'] for result in results),6),'reason':'Matched indexed lexical or symbol evidence for the requested change.','evidence_kind':'lexical_or_parser_symbol','citations':[result_citation(db,repo,result) for result in results[:3]],'declared_dependencies':declared})
+ ranked.sort(key=lambda item:(-item['score'],item['repository'],item['repository_id']))
+ return {'workspace':workspace_out(workspace),'snapshot':workspace_snapshot_out(db,snapshot),'query':q,'results':ranked[:limit],'unknowns':unknown,'limitations':['Ranking is bounded to lexical and parser-symbol evidence at the immutable snapshot pins.','Declared workspace dependencies are shown as declared evidence only; no automatic cross-repository call or import resolution is claimed.']}
 @app.get('/api/workspaces/{workspace_id}/dependencies')
 def workspace_dependencies(workspace_id:str,db:Session=Depends(get_db)):
  if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
