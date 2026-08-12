@@ -19,6 +19,9 @@ REQUIRED_CAPS = {
     "llm_input_tokens": 100_000,
     "llm_output_tokens": 15_000,
 }
+MAX_PILOT_REPOSITORY_CARD_DOCUMENTS = 2
+MAX_PILOT_CONTEXTUAL_DOCUMENTS = 100
+ALLOWED_PILOT_EMBEDDING_DOCUMENT_KINDS = {"repository_card", "module", "symbol"}
 
 
 def _validate_pilot_scope(db: Session, ledger: ProviderAuditLedger) -> None:
@@ -59,6 +62,19 @@ def _validate_pilot_scope(db: Session, ledger: ProviderAuditLedger) -> None:
                    or any(character not in "0123456789abcdef" for character in input_hash)
                    for input_hash in input_hashes)):
         raise RuntimeError("Vertex embedding blocked: ledger must pin one input hash per intended document")
+    document_kinds = configuration.get("embedding_document_kinds")
+    if (not isinstance(document_kinds, list) or len(document_kinds) != intended_documents
+            or any(kind not in ALLOWED_PILOT_EMBEDDING_DOCUMENT_KINDS for kind in document_kinds)
+            or document_kinds.count("repository_card") > MAX_PILOT_REPOSITORY_CARD_DOCUMENTS
+            or sum(kind in {"module", "symbol"} for kind in document_kinds) > MAX_PILOT_CONTEXTUAL_DOCUMENTS):
+        raise RuntimeError(
+            "Vertex embedding blocked: ledger must pin only up to two repository cards and "
+            "100 module/symbol contextual documents"
+        )
+    # The planned hashes and kinds are the authorization set, so a pilot cannot use the
+    # generic 150-document account cap to grow beyond the explicitly approved 2 + 100 scope.
+    if projected_documents > MAX_PILOT_REPOSITORY_CARD_DOCUMENTS + MAX_PILOT_CONTEXTUAL_DOCUMENTS:
+        raise RuntimeError("Vertex embedding blocked: projected scope exceeds the 102-document pilot limit")
 
 
 def admit_vertex_embedding(db: Session, ledger_id: str, texts: list[str]) -> ProviderAuditLedger:

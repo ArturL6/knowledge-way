@@ -30,8 +30,9 @@ def _ledger(**overrides):
         "caps": REQUIRED_CAPS.copy(),
         "configuration": {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 100,
                           "repository_ids": ["repository-a", "repository-b"],
-                          "intended_embedding_documents": 2, "projected_max_embedding_documents": 150,
-                          "embedding_document_input_hashes": [_hash("one"), _hash("two")]},
+                          "intended_embedding_documents": 2, "projected_max_embedding_documents": 2,
+                          "embedding_document_input_hashes": [_hash("one"), _hash("two")],
+                          "embedding_document_kinds": ["repository_card", "module"]},
         "actual": {"embedding_documents": 0, "cost_usd_micros": 0},
     }
     values.update(overrides)
@@ -104,6 +105,25 @@ def test_admission_rejects_repositories_not_in_pinned_snapshot():
     ledger = _ledger(); guarded_db = type("DB", (), {"get": lambda *_: ledger, "scalars": db.scalars})()
     with pytest.raises(RuntimeError, match="real members"):
         admit_vertex_embedding(guarded_db, "ledger", ["one"])
+
+
+@pytest.mark.parametrize("configuration", [
+    {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 100,
+     "repository_ids": ["repository-a", "repository-b"], "intended_embedding_documents": 1,
+     "projected_max_embedding_documents": 1, "embedding_document_input_hashes": [_hash("one")]},
+    {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 100,
+     "repository_ids": ["repository-a", "repository-b"], "intended_embedding_documents": 3,
+     "projected_max_embedding_documents": 3,
+     "embedding_document_input_hashes": [_hash("one"), _hash("two"), _hash("three")],
+     "embedding_document_kinds": ["repository_card", "repository_card", "repository_card"]},
+    {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 100,
+     "repository_ids": ["repository-a", "repository-b"], "intended_embedding_documents": 1,
+     "projected_max_embedding_documents": 103, "embedding_document_input_hashes": [_hash("one")],
+     "embedding_document_kinds": ["module"]},
+])
+def test_admission_requires_kind_bound_tiny_embedding_scope(configuration):
+    with pytest.raises(RuntimeError, match="repository cards|102-document"):
+        admit_vertex_embedding(_DB(_ledger(configuration=configuration)), "ledger", ["one"])
 
 
 def test_failure_is_evented_without_inventing_usage():
