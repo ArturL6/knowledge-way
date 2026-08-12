@@ -20,23 +20,34 @@ def test_openrouter_without_key_never_creates_provider(monkeypatch):
     assert semantic_capability()["state"] == "unconfigured"
 
 
-def test_vertex_provider_uses_explicit_project_configuration(monkeypatch):
+def test_vertex_provider_requires_explicit_enabled_pilot_ledger(monkeypatch):
     monkeypatch.setattr(settings, "embedding_provider", "vertex")
     monkeypatch.setattr(settings, "vertex_project_id", "ai-tinker-lab")
     monkeypatch.setattr(settings, "vertex_location", "us-central1")
     monkeypatch.setattr(settings, "vertex_embedding_model", "text-embedding-005")
+    monkeypatch.setattr(settings, "vertex_pilot_enabled", False)
+    monkeypatch.setattr(settings, "vertex_pilot_ledger_id", None)
+
+    assert embedding_provider() is None
+    assert semantic_capability() == {
+        "state": "pilot_guarded",
+        "enabled": False,
+        "provider": "vertex",
+        "model": None,
+        "reranking": {"enabled": False, "provider": "none", "model": None, "state": "disabled"},
+    }
+
+
+def test_vertex_provider_is_available_only_with_enabled_pilot_ledger(monkeypatch):
+    monkeypatch.setattr(settings, "embedding_provider", "vertex")
+    monkeypatch.setattr(settings, "vertex_project_id", "ai-tinker-lab")
+    monkeypatch.setattr(settings, "vertex_pilot_enabled", True)
+    monkeypatch.setattr(settings, "vertex_pilot_ledger_id", "ledger")
 
     provider = embedding_provider()
 
     assert isinstance(provider, VertexEmbeddingProvider)
     assert provider.model == "vertex:text-embedding-005"
-    assert semantic_capability() == {
-        "state": "enabled",
-        "enabled": True,
-        "provider": "vertex",
-        "model": "vertex:text-embedding-005",
-        "reranking": {"enabled": False, "provider": "none", "model": None, "state": "disabled"},
-    }
 
 
 def test_vertex_without_project_never_creates_provider(monkeypatch):

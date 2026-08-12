@@ -208,7 +208,11 @@ def embedding_provider() -> EmbeddingProvider | None:
             settings.openrouter_embedding_model,
             settings.openrouter_base_url,
         )
-    if provider == "vertex" and settings.vertex_project_id:
+    # Vertex is a paid pilot provider.  Do not advertise it as a usable semantic
+    # capability (or let indexing enter its path) until the explicit ledger gate
+    # is enabled; credentials and a project alone are deliberately insufficient.
+    if (provider == "vertex" and settings.vertex_project_id and
+            settings.vertex_pilot_enabled and settings.vertex_pilot_ledger_id):
         return VertexEmbeddingProvider(
             settings.vertex_project_id,
             settings.vertex_location,
@@ -239,6 +243,8 @@ def semantic_capability() -> dict[str, object]:
         state = "enabled"
     elif provider == "none":
         state = "disabled"
+    elif provider == "vertex" and settings.vertex_project_id:
+        state = "pilot_guarded"
     elif provider in {"openrouter", "vertex"}:
         state = "unconfigured"
     else:
