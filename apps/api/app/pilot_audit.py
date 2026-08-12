@@ -99,6 +99,11 @@ def record_vertex_embedding_success(db: Session, ledger: ProviderAuditLedger, *,
     Vertex embedding responses do not reliably include token/cost usage. The pilot therefore
     refuses to persist a response unless the caller has deterministically accounted for its cost.
     """
+    configured_model = ledger.configuration.get("embedding_model")
+    unit_cost = ledger.configuration.get("embedding_cost_usd_micros_per_document")
+    if (model != configured_model or not isinstance(unit_cost, int) or unit_cost < 0
+            or cost_usd_micros != unit_cost * len(texts)):
+        raise RuntimeError("Vertex embedding blocked: success usage must match the ledger model and deterministic price")
     if cost_usd_micros < 0 or input_tokens is not None and input_tokens < 0:
         raise RuntimeError("Vertex embedding blocked: provider usage accounting is invalid")
     actual = dict(ledger.actual or {})

@@ -96,6 +96,16 @@ def test_successful_embedding_cannot_outgrow_the_recorded_projection():
         )
 
 
+def test_successful_embedding_cannot_understate_ledger_pricing_or_change_model():
+    ledger = _ledger()
+    for model, cost in (("text-embedding-005", 199), ("another-model", 200)):
+        with pytest.raises(RuntimeError, match="match the ledger model and deterministic price"):
+            record_vertex_embedding_success(
+                _EventDB(ledger), cast(ProviderAuditLedger, ledger), model=model, texts=["one", "two"],
+                input_tokens=2, cost_usd_micros=cost,
+            )
+
+
 def test_admission_requires_deterministic_price_accounting():
     with pytest.raises(RuntimeError, match="price accounting"):
         admit_vertex_embedding(_DB(_ledger(configuration={"embedding_model": "text-embedding-005", "repository_ids": ["repository-a", "repository-b"], "intended_embedding_documents": 1, "projected_max_embedding_documents": 1})), "ledger", 1)
