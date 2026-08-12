@@ -57,6 +57,17 @@ def test_vertex_without_project_never_creates_provider(monkeypatch):
     assert semantic_capability()["state"] == "unconfigured"
 
 
+def test_vertex_pilot_cannot_enter_legacy_raw_chunk_embedding_path():
+    from app.ingestion import _allows_full_index_chunk_embedding
+
+    assert not _allows_full_index_chunk_embedding(
+        VertexEmbeddingProvider("project", "us-central1", "text-embedding-005", 2)
+    )
+    assert _allows_full_index_chunk_embedding(
+        type("Provider", (), {"model": "openrouter:text-embedding"})()
+    )
+
+
 def test_vertex_embedding_is_hard_blocked_without_enabled_audit_ledger(monkeypatch):
     monkeypatch.setattr(settings, "vertex_pilot_enabled", False)
     monkeypatch.setattr(settings, "vertex_pilot_ledger_id", None)

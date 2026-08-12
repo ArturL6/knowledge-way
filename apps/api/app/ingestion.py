@@ -163,10 +163,20 @@ def _embedding_document(repo, chunk, file, symbol, card, edges):
  return '\n'.join(header)+'\n\nSource code:\n'+chunk.source_text
 
 
+def _allows_full_index_chunk_embedding(provider):
+ """Legacy chunks are an OpenRouter-only projection, never the bounded Vertex pilot.
+
+ The pilot authorizes repository-card and module/symbol contextual documents, not the raw
+ source-chunk corpus. Keep the old chunk index available to non-pilot providers while the
+ retrieval-document vector projection is implemented separately.
+ """
+ return not provider.model.startswith('vertex:')
+
+
 def _embed_full_index_chunks(db, repo_id, reusable_embeddings):
  """Persist embeddings for contextual retrieval documents, with code as primary evidence."""
  provider = embedding_provider()
- if provider is None: return
+ if provider is None or not _allows_full_index_chunk_embedding(provider): return
  repo=db.get(Repository,repo_id); files={f.id:f for f in db.scalars(select(File).where(File.repository_id==repo_id)).all()}; symbols={s.id:s for s in db.scalars(select(Symbol).where(Symbol.repository_id==repo_id)).all()}; cards={c.symbol_id:c for c in db.scalars(select(CodeCard).where(CodeCard.repository_id==repo_id)).all()}; edges=db.scalars(select(SymbolEdge).where(SymbolEdge.repository_id==repo_id)).all(); missing=[]
  for chunk in db.scalars(select(CodeChunk).where(CodeChunk.repository_id == repo_id)).all():
   if not chunk.source_text.strip(): db.delete(chunk); continue
