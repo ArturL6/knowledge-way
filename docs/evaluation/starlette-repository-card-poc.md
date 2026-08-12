@@ -1,7 +1,7 @@
 # Starlette repository-card POC capture
 
-**Captured:** 2026-08-11  
-**Repository:** `https://github.com/Kludex/starlette.git`  
+**Captured:** 2026-08-11
+**Repository:** `https://github.com/Kludex/starlette.git`
 **Indexed commit:** `398e5a3430eb1ddd33e1d48d766efe41426e231f`
 
 This is an API-level local evaluation of `GET /api/repositories/starlette-poc/repository-card` after indexing a shallow checkout into an ephemeral SQLite-backed test instance. The endpoint was called through FastAPI `TestClient`; indexing used the normal local parser/graph and structural-card pipeline. `EMBEDDING_PROVIDER` remained its default `none`, and Code Cards were disabled: no embedding or LLM provider was invoked.
