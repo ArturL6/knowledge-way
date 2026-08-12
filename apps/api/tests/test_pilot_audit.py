@@ -11,10 +11,12 @@ class _DB:
 
 def _ledger(**overrides):
     values = {
-        "provider": "vertex", "status": "active",
+        "provider": "vertex", "status": "active", "workspace_snapshot_id": "immutable-snapshot",
         "price_source": {"url": "https://cloud.google.com/vertex-ai/pricing", "version": "2026-08-12"},
         "caps": REQUIRED_CAPS.copy(),
-        "configuration": {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 100},
+        "configuration": {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 100,
+                          "repository_ids": ["repository-a", "repository-b"],
+                          "intended_embedding_documents": 100, "projected_max_embedding_documents": 150},
         "actual": {"embedding_documents": 10, "cost_usd_micros": 0},
     }
     values.update(overrides)
@@ -35,7 +37,10 @@ def test_admission_blocks_document_and_cost_cap_before_provider_call():
     with pytest.raises(RuntimeError, match="USD 5"):
         admit_vertex_embedding(_DB(_ledger(actual={"embedding_documents": 0, "cost_usd_micros": 5_000_000})), "ledger", 1)
     with pytest.raises(RuntimeError, match="USD 5"):
-        admit_vertex_embedding(_DB(_ledger(configuration={"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 5_000_000}, actual={"embedding_documents": 10, "cost_usd_micros": 0})), "ledger", 1)
+        admit_vertex_embedding(_DB(_ledger(configuration={"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 5_000_000,
+                                                         "repository_ids": ["repository-a"], "intended_embedding_documents": 1,
+                                                         "projected_max_embedding_documents": 1},
+                                           actual={"embedding_documents": 10, "cost_usd_micros": 0})), "ledger", 1)
 
 
 class _EventDB(_DB):
@@ -65,7 +70,21 @@ def test_successful_embedding_is_evented_and_atomically_accounted():
 
 def test_admission_requires_deterministic_price_accounting():
     with pytest.raises(RuntimeError, match="price accounting"):
-        admit_vertex_embedding(_DB(_ledger(configuration={"embedding_model": "text-embedding-005"})), "ledger", 1)
+        admit_vertex_embedding(_DB(_ledger(configuration={"embedding_model": "text-embedding-005", "repository_ids": ["repository-a"], "intended_embedding_documents": 1, "projected_max_embedding_documents": 1})), "ledger", 1)
+
+
+@pytest.mark.parametrize("overrides", [
+    {"workspace_snapshot_id": None},
+    {"configuration": {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 100,
+                       "repository_ids": [], "intended_embedding_documents": 1, "projected_max_embedding_documents": 1}},
+    {"configuration": {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 100,
+                       "repository_ids": ["a", "b", "c"], "intended_embedding_documents": 1, "projected_max_embedding_documents": 1}},
+    {"configuration": {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 100,
+                       "repository_ids": ["a"], "intended_embedding_documents": 151, "projected_max_embedding_documents": 151}},
+])
+def test_admission_requires_immutable_snapshot_and_bounded_repository_scope(overrides):
+    with pytest.raises(RuntimeError, match="snapshot|one or two|intended and projected"):
+        admit_vertex_embedding(_DB(_ledger(**overrides)), "ledger", 1)
 
 
 def test_failed_provider_call_is_evented_without_inventing_usage():
