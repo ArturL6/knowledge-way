@@ -8,7 +8,8 @@ import httpx
 
 from app.config import settings
 from app.db import SessionLocal
-from app.pilot_audit import admit_vertex_embedding, record_vertex_embedding_success
+from app.pilot_audit import (admit_vertex_embedding, record_vertex_embedding_failure,
+                             record_vertex_embedding_success)
 
 
 # Floor for the halving retry below, so a genuinely un-embeddable input raises instead of looping.
@@ -147,26 +148,34 @@ class VertexEmbeddingProvider:
                 "instances": [{"content": text} for text in texts],
                 "parameters": {"outputDimensionality": self.output_dimensions},
             }
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                # The bounded pilot deliberately makes one provider request per admitted batch.
-                # Retrying or recursively splitting after a provider-side failure would create
-                # unledgered extra paid-call attempts and violate the pilot contract.
-                response = await client.post(
-                    self.endpoint,
-                    headers={"Authorization": f"Bearer {token}"},
-                    json=payload,
-                )
-            if response.status_code == 400:
-                raise RuntimeError(
-                    f"Vertex rejected embedding input (inputs={len(texts)}, "
-                    f"characters={sum(len(text) for text in texts)}): {response.text}"
-                )
-            response.raise_for_status()
             try:
-                embeddings = [prediction["embeddings"]["values"] for prediction in response.json()["predictions"]]
-            except (KeyError, TypeError) as exc:
-                raise RuntimeError("Vertex AI returned an invalid embedding response") from exc
-            embeddings = _validate_embeddings(embeddings, len(texts))
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    # The bounded pilot deliberately makes one provider request per admitted batch.
+                    # Retrying or recursively splitting after a provider-side failure would create
+                    # unledgered extra paid-call attempts and violate the pilot contract.
+                    response = await client.post(
+                        self.endpoint,
+                        headers={"Authorization": f"Bearer {token}"},
+                        json=payload,
+                    )
+                if response.status_code == 400:
+                    raise RuntimeError(
+                        f"Vertex rejected embedding input (inputs={len(texts)}, "
+                        f"characters={sum(len(text) for text in texts)}): {response.text}"
+                    )
+                response.raise_for_status()
+                try:
+                    embeddings = [prediction["embeddings"]["values"] for prediction in response.json()["predictions"]]
+                except (KeyError, TypeError) as exc:
+                    raise RuntimeError("Vertex AI returned an invalid embedding response") from exc
+                embeddings = _validate_embeddings(embeddings, len(texts))
+            except Exception as exc:
+                record_vertex_embedding_failure(
+                    db, ledger, model=self.vertex_model, texts=texts,
+                    details={"error_type": type(exc).__name__, "message": str(exc)[:500],
+                             "output_dimensions": self.output_dimensions},
+                )
+                raise
             usage = response.json().get("metadata", {}).get("usageMetadata", {})
             input_tokens = usage.get("promptTokenCount")
             if not isinstance(input_tokens, int):

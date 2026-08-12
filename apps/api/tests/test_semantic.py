@@ -78,11 +78,15 @@ def test_vertex_does_not_retry_a_rate_limited_batch(monkeypatch):
     monkeypatch.setattr("app.providers.SessionLocal", lambda: type("DB", (), {"close": lambda self: None})())
     monkeypatch.setattr("app.providers.admit_vertex_embedding", lambda *args: type("Ledger", (), {"configuration": {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 0}})())
     monkeypatch.setattr("app.providers.record_vertex_embedding_success", lambda *args, **kwargs: None)
+    failed = []
+    monkeypatch.setattr("app.providers.record_vertex_embedding_failure", lambda *args, **kwargs: failed.append(kwargs))
     monkeypatch.setattr(provider, "_access_token", lambda: original_sleep(0, result="token"))
     monkeypatch.setattr("app.providers.httpx.AsyncClient", lambda **kwargs: FakeClient())
     with pytest.raises(RuntimeError, match="rate limited"):
         asyncio.run(provider.embed_texts(["test"]))
     assert FakeClient.responses == []
+    assert len(failed) == 1
+    assert failed[0]["details"]["error_type"] == "RuntimeError"
 
 
 def test_vertex_does_not_split_a_payload_vertex_rejects(monkeypatch):
@@ -111,6 +115,8 @@ def test_vertex_does_not_split_a_payload_vertex_rejects(monkeypatch):
     monkeypatch.setattr("app.providers.SessionLocal", lambda: type("DB", (), {"close": lambda self: None})())
     monkeypatch.setattr("app.providers.admit_vertex_embedding", lambda *args: type("Ledger", (), {"configuration": {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 0}})())
     monkeypatch.setattr("app.providers.record_vertex_embedding_success", lambda *args, **kwargs: None)
+    failed = []
+    monkeypatch.setattr("app.providers.record_vertex_embedding_failure", lambda *args, **kwargs: failed.append(kwargs))
     original_sleep = asyncio.sleep
     monkeypatch.setattr(provider, "_access_token", lambda: original_sleep(0, result="token"))
     fake = FakeClient()
@@ -119,6 +125,8 @@ def test_vertex_does_not_split_a_payload_vertex_rejects(monkeypatch):
     with pytest.raises(RuntimeError, match="Vertex rejected embedding input"):
         asyncio.run(provider.embed_texts(["first", "second"]))
     assert fake.calls == [["first", "second"]]
+    assert len(failed) == 1
+    assert failed[0]["details"]["error_type"] == "RuntimeError"
 
 
 def test_hybrid_fusion_is_deterministic():

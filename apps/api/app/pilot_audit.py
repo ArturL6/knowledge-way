@@ -44,8 +44,9 @@ def admit_vertex_embedding(db: Session, ledger_id: str, document_count: int) -> 
         raise RuntimeError("Vertex embedding blocked: ledger actuals are invalid")
     if document_count <= 0 or used + document_count > REQUIRED_CAPS["embedding_documents"]:
         raise RuntimeError("Vertex embedding blocked: embedding document cap would be exceeded")
-    if cost >= REQUIRED_CAPS["cost_usd_micros"]:
-        raise RuntimeError("Vertex embedding blocked: USD 5 cost cap reached")
+    projected_cost = unit_cost * document_count
+    if cost >= REQUIRED_CAPS["cost_usd_micros"] or cost + projected_cost >= REQUIRED_CAPS["cost_usd_micros"]:
+        raise RuntimeError("Vertex embedding blocked: USD 5 cost cap would be reached or exceeded")
     return ledger
 
 
@@ -76,6 +77,25 @@ def record_vertex_embedding_success(db: Session, ledger: ProviderAuditLedger, *,
         status="succeeded", details=details or {},
     )
     ledger.actual = actual
+    db.add(event)
+    db.commit()
+    return event
+
+
+def record_vertex_embedding_failure(db: Session, ledger: ProviderAuditLedger, *, model: str,
+                                    texts: list[str], details: dict) -> ProviderAuditEvent:
+    """Persist one auditable zero-cost event for a failed Vertex request.
+
+    The pilot makes no retries, but a rejected or unavailable request is still a provider call
+    and must be visible in the persistent ledger. Vertex does not return billable usage for
+    failed requests, so the event records a deterministic zero cost rather than guessing.
+    """
+    event = ProviderAuditEvent(
+        ledger_id=ledger.id, operation="embedding", model=model,
+        model_version=ledger.configuration.get("embedding_model_version"),
+        input_hash=hashlib.sha256(json.dumps(texts, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest(),
+        input_tokens=None, output_tokens=0, cost_usd_micros=0, status="failed", details=details,
+    )
     db.add(event)
     db.commit()
     return event
