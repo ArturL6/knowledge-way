@@ -1,9 +1,12 @@
+from typing import cast
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.models import Base, Repository, Workspace, WorkspaceSnapshot, WorkspaceSnapshotRepository
+from app.models import (Base, ProviderAuditLedger, Repository, Workspace, WorkspaceSnapshot,
+                        WorkspaceSnapshotRepository)
 from app.pilot_audit import (REQUIRED_CAPS, admit_vertex_embedding,
                              record_vertex_embedding_failure, record_vertex_embedding_success)
 
@@ -46,7 +49,13 @@ def test_admission_blocks_document_and_cost_cap_before_provider_call():
         admit_vertex_embedding(_DB(_ledger(configuration={"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 5_000_000,
                                                          "repository_ids": ["repository-a", "repository-b"], "intended_embedding_documents": 1,
                                                          "projected_max_embedding_documents": 1},
-                                           actual={"embedding_documents": 10, "cost_usd_micros": 0})), "ledger", 1)
+                                           actual={"embedding_documents": 0, "cost_usd_micros": 0})), "ledger", 1)
+    with pytest.raises(RuntimeError, match="document cap"):
+        admit_vertex_embedding(_DB(_ledger(
+            configuration={"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 100,
+                           "repository_ids": ["repository-a", "repository-b"], "intended_embedding_documents": 10,
+                           "projected_max_embedding_documents": 10},
+            actual={"embedding_documents": 10, "cost_usd_micros": 0})), "ledger", 1)
 
 
 class _EventDB(_DB):
@@ -72,6 +81,19 @@ def test_successful_embedding_is_evented_and_atomically_accounted():
     assert event.input_tokens == 3
     assert event.cost_usd_micros == 200
     assert event.input_hash
+
+
+def test_successful_embedding_cannot_outgrow_the_recorded_projection():
+    ledger = _ledger(
+        configuration={"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 100,
+                       "repository_ids": ["repository-a", "repository-b"], "intended_embedding_documents": 10,
+                       "projected_max_embedding_documents": 10},
+    )
+    with pytest.raises(RuntimeError, match="hard cap"):
+        record_vertex_embedding_success(
+            _EventDB(ledger), cast(ProviderAuditLedger, ledger), model="text-embedding-005", texts=["one"],
+            input_tokens=1, cost_usd_micros=100,
+        )
 
 
 def test_admission_requires_deterministic_price_accounting():

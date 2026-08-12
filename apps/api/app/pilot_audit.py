@@ -78,7 +78,12 @@ def admit_vertex_embedding(db: Session, ledger_id: str, document_count: int) -> 
     cost = actual.get("cost_usd_micros", 0)
     if not isinstance(used, int) or not isinstance(cost, int) or used < 0 or cost < 0:
         raise RuntimeError("Vertex embedding blocked: ledger actuals are invalid")
-    if document_count <= 0 or used + document_count > REQUIRED_CAPS["embedding_documents"]:
+    # The hard cap is the outer safety boundary, while the recorded projection is the
+    # operator-approved scope for this particular pilot. Do not silently use unused
+    # global headroom to grow a pilot beyond its start-of-run declaration.
+    projected_documents = ledger.configuration["projected_max_embedding_documents"]
+    if (document_count <= 0 or used + document_count > REQUIRED_CAPS["embedding_documents"]
+            or used + document_count > projected_documents):
         raise RuntimeError("Vertex embedding blocked: embedding document cap would be exceeded")
     projected_cost = unit_cost * document_count
     if cost >= REQUIRED_CAPS["cost_usd_micros"] or cost + projected_cost >= REQUIRED_CAPS["cost_usd_micros"]:
@@ -101,7 +106,11 @@ def record_vertex_embedding_success(db: Session, ledger: ProviderAuditLedger, *,
     used_cost = actual.get("cost_usd_micros", 0)
     if not isinstance(used_documents, int) or not isinstance(used_cost, int):
         raise RuntimeError("Vertex embedding blocked: ledger actuals are invalid")
-    if used_documents + len(texts) > REQUIRED_CAPS["embedding_documents"] or used_cost + cost_usd_micros > REQUIRED_CAPS["cost_usd_micros"]:
+    projected_documents = ledger.configuration.get("projected_max_embedding_documents")
+    if (not isinstance(projected_documents, int)
+            or used_documents + len(texts) > REQUIRED_CAPS["embedding_documents"]
+            or used_documents + len(texts) > projected_documents
+            or used_cost + cost_usd_micros > REQUIRED_CAPS["cost_usd_micros"]):
         raise RuntimeError("Vertex embedding blocked: actual usage would exceed a hard cap")
     actual["embedding_documents"] = used_documents + len(texts)
     actual["cost_usd_micros"] = used_cost + cost_usd_micros
