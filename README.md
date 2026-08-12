@@ -13,6 +13,7 @@ A self-hosted, privacy-conscious code intelligence and grounded AI code-search p
 - Grounded chat answers with verified, clickable file-and-line citations
 - Next.js UI for dashboard, search, browsing and chat
 - Workspace-scoped declared repository dependency maps (metadata only; no inferred cross-repository code edges)
+- Evidence-bounded workspace overview API with per-repository indexed-commit and vector-coverage provenance
 
 ## Run
 
