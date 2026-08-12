@@ -138,6 +138,7 @@ def update_workspace(workspace_id:str,body:WorkspaceUpdate,db:Session=Depends(ge
 def delete_workspace(workspace_id:str,db:Session=Depends(get_db)):
  w=db.get(Workspace,workspace_id)
  if not w: raise HTTPException(404,'Workspace not found')
+ if db.scalar(select(WorkspaceSnapshot.id).where(WorkspaceSnapshot.workspace_id==workspace_id).limit(1)): raise HTTPException(409,'Cannot delete a workspace with immutable snapshots')
  db.execute(delete(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace_id)); db.execute(delete(WorkspaceRepository).where(WorkspaceRepository.workspace_id==workspace_id)); db.delete(w); db.commit()
 @app.get('/api/workspaces/{workspace_id}/snapshots')
 def workspace_snapshots(workspace_id:str,db:Session=Depends(get_db)):

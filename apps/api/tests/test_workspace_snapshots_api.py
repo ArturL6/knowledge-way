@@ -25,6 +25,7 @@ def test_workspace_snapshot_is_membership_validated_commit_pinned_and_immutable(
         assert snapshot['repository_pins']==[{'repository_id':'one','indexed_commit_sha':'a'*40},{'repository_id':'two','indexed_commit_sha':'b'*40}]
         assert len(snapshot['manifest_hash'])==64
         assert api.delete('/api/repositories/one').status_code==409
+        assert api.delete(f'/api/workspaces/{workspace_id}').status_code==409
         assert api.post(f'/api/workspaces/{workspace_id}/snapshots',json=payload).json()['id']==snapshot['id']
         db.get(Repository,'one').indexed_commit_sha='d'*40; db.commit()
         fetched=api.get(f"/api/workspaces/{workspace_id}/snapshots/{snapshot['id']}")

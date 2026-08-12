@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.db import get_db
 from app.main import app
-from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency
+from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, WorkspaceSnapshot
 
 
 def test_workspace_crud_and_exclusive_idempotent_membership():
@@ -16,6 +16,7 @@ def test_workspace_crud_and_exclusive_idempotent_membership():
     Workspace.__table__.create(engine)
     WorkspaceRepository.__table__.create(engine)
     WorkspaceDependency.__table__.create(engine)
+    WorkspaceSnapshot.__table__.create(engine)
     Session = sessionmaker(bind=engine)
     db = Session()
     db.add_all([
