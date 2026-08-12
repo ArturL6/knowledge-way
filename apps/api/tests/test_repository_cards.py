@@ -57,6 +57,9 @@ def test_repository_card_is_bounded_commit_scoped_and_uses_only_persisted_eviden
         assert "Repository: demo" in card["retrieval_document"]
         assert "preview-only" in card["limitations"][-1]
         assert TestClient(app).get("/api/repositories/missing/repository-card").status_code == 404
+        db.add(Repository(id="unindexed", name="unindexed", clone_url="https://example.test/unindexed.git"))
+        db.commit()
+        assert TestClient(app).get("/api/repositories/unindexed/repository-card").status_code == 409
     finally:
         app.dependency_overrides.clear()
         db.close()
