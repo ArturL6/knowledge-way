@@ -46,6 +46,14 @@ def test_vertex_without_project_never_creates_provider(monkeypatch):
     assert semantic_capability()["state"] == "unconfigured"
 
 
+def test_vertex_embedding_is_hard_blocked_without_enabled_audit_ledger(monkeypatch):
+    monkeypatch.setattr(settings, "vertex_pilot_enabled", False)
+    monkeypatch.setattr(settings, "vertex_pilot_ledger_id", None)
+    provider = VertexEmbeddingProvider("project", "us-central1", "text-embedding-005", 2)
+    with pytest.raises(RuntimeError, match="persistent pilot audit ledger"):
+        asyncio.run(provider.embed_texts(["bounded document"]))
+
+
 def test_vertex_retries_a_rate_limited_batch(monkeypatch):
     class FakeResponse:
         def __init__(self, status_code, body, headers=None):
@@ -69,6 +77,8 @@ def test_vertex_retries_a_rate_limited_batch(monkeypatch):
     delays = []
     original_sleep = asyncio.sleep
     provider = VertexEmbeddingProvider("project", "us-central1", "text-embedding-005", 2)
+    monkeypatch.setattr(settings, "vertex_pilot_enabled", True)
+    monkeypatch.setattr(settings, "vertex_pilot_ledger_id", "ledger")
     monkeypatch.setattr(provider, "_access_token", lambda: original_sleep(0, result="token"))
     monkeypatch.setattr("app.providers.httpx.AsyncClient", lambda **kwargs: FakeClient())
     monkeypatch.setattr("app.providers.asyncio.sleep", lambda seconds: delays.append(seconds) or original_sleep(0))
@@ -98,6 +108,8 @@ def test_vertex_splits_a_payload_vertex_rejects(monkeypatch):
             return FakeResponse(200, {"predictions": [{"embeddings": {"values": [float(len(text))]}} for text in texts]})
 
     provider = VertexEmbeddingProvider("project", "us-central1", "text-embedding-005", 1)
+    monkeypatch.setattr(settings, "vertex_pilot_enabled", True)
+    monkeypatch.setattr(settings, "vertex_pilot_ledger_id", "ledger")
     original_sleep = asyncio.sleep
     monkeypatch.setattr(provider, "_access_token", lambda: original_sleep(0, result="token"))
     fake = FakeClient()

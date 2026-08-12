@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     vertex_location: str = "us-central1"
     vertex_embedding_model: str = "text-embedding-005"
     vertex_embedding_dimensions: int = 768
+    # Credentials/configuration must never be sufficient to make a paid request. A pilot needs
+    # an explicit enabled flag and identifier for its persistent local audit ledger.
+    vertex_pilot_enabled: bool = False
+    vertex_pilot_ledger_id: str | None = None
     # Optional, versioned LLM summaries of symbols. Explicit opt-in because they incur usage costs.
     code_cards_enabled: bool = False
     # "vertex" uses ADC and Gemini; "openrouter" reuses OPENROUTER_API_KEY. The model must support

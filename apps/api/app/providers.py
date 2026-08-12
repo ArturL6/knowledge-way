@@ -131,6 +131,8 @@ class VertexEmbeddingProvider:
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
+        if not settings.vertex_pilot_enabled or not settings.vertex_pilot_ledger_id:
+            raise RuntimeError("Vertex embedding blocked: an enabled persistent pilot audit ledger is required")
         token = await self._access_token()
         payload = {
             "instances": [{"content": text} for text in texts],
