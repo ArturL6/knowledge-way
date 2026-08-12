@@ -61,6 +61,20 @@ def test_search_modes_and_scopes_match_api_contract(monkeypatch):
     ]
 
 
+def test_workspace_snapshot_navigation_uses_snapshot_scoped_contract(monkeypatch):
+    client = KnowledgeWayClient("http://localhost:8000")
+    captured = []
+    monkeypatch.setattr(client, "_get", lambda path, params=None: captured.append((path, params)) or {})
+
+    client.get_workspace_overview("team/a", "snapshot b")
+    client.find_relevant_repositories("team/a", "snapshot b", "change widget", limit=7)
+
+    assert captured == [
+        ("/api/workspaces/team%2Fa/overview", {"snapshot_id": "snapshot b"}),
+        ("/api/workspaces/team%2Fa/snapshots/snapshot%20b/relevant-repositories", {"q": "change widget", "limit": 7}),
+    ]
+
+
 @pytest.mark.parametrize("call", [
     lambda c: c.search_code("", limit=1),
     lambda c: c.search_code("x" * 1001),
@@ -69,6 +83,8 @@ def test_search_modes_and_scopes_match_api_contract(monkeypatch):
     lambda c: c.search_code("ok", limit=51),
     lambda c: c.search_code("ok", repository_id="r", workspace_id="w"),
     lambda c: c.get_symbol("r", "s" * 257),
+    lambda c: c.get_workspace_overview("r", "s" * 257),
+    lambda c: c.find_relevant_repositories("r", "s", "ok", limit=21),
     lambda c: c.get_subgraph("r", "s", depth=3),
     lambda c: c.get_subgraph("r", "s", max_nodes=101),
 ])

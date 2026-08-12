@@ -96,6 +96,30 @@ class KnowledgeWayClient:
     def list_repositories(self) -> Any:
         return self._get("/api/repositories")
 
+    def get_workspace_overview(self, workspace_id: str, snapshot_id: str) -> Any:
+        """Return the evidence-labelled repository map for one immutable snapshot."""
+        workspace_id = _bounded_text(workspace_id, "workspace_id", MAX_ID_LENGTH)
+        snapshot_id = _bounded_text(snapshot_id, "snapshot_id", MAX_ID_LENGTH)
+        return self._get(
+            f"/api/workspaces/{quote(workspace_id, safe='')}/overview",
+            {"snapshot_id": snapshot_id},
+        )
+
+    def find_relevant_repositories(
+        self, workspace_id: str, snapshot_id: str, query: str, limit: int = 8
+    ) -> Any:
+        """Rank snapshot-pinned repositories using only local lexical/symbol evidence."""
+        workspace_id = _bounded_text(workspace_id, "workspace_id", MAX_ID_LENGTH)
+        snapshot_id = _bounded_text(snapshot_id, "snapshot_id", MAX_ID_LENGTH)
+        query = _bounded_text(query, "query", MAX_QUERY_LENGTH)
+        limit = _bounded_int(limit, "limit", 1, 20)
+        return self._get(
+            "/api/workspaces/{}/snapshots/{}/relevant-repositories".format(
+                quote(workspace_id, safe=""), quote(snapshot_id, safe="")
+            ),
+            {"q": query, "limit": limit},
+        )
+
     def search_code(
         self,
         query: str,

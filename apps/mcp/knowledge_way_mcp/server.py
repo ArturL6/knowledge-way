@@ -23,6 +23,25 @@ def list_repositories() -> list[dict]:
 
 
 @mcp.tool()
+def get_workspace_overview(workspace_id: str, snapshot_id: str) -> dict:
+    """Get member repositories and declared dependencies for an immutable workspace snapshot.
+
+    Edge evidence is explicitly labelled; no cross-repository resolution is inferred.
+    """
+    return client().get_workspace_overview(workspace_id, snapshot_id)
+
+
+@mcp.tool()
+def find_relevant_repositories(workspace_id: str, snapshot_id: str, query: str, limit: int = 8) -> dict:
+    """Rank relevant repositories at immutable snapshot pins with citations and unknowns.
+
+    Use this before repository drill-down. It never searches a repository outside
+    the supplied snapshot and does not invoke semantic providers.
+    """
+    return client().find_relevant_repositories(workspace_id, snapshot_id, query, limit)
+
+
+@mcp.tool()
 def search_code(query: str, mode: str = "hybrid", limit: int = 20, repository_id: str | None = None, workspace_id: str | None = None) -> dict:
     """Search code globally, in one repository, or across declared workspace members.
 
