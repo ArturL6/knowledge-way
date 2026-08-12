@@ -179,7 +179,9 @@ class VertexEmbeddingProvider:
             usage = response.json().get("metadata", {}).get("usageMetadata", {})
             input_tokens = usage.get("promptTokenCount")
             if not isinstance(input_tokens, int):
-                input_tokens = None
+                # The input-token cap is a hard pilot limit. A response without usage
+                # cannot be safely admitted for future calls, so do not persist vectors.
+                raise RuntimeError("Vertex embedding blocked: provider did not return input-token usage")
             record_vertex_embedding_success(
                 db, ledger, model=self.vertex_model, texts=texts, input_tokens=input_tokens,
                 cost_usd_micros=ledger.configuration["embedding_cost_usd_micros_per_document"] * len(texts),

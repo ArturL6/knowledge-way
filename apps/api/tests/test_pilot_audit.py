@@ -69,6 +69,7 @@ def test_success_is_evented_accounted_and_prevents_reuse():
                                              input_tokens=3, cost_usd_micros=200)
     assert db.commits == 1 and db.added == [event]
     assert ledger.actual == {"embedding_documents": 2, "cost_usd_micros": 200,
+                             "llm_input_tokens": 3,
                              "embedding_document_input_hashes": [_hash("one"), _hash("two")]}
     with pytest.raises(RuntimeError, match="previously embedded"):
         admit_vertex_embedding(_DB(ledger), "ledger", ["one"])
@@ -81,6 +82,19 @@ def test_success_cannot_understate_price_change_model_or_record_unplanned_input(
         with pytest.raises(RuntimeError, match="match the ledger model|planned ledger hashes"):
             record_vertex_embedding_success(_EventDB(ledger), cast(ProviderAuditLedger, ledger), model=model,
                                             texts=texts, input_tokens=2, cost_usd_micros=cost)
+
+
+def test_success_requires_and_caps_provider_input_tokens():
+    ledger = _ledger()
+    with pytest.raises(RuntimeError, match="input-token accounting"):
+        record_vertex_embedding_success(_EventDB(ledger), cast(ProviderAuditLedger, ledger),
+                                        model="text-embedding-005", texts=["one"],
+                                        input_tokens=None, cost_usd_micros=100)
+    ledger.actual["llm_input_tokens"] = REQUIRED_CAPS["llm_input_tokens"]
+    with pytest.raises(RuntimeError, match="hard cap"):
+        record_vertex_embedding_success(_EventDB(ledger), cast(ProviderAuditLedger, ledger),
+                                        model="text-embedding-005", texts=["one"],
+                                        input_tokens=1, cost_usd_micros=100)
 
 
 @pytest.mark.parametrize("overrides", [

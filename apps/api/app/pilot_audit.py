@@ -107,7 +107,9 @@ def admit_vertex_embedding(db: Session, ledger_id: str, texts: list[str]) -> Pro
         raise RuntimeError("Vertex embedding blocked: request inputs must be unique, planned, and not previously embedded")
     used = actual.get("embedding_documents", 0)
     cost = actual.get("cost_usd_micros", 0)
-    if not isinstance(used, int) or not isinstance(cost, int) or used < 0 or cost < 0:
+    input_tokens = actual.get("llm_input_tokens", 0)
+    if (not isinstance(used, int) or not isinstance(cost, int) or not isinstance(input_tokens, int)
+            or used < 0 or cost < 0 or input_tokens < 0):
         raise RuntimeError("Vertex embedding blocked: ledger actuals are invalid")
     # The hard cap is the outer safety boundary, while the recorded projection is the
     # operator-approved scope for this particular pilot. Do not silently use unused
@@ -135,18 +137,21 @@ def record_vertex_embedding_success(db: Session, ledger: ProviderAuditLedger, *,
     if (model != configured_model or not isinstance(unit_cost, int) or unit_cost < 0
             or cost_usd_micros != unit_cost * len(texts)):
         raise RuntimeError("Vertex embedding blocked: success usage must match the ledger model and deterministic price")
-    if cost_usd_micros < 0 or input_tokens is not None and input_tokens < 0:
-        raise RuntimeError("Vertex embedding blocked: provider usage accounting is invalid")
+    if not isinstance(input_tokens, int) or input_tokens < 0:
+        raise RuntimeError("Vertex embedding blocked: provider input-token accounting is required")
     actual = dict(ledger.actual or {})
     used_documents = actual.get("embedding_documents", 0)
     used_cost = actual.get("cost_usd_micros", 0)
-    if not isinstance(used_documents, int) or not isinstance(used_cost, int):
+    used_input_tokens = actual.get("llm_input_tokens", 0)
+    if (not isinstance(used_documents, int) or not isinstance(used_cost, int)
+            or not isinstance(used_input_tokens, int)):
         raise RuntimeError("Vertex embedding blocked: ledger actuals are invalid")
     projected_documents = ledger.configuration.get("projected_max_embedding_documents")
     if (not isinstance(projected_documents, int)
             or used_documents + len(texts) > REQUIRED_CAPS["embedding_documents"]
             or used_documents + len(texts) > projected_documents
-            or used_cost + cost_usd_micros > REQUIRED_CAPS["cost_usd_micros"]):
+            or used_cost + cost_usd_micros > REQUIRED_CAPS["cost_usd_micros"]
+            or used_input_tokens + input_tokens > REQUIRED_CAPS["llm_input_tokens"]):
         raise RuntimeError("Vertex embedding blocked: actual usage would exceed a hard cap")
     input_hashes = [hashlib.sha256(text.encode()).hexdigest() for text in texts]
     recorded_hashes = actual.get("embedding_document_input_hashes", [])
@@ -156,6 +161,7 @@ def record_vertex_embedding_success(db: Session, ledger: ProviderAuditLedger, *,
         raise RuntimeError("Vertex embedding blocked: successful inputs must match unused planned ledger hashes")
     actual["embedding_documents"] = used_documents + len(texts)
     actual["cost_usd_micros"] = used_cost + cost_usd_micros
+    actual["llm_input_tokens"] = used_input_tokens + input_tokens
     actual["embedding_document_input_hashes"] = recorded_hashes + input_hashes
     event = ProviderAuditEvent(
         ledger_id=ledger.id, operation="embedding", model=model,
