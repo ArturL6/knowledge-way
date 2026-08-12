@@ -5,7 +5,7 @@ stage: R
 packets:
   - id: "R.1"
     title: "Governance bootstrap"
-    state: pr_open
+    state: review_blocked
     branch: "packet/R.1-governance-bootstrap"
     verify: "governance/checks/stageR_governance.sh"
     blocked_by: []
@@ -46,7 +46,7 @@ packets:
     branch: "packet/R.7-evidence-table"
     verify: "governance/checks/stageR_evidence.sh"
     blocked_by: ["R.6"]
-last_review: null
+last_review: REVIEW-001
 drift_flags: []
 ```
 
