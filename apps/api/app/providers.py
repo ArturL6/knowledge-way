@@ -7,6 +7,8 @@ from typing import Protocol
 import httpx
 
 from app.config import settings
+from app.db import SessionLocal
+from app.pilot_audit import admit_vertex_embedding
 
 
 # Floor for the halving retry below, so a genuinely un-embeddable input raises instead of looping.
@@ -133,6 +135,15 @@ class VertexEmbeddingProvider:
             return []
         if not settings.vertex_pilot_enabled or not settings.vertex_pilot_ledger_id:
             raise RuntimeError("Vertex embedding blocked: an enabled persistent pilot audit ledger is required")
+        # Validate the persisted budget and price provenance before refreshing ADC or opening a
+        # network connection. Configuration alone can never authorize a paid call.
+        db = SessionLocal()
+        try:
+            ledger = admit_vertex_embedding(db, settings.vertex_pilot_ledger_id, len(texts))
+            if ledger.configuration["embedding_model"] != self.vertex_model:
+                raise RuntimeError("Vertex embedding blocked: configured model differs from pilot audit ledger")
+        finally:
+            db.close()
         token = await self._access_token()
         payload = {
             "instances": [{"content": text} for text in texts],

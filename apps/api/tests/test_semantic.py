@@ -79,6 +79,8 @@ def test_vertex_retries_a_rate_limited_batch(monkeypatch):
     provider = VertexEmbeddingProvider("project", "us-central1", "text-embedding-005", 2)
     monkeypatch.setattr(settings, "vertex_pilot_enabled", True)
     monkeypatch.setattr(settings, "vertex_pilot_ledger_id", "ledger")
+    monkeypatch.setattr("app.providers.SessionLocal", lambda: type("DB", (), {"close": lambda self: None})())
+    monkeypatch.setattr("app.providers.admit_vertex_embedding", lambda *args: type("Ledger", (), {"configuration": {"embedding_model": "text-embedding-005"}})())
     monkeypatch.setattr(provider, "_access_token", lambda: original_sleep(0, result="token"))
     monkeypatch.setattr("app.providers.httpx.AsyncClient", lambda **kwargs: FakeClient())
     monkeypatch.setattr("app.providers.asyncio.sleep", lambda seconds: delays.append(seconds) or original_sleep(0))
@@ -110,6 +112,8 @@ def test_vertex_splits_a_payload_vertex_rejects(monkeypatch):
     provider = VertexEmbeddingProvider("project", "us-central1", "text-embedding-005", 1)
     monkeypatch.setattr(settings, "vertex_pilot_enabled", True)
     monkeypatch.setattr(settings, "vertex_pilot_ledger_id", "ledger")
+    monkeypatch.setattr("app.providers.SessionLocal", lambda: type("DB", (), {"close": lambda self: None})())
+    monkeypatch.setattr("app.providers.admit_vertex_embedding", lambda *args: type("Ledger", (), {"configuration": {"embedding_model": "text-embedding-005"}})())
     original_sleep = asyncio.sleep
     monkeypatch.setattr(provider, "_access_token", lambda: original_sleep(0, result="token"))
     fake = FakeClient()
