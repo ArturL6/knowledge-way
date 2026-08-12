@@ -205,6 +205,7 @@ def code_card(repo_id:str,symbol_id:str,db:Session=Depends(get_db)):
 def repository_card(repo_id:str,db:Session=Depends(get_db)):
  repo=db.get(Repository,repo_id)
  if not repo: raise HTTPException(404,'Repository not found')
+ if not repo.indexed_commit_sha: raise HTTPException(409,'Repository has no indexed snapshot')
  return build_repository_card(db,repo)
 @app.get('/api/repositories/{repo_id}/structural-cards')
 def structural_cards(repo_id:str,path:str='',kind:str|None=None,limit:int=Query(50,ge=1,le=100),db:Session=Depends(get_db)):
