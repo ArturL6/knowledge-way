@@ -51,6 +51,18 @@ def live_progress(r): return {} if r.indexing_status=='ready' else r.indexing_pr
 def repo_out(r): return {'id':r.id,'name':r.name,'clone_url':r.clone_url,'requested_revision':r.requested_revision,'default_branch':r.default_branch,'indexed_branch':r.indexed_branch,'indexed_commit_sha':r.indexed_commit_sha,'latest_detected_commit_sha':r.latest_detected_commit_sha,'indexing_status':r.indexing_status,'indexing_progress':live_progress(r),'error_message':r.error_message,'last_indexed_at':r.last_indexed_at,'last_sync_at':r.last_sync_at,'created_at':r.created_at}
 def workspace_out(w): return {'id':w.id,'name':w.name,'description':w.description,'created_at':w.created_at,'updated_at':w.updated_at}
 def workspace_dependency_out(d): return {'id':d.id,'workspace_id':d.workspace_id,'source_repository_id':d.source_repository_id,'target_repository_id':d.target_repository_id,'package_name':d.package_name,'import_path':d.import_path,'reason':d.reason,'note':d.note,'created_at':d.created_at,'updated_at':d.updated_at}
+def workspace_overview(db,workspace):
+ members=db.scalars(select(Repository).join(WorkspaceRepository,WorkspaceRepository.repository_id==Repository.id).where(WorkspaceRepository.workspace_id==workspace.id).order_by(Repository.id)).all()
+ member_ids={member.id for member in members}
+ declarations=db.scalars(select(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace.id).order_by(WorkspaceDependency.id)).all()
+ # Dependencies are user-declared evidence only. This endpoint never derives cross-repository
+ # import, call, or symbol-resolution edges from indexed source text.
+ edges=[dict(workspace_dependency_out(declaration),evidence_kind='declared_workspace_dependency') for declaration in declarations if declaration.source_repository_id in member_ids and declaration.target_repository_id in member_ids]
+ repositories=[]
+ for member in members:
+  total_chunks,embedded_chunks=db.execute(select(func.count(CodeChunk.id),func.count(CodeChunk.embedding)).where(CodeChunk.repository_id==member.id)).one()
+  repositories.append({'id':member.id,'name':member.name,'indexed_commit_sha':member.indexed_commit_sha,'indexing_status':member.indexing_status,'vector_provenance':{'indexed_commit_sha':member.indexed_commit_sha,'total_chunks':total_chunks,'embedded_chunks':embedded_chunks,'coverage_complete':total_chunks==embedded_chunks}})
+ return {'workspace':workspace_out(workspace),'repositories':repositories,'edges':edges,'provenance':{'repository_commit_pins':[{ 'repository_id':member['id'],'indexed_commit_sha':member['indexed_commit_sha']} for member in repositories],'vector_provenance_is_per_repository':True,'cross_repository_resolution':'not_performed','edge_evidence':'declared_workspace_dependency_only'}}
 def validate_dependency_membership(db,workspace_id,source_repository_id,target_repository_id):
  if source_repository_id==target_repository_id: raise HTTPException(422,'Source and target repositories must differ')
  members=set(db.scalars(select(WorkspaceRepository.repository_id).where(WorkspaceRepository.workspace_id==workspace_id)).all())
@@ -127,6 +139,11 @@ def delete_workspace(workspace_id:str,db:Session=Depends(get_db)):
  w=db.get(Workspace,workspace_id)
  if not w: raise HTTPException(404,'Workspace not found')
  db.execute(delete(WorkspaceDependency).where(WorkspaceDependency.workspace_id==workspace_id)); db.execute(delete(WorkspaceRepository).where(WorkspaceRepository.workspace_id==workspace_id)); db.delete(w); db.commit()
+@app.get('/api/workspaces/{workspace_id}/overview')
+def get_workspace_overview(workspace_id:str,db:Session=Depends(get_db)):
+ workspace=db.get(Workspace,workspace_id)
+ if not workspace: raise HTTPException(404,'Workspace not found')
+ return workspace_overview(db,workspace)
 @app.get('/api/workspaces/{workspace_id}/dependencies')
 def workspace_dependencies(workspace_id:str,db:Session=Depends(get_db)):
  if not db.get(Workspace,workspace_id): raise HTTPException(404,'Workspace not found')
