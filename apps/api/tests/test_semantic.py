@@ -54,7 +54,7 @@ def test_vertex_embedding_is_hard_blocked_without_enabled_audit_ledger(monkeypat
         asyncio.run(provider.embed_texts(["bounded document"]))
 
 
-def test_vertex_retries_a_rate_limited_batch(monkeypatch):
+def test_vertex_does_not_retry_a_rate_limited_batch(monkeypatch):
     class FakeResponse:
         def __init__(self, status_code, body, headers=None):
             self.status_code = status_code
@@ -66,15 +66,11 @@ def test_vertex_retries_a_rate_limited_batch(monkeypatch):
         def json(self): return self._body
 
     class FakeClient:
-        responses = [
-            FakeResponse(429, {}, {"Retry-After": "0"}),
-            FakeResponse(200, {"predictions": [{"embeddings": {"values": [0.1, 0.2]}}]}),
-        ]
+        responses = [FakeResponse(429, {}, {"Retry-After": "0"})]
         async def __aenter__(self): return self
         async def __aexit__(self, *args): pass
         async def post(self, *args, **kwargs): return self.responses.pop(0)
 
-    delays = []
     original_sleep = asyncio.sleep
     provider = VertexEmbeddingProvider("project", "us-central1", "text-embedding-005", 2)
     monkeypatch.setattr(settings, "vertex_pilot_enabled", True)
@@ -83,13 +79,12 @@ def test_vertex_retries_a_rate_limited_batch(monkeypatch):
     monkeypatch.setattr("app.providers.admit_vertex_embedding", lambda *args: type("Ledger", (), {"configuration": {"embedding_model": "text-embedding-005"}})())
     monkeypatch.setattr(provider, "_access_token", lambda: original_sleep(0, result="token"))
     monkeypatch.setattr("app.providers.httpx.AsyncClient", lambda **kwargs: FakeClient())
-    monkeypatch.setattr("app.providers.asyncio.sleep", lambda seconds: delays.append(seconds) or original_sleep(0))
+    with pytest.raises(RuntimeError, match="rate limited"):
+        asyncio.run(provider.embed_texts(["test"]))
+    assert FakeClient.responses == []
 
-    assert asyncio.run(provider.embed_texts(["test"])) == [[0.1, 0.2]]
-    assert delays == [1.0]
 
-
-def test_vertex_splits_a_payload_vertex_rejects(monkeypatch):
+def test_vertex_does_not_split_a_payload_vertex_rejects(monkeypatch):
     class FakeResponse:
         def __init__(self, status_code, body):
             self.status_code, self._body, self.headers = status_code, body, {}
@@ -97,6 +92,8 @@ def test_vertex_splits_a_payload_vertex_rejects(monkeypatch):
             if self.status_code >= 400:
                 raise RuntimeError("bad request")
         def json(self): return self._body
+        @property
+        def text(self): return "invalid payload"
 
     class FakeClient:
         calls = []
@@ -105,9 +102,7 @@ def test_vertex_splits_a_payload_vertex_rejects(monkeypatch):
         async def post(self, *args, **kwargs):
             texts = [item["content"] for item in kwargs["json"]["instances"]]
             self.calls.append(texts)
-            if len(texts) == 2:
-                return FakeResponse(400, {})
-            return FakeResponse(200, {"predictions": [{"embeddings": {"values": [float(len(text))]}} for text in texts]})
+            return FakeResponse(400, {})
 
     provider = VertexEmbeddingProvider("project", "us-central1", "text-embedding-005", 1)
     monkeypatch.setattr(settings, "vertex_pilot_enabled", True)
@@ -119,8 +114,9 @@ def test_vertex_splits_a_payload_vertex_rejects(monkeypatch):
     fake = FakeClient()
     monkeypatch.setattr("app.providers.httpx.AsyncClient", lambda **kwargs: fake)
 
-    assert asyncio.run(provider.embed_texts(["first", "second"])) == [[5.0], [6.0]]
-    assert fake.calls == [["first", "second"], ["first"], ["second"]]
+    with pytest.raises(RuntimeError, match="Vertex rejected embedding input"):
+        asyncio.run(provider.embed_texts(["first", "second"]))
+    assert fake.calls == [["first", "second"]]
 
 
 def test_hybrid_fusion_is_deterministic():

@@ -150,38 +150,20 @@ class VertexEmbeddingProvider:
             "parameters": {"outputDimensionality": self.output_dimensions},
         }
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response: httpx.Response | None = None
-            for attempt in range(8):
-                response = await client.post(
-                    self.endpoint,
-                    headers={"Authorization": f"Bearer {token}"},
-                    json=payload,
-                )
-                if response.status_code == 400 and len(texts) > 1:
-                    # Vertex can reject a multi-instance request whose aggregate payload is
-                    # too large even when every individual input is valid. Bisecting retains
-                    # the original ordering while allowing the worker to persist a full index.
-                    midpoint = len(texts) // 2
-                    return await self.embed_texts(texts[:midpoint]) + await self.embed_texts(texts[midpoint:])
-                if response.status_code != 429:
-                    if response.status_code == 400:
-                        # A single invalid Vertex input cannot be split further. Preserve only
-                        # safe diagnostics (size and Vertex's response) for index-job triage.
-                        raise RuntimeError(
-                            f"Vertex rejected embedding input (inputs={len(texts)}, "
-                            f"characters={sum(len(text) for text in texts)}): {response.text}"
-                        )
-                    response.raise_for_status()
-                    break
-                if attempt == 7:
-                    response.raise_for_status()
-                retry_after = response.headers.get("Retry-After")
-                try:
-                    delay = max(1.0, float(retry_after)) if retry_after else min(60.0, 2.0 ** (attempt + 1))
-                except ValueError:
-                    delay = min(60.0, 2.0 ** (attempt + 1))
-                await asyncio.sleep(delay)
-        assert response is not None
+            # The bounded pilot deliberately makes one provider request per admitted batch.
+            # Retrying or recursively splitting after a provider-side failure would create
+            # unledgered extra paid-call attempts and violate the pilot contract.
+            response = await client.post(
+                self.endpoint,
+                headers={"Authorization": f"Bearer {token}"},
+                json=payload,
+            )
+        if response.status_code == 400:
+            raise RuntimeError(
+                f"Vertex rejected embedding input (inputs={len(texts)}, "
+                f"characters={sum(len(text) for text in texts)}): {response.text}"
+            )
+        response.raise_for_status()
         try:
             embeddings = [prediction["embeddings"]["values"] for prediction in response.json()["predictions"]]
         except (KeyError, TypeError) as exc:
