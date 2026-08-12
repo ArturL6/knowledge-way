@@ -8,7 +8,7 @@ import httpx
 
 from app.config import settings
 from app.db import SessionLocal
-from app.pilot_audit import admit_vertex_embedding
+from app.pilot_audit import admit_vertex_embedding, record_vertex_embedding_success
 
 
 # Floor for the halving retry below, so a genuinely un-embeddable input raises instead of looping.
@@ -142,33 +142,43 @@ class VertexEmbeddingProvider:
             ledger = admit_vertex_embedding(db, settings.vertex_pilot_ledger_id, len(texts))
             if ledger.configuration["embedding_model"] != self.vertex_model:
                 raise RuntimeError("Vertex embedding blocked: configured model differs from pilot audit ledger")
+            token = await self._access_token()
+            payload = {
+                "instances": [{"content": text} for text in texts],
+                "parameters": {"outputDimensionality": self.output_dimensions},
+            }
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # The bounded pilot deliberately makes one provider request per admitted batch.
+                # Retrying or recursively splitting after a provider-side failure would create
+                # unledgered extra paid-call attempts and violate the pilot contract.
+                response = await client.post(
+                    self.endpoint,
+                    headers={"Authorization": f"Bearer {token}"},
+                    json=payload,
+                )
+            if response.status_code == 400:
+                raise RuntimeError(
+                    f"Vertex rejected embedding input (inputs={len(texts)}, "
+                    f"characters={sum(len(text) for text in texts)}): {response.text}"
+                )
+            response.raise_for_status()
+            try:
+                embeddings = [prediction["embeddings"]["values"] for prediction in response.json()["predictions"]]
+            except (KeyError, TypeError) as exc:
+                raise RuntimeError("Vertex AI returned an invalid embedding response") from exc
+            embeddings = _validate_embeddings(embeddings, len(texts))
+            usage = response.json().get("metadata", {}).get("usageMetadata", {})
+            input_tokens = usage.get("promptTokenCount")
+            if not isinstance(input_tokens, int):
+                input_tokens = None
+            record_vertex_embedding_success(
+                db, ledger, model=self.vertex_model, texts=texts, input_tokens=input_tokens,
+                cost_usd_micros=ledger.configuration["embedding_cost_usd_micros_per_document"] * len(texts),
+                details={"output_dimensions": self.output_dimensions},
+            )
+            return embeddings
         finally:
             db.close()
-        token = await self._access_token()
-        payload = {
-            "instances": [{"content": text} for text in texts],
-            "parameters": {"outputDimensionality": self.output_dimensions},
-        }
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            # The bounded pilot deliberately makes one provider request per admitted batch.
-            # Retrying or recursively splitting after a provider-side failure would create
-            # unledgered extra paid-call attempts and violate the pilot contract.
-            response = await client.post(
-                self.endpoint,
-                headers={"Authorization": f"Bearer {token}"},
-                json=payload,
-            )
-        if response.status_code == 400:
-            raise RuntimeError(
-                f"Vertex rejected embedding input (inputs={len(texts)}, "
-                f"characters={sum(len(text) for text in texts)}): {response.text}"
-            )
-        response.raise_for_status()
-        try:
-            embeddings = [prediction["embeddings"]["values"] for prediction in response.json()["predictions"]]
-        except (KeyError, TypeError) as exc:
-            raise RuntimeError("Vertex AI returned an invalid embedding response") from exc
-        return _validate_embeddings(embeddings, len(texts))
 
 
 def _validate_embeddings(embeddings: list[list[float]], expected_count: int) -> list[list[float]]:

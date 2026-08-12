@@ -76,7 +76,8 @@ def test_vertex_does_not_retry_a_rate_limited_batch(monkeypatch):
     monkeypatch.setattr(settings, "vertex_pilot_enabled", True)
     monkeypatch.setattr(settings, "vertex_pilot_ledger_id", "ledger")
     monkeypatch.setattr("app.providers.SessionLocal", lambda: type("DB", (), {"close": lambda self: None})())
-    monkeypatch.setattr("app.providers.admit_vertex_embedding", lambda *args: type("Ledger", (), {"configuration": {"embedding_model": "text-embedding-005"}})())
+    monkeypatch.setattr("app.providers.admit_vertex_embedding", lambda *args: type("Ledger", (), {"configuration": {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 0}})())
+    monkeypatch.setattr("app.providers.record_vertex_embedding_success", lambda *args, **kwargs: None)
     monkeypatch.setattr(provider, "_access_token", lambda: original_sleep(0, result="token"))
     monkeypatch.setattr("app.providers.httpx.AsyncClient", lambda **kwargs: FakeClient())
     with pytest.raises(RuntimeError, match="rate limited"):
@@ -108,7 +109,8 @@ def test_vertex_does_not_split_a_payload_vertex_rejects(monkeypatch):
     monkeypatch.setattr(settings, "vertex_pilot_enabled", True)
     monkeypatch.setattr(settings, "vertex_pilot_ledger_id", "ledger")
     monkeypatch.setattr("app.providers.SessionLocal", lambda: type("DB", (), {"close": lambda self: None})())
-    monkeypatch.setattr("app.providers.admit_vertex_embedding", lambda *args: type("Ledger", (), {"configuration": {"embedding_model": "text-embedding-005"}})())
+    monkeypatch.setattr("app.providers.admit_vertex_embedding", lambda *args: type("Ledger", (), {"configuration": {"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 0}})())
+    monkeypatch.setattr("app.providers.record_vertex_embedding_success", lambda *args, **kwargs: None)
     original_sleep = asyncio.sleep
     monkeypatch.setattr(provider, "_access_token", lambda: original_sleep(0, result="token"))
     fake = FakeClient()
