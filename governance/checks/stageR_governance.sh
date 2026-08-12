@@ -20,7 +20,7 @@ done
 
 grep -Fq 'stage: R' governance/STATUS.md || fail 'STATUS does not declare Stage R'
 grep -Fq 'id: "R.1"' governance/STATUS.md || fail 'STATUS does not contain R.1'
-grep -Fq 'state: in_progress' governance/STATUS.md || fail 'R.1 is not in progress'
+grep -Eq 'state: (in_progress|pr_open)' governance/STATUS.md || fail 'R.1 has no active packet state'
 grep -Fq 'Retain Redis + RQ' governance/decisions/ADR-001-retain-redis-rq.md || fail 'ADR-001 decision missing'
 grep -Fq 'Next.js + React 19' governance/decisions/ADR-002-retain-nextjs-react19.md || fail 'ADR-002 decision missing'
 

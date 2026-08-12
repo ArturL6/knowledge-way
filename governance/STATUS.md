@@ -5,7 +5,7 @@ stage: R
 packets:
   - id: "R.1"
     title: "Governance bootstrap"
-    state: in_progress
+    state: pr_open
     branch: "packet/R.1-governance-bootstrap"
     verify: "governance/checks/stageR_governance.sh"
     blocked_by: []
