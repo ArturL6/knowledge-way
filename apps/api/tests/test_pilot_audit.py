@@ -1,5 +1,9 @@
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from app.models import Base, Repository, Workspace, WorkspaceSnapshot, WorkspaceSnapshotRepository
 from app.pilot_audit import (REQUIRED_CAPS, admit_vertex_embedding,
                              record_vertex_embedding_failure, record_vertex_embedding_success)
 
@@ -7,6 +11,8 @@ from app.pilot_audit import (REQUIRED_CAPS, admit_vertex_embedding,
 class _DB:
     def __init__(self, ledger): self.ledger = ledger
     def get(self, model, identifier): return self.ledger if identifier == "ledger" else None
+    def scalars(self, statement):
+        return type("Scalars", (), {"all": lambda _: ["repository-a", "repository-b"]})()
 
 
 def _ledger(**overrides):
@@ -38,7 +44,7 @@ def test_admission_blocks_document_and_cost_cap_before_provider_call():
         admit_vertex_embedding(_DB(_ledger(actual={"embedding_documents": 0, "cost_usd_micros": 5_000_000})), "ledger", 1)
     with pytest.raises(RuntimeError, match="USD 5"):
         admit_vertex_embedding(_DB(_ledger(configuration={"embedding_model": "text-embedding-005", "embedding_cost_usd_micros_per_document": 5_000_000,
-                                                         "repository_ids": ["repository-a"], "intended_embedding_documents": 1,
+                                                         "repository_ids": ["repository-a", "repository-b"], "intended_embedding_documents": 1,
                                                          "projected_max_embedding_documents": 1},
                                            actual={"embedding_documents": 10, "cost_usd_micros": 0})), "ledger", 1)
 
@@ -70,7 +76,7 @@ def test_successful_embedding_is_evented_and_atomically_accounted():
 
 def test_admission_requires_deterministic_price_accounting():
     with pytest.raises(RuntimeError, match="price accounting"):
-        admit_vertex_embedding(_DB(_ledger(configuration={"embedding_model": "text-embedding-005", "repository_ids": ["repository-a"], "intended_embedding_documents": 1, "projected_max_embedding_documents": 1})), "ledger", 1)
+        admit_vertex_embedding(_DB(_ledger(configuration={"embedding_model": "text-embedding-005", "repository_ids": ["repository-a", "repository-b"], "intended_embedding_documents": 1, "projected_max_embedding_documents": 1})), "ledger", 1)
 
 
 @pytest.mark.parametrize("overrides", [
@@ -85,6 +91,22 @@ def test_admission_requires_deterministic_price_accounting():
 def test_admission_requires_immutable_snapshot_and_bounded_repository_scope(overrides):
     with pytest.raises(RuntimeError, match="snapshot|one or two|intended and projected"):
         admit_vertex_embedding(_DB(_ledger(**overrides)), "ledger", 1)
+
+
+def test_admission_rejects_ledger_repositories_not_in_pinned_snapshot():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    db = sessionmaker(bind=engine)()
+    db.add(Workspace(id="workspace", name="Workspace")); db.commit()
+    db.add(Repository(id="repository-a", name="A", clone_url="https://example.test/a.git")); db.commit()
+    db.add(WorkspaceSnapshot(id="immutable-snapshot", workspace_id="workspace", manifest_hash="a" * 64,
+                             schema_version="workspace-snapshot-v1")); db.commit()
+    db.add(WorkspaceSnapshotRepository(snapshot_id="immutable-snapshot", repository_id="repository-a",
+                                       indexed_commit_sha="a" * 40)); db.commit()
+    ledger = _ledger()
+    guarded_db = type("DB", (), {"get": lambda *_: ledger, "scalars": db.scalars})()
+    with pytest.raises(RuntimeError, match="real members"):
+        admit_vertex_embedding(guarded_db, "ledger", 1)
 
 
 def test_failed_provider_call_is_evented_without_inventing_usage():

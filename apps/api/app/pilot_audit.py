@@ -6,9 +6,11 @@ created by an operator/migration workflow; this module never creates an implicit
 import hashlib
 import json
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import ProviderAuditEvent, ProviderAuditLedger
+from app.models import (ProviderAuditEvent, ProviderAuditLedger, Repository,
+                        WorkspaceSnapshotRepository)
 
 REQUIRED_CAPS = {
     "cost_usd_micros": 5_000_000,
@@ -19,7 +21,7 @@ REQUIRED_CAPS = {
 }
 
 
-def _validate_pilot_scope(ledger: ProviderAuditLedger) -> None:
+def _validate_pilot_scope(db: Session, ledger: ProviderAuditLedger) -> None:
     """Reject a ledger that cannot prove the deliberately tiny pilot scope.
 
     Embedding admission receives document text only, so the immutable snapshot, real repository
@@ -34,6 +36,16 @@ def _validate_pilot_scope(ledger: ProviderAuditLedger) -> None:
             or any(not isinstance(repository_id, str) or not repository_id for repository_id in repository_ids)
             or len(set(repository_ids)) != len(repository_ids)):
         raise RuntimeError("Vertex embedding blocked: ledger must pin one or two real repositories")
+    snapshot_repository_ids = set(db.scalars(
+        select(WorkspaceSnapshotRepository.repository_id).where(
+            WorkspaceSnapshotRepository.snapshot_id == ledger.workspace_snapshot_id
+        )
+    ).all())
+    existing_repository_ids = set(db.scalars(
+        select(Repository.id).where(Repository.id.in_(repository_ids))
+    ).all())
+    if set(repository_ids) != existing_repository_ids or not set(repository_ids).issubset(snapshot_repository_ids):
+        raise RuntimeError("Vertex embedding blocked: ledger repositories must be real members of its pinned snapshot")
     intended_documents = configuration.get("intended_embedding_documents")
     projected_documents = configuration.get("projected_max_embedding_documents")
     if (not isinstance(intended_documents, int) or not isinstance(projected_documents, int)
@@ -57,7 +69,7 @@ def admit_vertex_embedding(db: Session, ledger_id: str, document_count: int) -> 
         raise RuntimeError("Vertex embedding blocked: pilot ledger hard caps are missing or changed")
     if not isinstance(ledger.configuration, dict) or not ledger.configuration.get("embedding_model"):
         raise RuntimeError("Vertex embedding blocked: ledger must record the exact embedding model")
-    _validate_pilot_scope(ledger)
+    _validate_pilot_scope(db, ledger)
     unit_cost = ledger.configuration.get("embedding_cost_usd_micros_per_document")
     if not isinstance(unit_cost, int) or unit_cost < 0:
         raise RuntimeError("Vertex embedding blocked: deterministic per-document price accounting is required")
