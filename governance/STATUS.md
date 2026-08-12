@@ -15,18 +15,13 @@ packets:
     branch: "packet/R.2-branch-consolidation"
     verify: "governance/checks/stageR_branch.sh"
     blocked_by: ["R.1"]
-  - id: "R.2b"
-    title: "Test gauntlet in CI"
-    state: todo
-    branch: "packet/R.2b-ci-gauntlet"
-    verify: "governance/checks/stageR_ci.sh"
-    blocked_by: ["R.2"]
+
   - id: "R.3"
     title: "uv migration"
     state: todo
     branch: "packet/R.3-uv-migration"
     verify: "governance/checks/stageR_uv.sh"
-    blocked_by: ["R.2b"]
+    blocked_by: ["R.2"]
   - id: "R.4"
     title: "Hexagon: extract ports and move adapters"
     state: todo

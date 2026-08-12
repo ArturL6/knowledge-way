@@ -38,11 +38,11 @@ Solidity is therefore defined as: **hit@5 on gold tasks, false-edge rate, and la
 |---|---|---|
 | Codebase | **knowledge-way**, integration branch `integration/roadmap-v2` | Created from `main`; merge `feat/hierarchical-retrieval-poc` into it in Stage R |
 | Backend | Python 3.12+, **FastAPI**, SQLAlchemy 2, Alembic | Already in place |
-| Architecture | **Hexagonal (ports & adapters)** — retrofitted in Stage R | Import-linter rule in CI enforces the boundary |
+| Architecture | **Hexagonal (ports & adapters)** — retrofitted in Stage R | Import-linter enforces the boundary in the local gauntlet |
 | Database | PostgreSQL + **pgvector** | Already in place; ANN actually used from Stage 1 |
 | Jobs | **Keep Redis + RQ** | ADR-001: working and tested; a Postgres-queue reversal is not justified |
 | Frontend | **Keep Next.js + React 19** | ADR-002: exists with search/graph/files/chat views |
-| E2E testing | **Playwright** on `apps/web` | Added in R.2b; mandatory on any web/UI change |
+| E2E testing | **Playwright** on `apps/web` | Added in R.2; mandatory on any web/UI change |
 | Package manager | Migrate `requirements.txt` → **uv** | Stage R packet |
 | Parsing | tree-sitter (already integrated via `parser_facts.py`, versioned) | Extend languages per benchmark need |
 | Lexical index | Postgres FTS + pg_trgm first; **Zoekt only if Stage 4 benchmark demands** | Behind a `LexicalSearch` port either way |
@@ -105,15 +105,15 @@ Rules:
    - scorecard run for retrieval-touching packets (standing rule 10).
 4. **Merge direction is always packet → integration**, on green gauntlet + reviewer verdict. Integration therefore only ever gets better, one verified packet at a time.
 5. **Stage completion promotes integration → main:** when a stage's exit criteria pass and the reviewer issues the stage-exit verdict, integration merges into main. Main is thus a sequence of proven, stage-sized improvements.
-6. The full gauntlet runs in CI on every PR — locally green is necessary but not sufficient.
+6. CI is optional advisory automation. The binding merge gate is recorded local-gauntlet evidence plus a reviewer verdict.
 
 ## Governance & autonomous operation (Hermes cron setup)
 
 Three hardening principles are binding:
 
 1. **Artifacts, never summaries.** Reviews consume the actual diff, test output, and scorecards — not the implementer's narrative.
-2. **CI enforces, reviewer judges.** Import-linter, pytest, and `governance/checks/*.sh` run on every PR; drift cannot merge even if a review is missed.
-3. **One packet per branch/PR**, merged only on green CI + reviewer verdict.
+2. **Local gauntlet enforces, reviewer judges.** Import-linter, pytest, and `governance/checks/*.sh` are run and their output is committed or attached to the PR; drift cannot merge even if a review is missed.
+3. **One packet per branch/PR**, merged only on recorded green local gauntlet + reviewer verdict.
 
 ### Repository artifacts (committed in `governance/`)
 
@@ -123,7 +123,7 @@ governance/
 ├── STATUS.md            # machine-readable packet board (format below)
 ├── decisions/           # ADR-NNN-*.md (ADR-001 RQ, ADR-002 Next.js created in Stage R)
 ├── reviews/             # REVIEW-NNN.md — reviewer verdicts, append-only
-└── checks/              # executable exit criteria (bash/pytest), run in CI
+└── checks/              # executable exit criteria (bash/pytest), run locally and recorded with the PR
 ```
 
 ### STATUS.md packet board format (what cron jobs read and write)
@@ -146,7 +146,7 @@ drift_flags: []
 | Job | Schedule | Prompt contract |
 |---|---|---|
 | `implementer-run` | nightly (or every N hours) | Read PLAN.md + STATUS.md. **First: merge main → integration if main moved; merge integration → current packet branch if stale.** Pick the lowest-numbered `todo` packet with no unmet `blocked_by`. Set `in_progress`. Implement on `packet/<id>-<slug>` branched from integration. Run the **full test gauntlet** (static checks, unit, API endpoint tests, Playwright if web/UI touched, packet `verify`, scorecard if retrieval touched). Open PR **into integration** containing: diff, gauntlet + verify output, STATUS.md update to `pr_open`. **Never** start a packet from a future stage. **Never** merge. |
-| `reviewer-run` | every morning | For each `pr_open` packet: fetch diff + CI output + verify output. Check against PLAN.md packet definition and standing rules. Write `governance/reviews/REVIEW-NNN.md` with the verdict contract below. Verdict `on_track` → approve merge. `drift` → set `review_blocked` with required actions. |
+| `reviewer-run` | every morning | For each `pr_open` packet: fetch diff + recorded local gauntlet output + verify output. Check against PLAN.md packet definition and standing rules. Write `governance/reviews/REVIEW-NNN.md` with the verdict contract below. Verdict `on_track` → approve merge. `drift` → set `review_blocked` with required actions. |
 | `drift-audit` | weekly | Diff the integration branch against PLAN.md stage scope. Check: hexagon boundary intact, no unplanned dependencies, scorecard trend not regressing, STATUS.md matches reality, integration current with main. Output: audit review + updated `drift_flags`. |
 | `benchmark-run` | weekly (from Stage 0 on) | Run the gold-task harness against integration; commit scorecard to `benchmarks/results/`; flag any regression as a drift finding. |
 
@@ -175,11 +175,10 @@ scope_creep_risk: low | medium | high
 
 - **R.1 — Governance bootstrap.** Create `governance/` (PLAN=this file, STATUS, ADR-001 RQ, ADR-002 Next.js, empty reviews/, checks/). Configure the four cron jobs per the table above. Verify: cron jobs execute a dry run end-to-end (implementer picks a dummy packet, reviewer reviews it).
 - **R.2 — Branch consolidation, main as base.** Create `integration/roadmap-v2` **from `main`** (main is the fresh start). Merge `feat/hierarchical-retrieval-poc` into it (4 files, +249 lines — resolve trivially). Freeze all other feature branches — no further work lands on them. Verify: full test suite green (≥ 80 tests); `git merge-base` confirms integration descends from current main.
-- **R.2b — Test gauntlet in CI.** Wire the full gauntlet (ruff, import-linter placeholder until R.6, unit tests, API endpoint tests) as required PR checks into integration; add **Playwright** to `apps/web` with the minimum smoke flow (add repo → index → search → open evidence), triggered on any `apps/web` change. Verify: a deliberately failing check blocks a test PR; the smoke flow passes against docker-compose.
-- **R.3 — uv migration.** `pyproject.toml` + lockfile replaces `requirements.txt`; CI installs via uv. Verify: clean-checkout CI run green.
+- **R.3 — uv migration.** `pyproject.toml` + lockfile replaces `requirements.txt`; the local gauntlet installs via uv. Verify: clean-checkout local run green.
 - **R.4 — Hexagon: extract ports + move adapters.** Create the layout above; move `models.py/db.py`→postgres adapter, `parser_facts.py`→treesitter adapter, `providers.py`→llm adapter, `git_*`→git adapter, `worker.py`→rq adapter; define the eight port Protocols. Behavior-preserving; tests untouched and green.
 - **R.5 — Hexagon: split main.py.** Routers → `adapters/inbound/http/`; logic → use cases; pure fusion/ranking/graph shaping → `domain/`. Verify: `main.py` gone or < 50 lines of app factory; tests green.
-- **R.6 — Boundary enforcement.** import-linter contract (domain/application import nothing from adapters or frameworks) wired into CI. Verify: CI fails on a deliberate violation commit, passes on HEAD.
+- **R.6 — Boundary enforcement.** import-linter contract (domain/application import nothing from adapters or frameworks) wired into the local gauntlet. Verify: the local check fails on a deliberate violation fixture, passes on HEAD.
 - **R.7 — Evidence table.** New `evidence(id, repository_id, indexed_commit_sha, path, start_line, end_line, extractor, extractor_version, content_hash)`; `symbol_edges` gains `evidence_id`; backfill from existing `source_file_id`+`line_number`; DB constraint/test: **no edge without evidence** (standing rule 1).
 
 ### Exit criteria
@@ -340,8 +339,8 @@ The Next.js app exists (dashboard, search, graph, files, chat). Evolve, don't re
 8. **GitNexus: study concepts, never copy code** (PolyForm Noncommercial).
 9. **Secrets never enter cards, embeddings, or prompts.**
 10. **Every retrieval change ships with a scorecard delta**; regressions block merge.
-11. **Hexagonal boundary enforced by CI** (import-linter), not discipline.
-12. **No packet merges without green CI + a reviewer verdict**; two consecutive drift verdicts on one topic pause all cron jobs until the human decides.
+11. **Hexagonal boundary enforced by the local gauntlet** (import-linter), not discipline.
+12. **No packet merges without a recorded green local gauntlet + a reviewer verdict**; two consecutive drift verdicts on one topic pause all cron jobs until the human decides.
 13. **Branch hygiene:** main is the base; integration is always current with main; packets always branch from and merge into integration; integration promotes to main only at stage exit. Frozen legacy branches never receive new work.
 
 ---
