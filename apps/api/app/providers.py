@@ -140,7 +140,7 @@ class VertexEmbeddingProvider:
         # network connection. Configuration alone can never authorize a paid call.
         db = SessionLocal()
         try:
-            ledger = admit_vertex_embedding(db, settings.vertex_pilot_ledger_id, len(texts))
+            ledger = admit_vertex_embedding(db, settings.vertex_pilot_ledger_id, texts)
             if ledger.configuration["embedding_model"] != self.vertex_model:
                 raise RuntimeError("Vertex embedding blocked: configured model differs from pilot audit ledger")
             token = await self._access_token()

@@ -52,14 +52,22 @@ def _validate_pilot_scope(db: Session, ledger: ProviderAuditLedger) -> None:
             or intended_documents <= 0 or projected_documents < intended_documents
             or projected_documents > REQUIRED_CAPS["embedding_documents"]):
         raise RuntimeError("Vertex embedding blocked: ledger must record bounded intended and projected document counts")
+    input_hashes = configuration.get("embedding_document_input_hashes")
+    if (not isinstance(input_hashes, list) or len(input_hashes) != intended_documents
+            or len(set(input_hashes)) != len(input_hashes)
+            or any(not isinstance(input_hash, str) or len(input_hash) != 64
+                   or any(character not in "0123456789abcdef" for character in input_hash)
+                   for input_hash in input_hashes)):
+        raise RuntimeError("Vertex embedding blocked: ledger must pin one input hash per intended document")
 
 
-def admit_vertex_embedding(db: Session, ledger_id: str, document_count: int) -> ProviderAuditLedger:
+def admit_vertex_embedding(db: Session, ledger_id: str, texts: list[str]) -> ProviderAuditLedger:
     """Return an active, priced ledger only when this bounded request fits its hard caps.
 
     A missing or malformed price source is a blocker: callers must not substitute estimated
     pricing for an unaccountable paid request.
     """
+    document_count = len(texts)
     ledger = db.get(ProviderAuditLedger, ledger_id)
     if ledger is None or ledger.provider != "vertex" or ledger.status != "active":
         raise RuntimeError("Vertex embedding blocked: active persistent pilot audit ledger not found")
@@ -74,6 +82,13 @@ def admit_vertex_embedding(db: Session, ledger_id: str, document_count: int) -> 
     if not isinstance(unit_cost, int) or unit_cost < 0:
         raise RuntimeError("Vertex embedding blocked: deterministic per-document price accounting is required")
     actual = ledger.actual if isinstance(ledger.actual, dict) else {}
+    input_hashes = [hashlib.sha256(text.encode()).hexdigest() for text in texts]
+    allowed_hashes = set(ledger.configuration["embedding_document_input_hashes"])
+    embedded_hashes = actual.get("embedding_document_input_hashes", [])
+    if (len(input_hashes) != len(set(input_hashes)) or not isinstance(embedded_hashes, list)
+            or not all(input_hash in allowed_hashes for input_hash in input_hashes)
+            or any(input_hash in embedded_hashes for input_hash in input_hashes)):
+        raise RuntimeError("Vertex embedding blocked: request inputs must be unique, planned, and not previously embedded")
     used = actual.get("embedding_documents", 0)
     cost = actual.get("cost_usd_micros", 0)
     if not isinstance(used, int) or not isinstance(cost, int) or used < 0 or cost < 0:
@@ -117,8 +132,15 @@ def record_vertex_embedding_success(db: Session, ledger: ProviderAuditLedger, *,
             or used_documents + len(texts) > projected_documents
             or used_cost + cost_usd_micros > REQUIRED_CAPS["cost_usd_micros"]):
         raise RuntimeError("Vertex embedding blocked: actual usage would exceed a hard cap")
+    input_hashes = [hashlib.sha256(text.encode()).hexdigest() for text in texts]
+    recorded_hashes = actual.get("embedding_document_input_hashes", [])
+    allowed_hashes = ledger.configuration.get("embedding_document_input_hashes", [])
+    if (not isinstance(recorded_hashes, list) or len(input_hashes) != len(set(input_hashes))
+            or not all(input_hash in allowed_hashes and input_hash not in recorded_hashes for input_hash in input_hashes)):
+        raise RuntimeError("Vertex embedding blocked: successful inputs must match unused planned ledger hashes")
     actual["embedding_documents"] = used_documents + len(texts)
     actual["cost_usd_micros"] = used_cost + cost_usd_micros
+    actual["embedding_document_input_hashes"] = recorded_hashes + input_hashes
     event = ProviderAuditEvent(
         ledger_id=ledger.id, operation="embedding", model=model,
         model_version=ledger.configuration.get("embedding_model_version"),
