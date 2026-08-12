@@ -54,9 +54,8 @@ database. For a local test, first start the stack with `docker compose up -d`, t
 For a repeatable UI, API, graph, MCP, workspace, and cleanup walkthrough, see
 the [guided demo playbook](docs/demo-playbook.md). For an implementation-neutral,
 reproducible comparison scaffold, see the [benchmark harness](benchmarks/README.md).
-
-For a repeatable UI, API, graph, MCP, workspace, and cleanup walkthrough, see
-the [guided demo playbook](docs/demo-playbook.md).
+For local start/stop, commit-pinned POC captures, data paths, known limits, and a
+disposable backup/restore test, see the [private/local POC operations runbook](docs/poc-operations.md).
 
 ## Security model
 
