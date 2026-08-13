@@ -27,7 +27,7 @@ packets:
 
   - id: "R.3"
     title: "uv migration"
-    state: in_progress
+    state: pr_open
     branch: "packet/R.3-uv-migration"
     verify: "governance/checks/stageR_uv.sh"
     blocked_by: ["R.2"]
