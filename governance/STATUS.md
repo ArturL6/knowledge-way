@@ -56,11 +56,12 @@ packets:
     integration_merge: "3b34bc165f2e37869790788a023ba740d8a178eb"
   - id: "R.7"
     title: "Evidence table"
-    state: pr_open
+    state: done
     branch: "packet/R.7-evidence-table"
     verify: "governance/checks/stageR_evidence.sh"
     blocked_by: ["R.6"]
-last_review: REVIEW-011
+    integration_merge: "68d0f136dc1a015c7c0d183ec494a59f64d9da1d"
+last_review: REVIEW-013
 drift_flags: []
 ```
 
