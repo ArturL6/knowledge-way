@@ -41,10 +41,12 @@ packets:
     integration_merge: "e27e411d794383356865eba6a21623d9f85e5207"
   - id: "R.5"
     title: "Hexagon: split main.py"
-    state: pr_open
+    state: review_blocked
     branch: "packet/R.5-split-main"
     verify: "pytest -q"
     blocked_by: ["R.4"]
+    review_required_actions:
+      - "Replace IMPLEMENTATION-R.5 with committed evidence that identifies the exact tested implementation SHA; if STATUS/evidence commits follow it, enumerate those evidence-only successor commits and re-signal pr_open."
   - id: "R.6"
     title: "Boundary enforcement"
     state: todo
@@ -57,7 +59,7 @@ packets:
     branch: "packet/R.7-evidence-table"
     verify: "governance/checks/stageR_evidence.sh"
     blocked_by: ["R.6"]
-last_review: REVIEW-008
+last_review: REVIEW-010
 drift_flags: []
 ```
 
