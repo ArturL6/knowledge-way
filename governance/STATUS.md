@@ -23,8 +23,6 @@ packets:
     verify: "governance/checks/stageR_branch.sh"
     blocked_by: ["R.1"]
     integration_merge: "debf40c1eff58cdbbc459c8fdb0dcd2f52c9409e"
-
-
   - id: "R.3"
     title: "uv migration"
     state: done
@@ -46,7 +44,6 @@ packets:
     verify: "pytest -q"
     blocked_by: ["R.4"]
     integration_merge: "5ba2409b764f82b3e14b8f2e035351e41ee88174"
-
   - id: "R.6"
     title: "Boundary enforcement"
     state: done
@@ -61,6 +58,53 @@ packets:
     verify: "governance/checks/stageR_evidence.sh"
     blocked_by: ["R.6"]
     integration_merge: "68d0f136dc1a015c7c0d183ec494a59f64d9da1d"
+  - id: "R.7a"
+    title: "Synchronize origin/main into integration"
+    state: in_progress
+    branch: "packet/R.7a-sync-main"
+    verify: "governance/checks/stageR_sync_main.sh"
+    blocked_by: ["R.7"]
+    notes: "Stage-R exit blocker. Merge the legacy main lead, run the full gauntlet and quickstart, and ratchet tests to approximately 80; plan now and execute on a full two-hour tick."
+  - id: "0.1"
+    title: "Workspace selection: fastapi-stack"
+    state: todo
+    branch: "packet/0.1-fastapi-stack-corpus"
+    verify: "test -f benchmarks/corpora.json"
+    blocked_by: ["R.7a"]
+    notes: "Prefilled owner selection: fastapi/fastapi, encode/starlette, pydantic/pydantic."
+  - id: "0.2"
+    title: "Gold tasks from historical issue/fix-PR pairs"
+    state: todo
+    branch: "packet/0.2-gold-tasks"
+    verify: "python benchmarks/validate_tasks.py"
+    blocked_by: ["0.1"]
+    notes: "25–40 closed issues; labels mechanically derived from merged fix PRs; Sol samples 10."
+  - id: "0.3"
+    title: "Retrieval scorecard baseline harness"
+    state: todo
+    branch: "packet/0.3-scorecard-harness"
+    verify: "python benchmarks/run_retrieval.py --help"
+    blocked_by: ["0.1", "0.2"]
+  - id: "0.4"
+    title: "GitNexus local test drive"
+    state: todo
+    branch: "packet/0.4-gitnexus-test-drive"
+    verify: "test -f benchmarks/gitnexus-findings.md"
+    blocked_by: ["0.1"]
+    notes: "Study behavior only; never copy PolyForm Noncommercial code."
+  - id: "0.5"
+    title: "Benchmark scheduler wiring"
+    state: todo
+    branch: "packet/0.5-benchmark-scheduler"
+    verify: "true"
+    blocked_by: ["0.3"]
+  - id: "0.6"
+    title: "Local quickstart v1"
+    state: todo
+    branch: "packet/0.6-local-quickstart"
+    verify: "scripts/quickstart_smoke.sh"
+    blocked_by: ["R.7a"]
+    notes: "May proceed in parallel with 0.2–0.5. Keyless default uses EMBEDDING_PROVIDER=none."
 last_review: REVIEW-013
 drift_flags: []
 ```
