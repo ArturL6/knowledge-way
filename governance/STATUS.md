@@ -27,10 +27,11 @@ packets:
 
   - id: "R.3"
     title: "uv migration"
-    state: pr_open
+    state: done
     branch: "packet/R.3-uv-migration"
     verify: "governance/checks/stageR_uv.sh"
     blocked_by: ["R.2"]
+    integration_merge: "08f025b2445904dbba29ce2c41242e1f0eff4756"
   - id: "R.4"
     title: "Hexagon: extract ports and move adapters"
     state: todo
