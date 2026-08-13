@@ -108,8 +108,8 @@ def test_vertex_splits_a_payload_vertex_rejects(monkeypatch):
 
 
 def test_hybrid_fusion_is_deterministic():
-    first = {"type": "chunk", "file_id": "a", "start_line": 1, "end_line": 2, "score": .2}
-    second = {"type": "chunk", "file_id": "b", "start_line": 1, "end_line": 2, "score": .9}
+    first = {"type": "chunk", "result_id": "a", "file_id": "a", "start_line": 1, "end_line": 2, "score": .2}
+    second = {"type": "chunk", "result_id": "b", "file_id": "b", "start_line": 1, "end_line": 2, "score": .9}
     assert [item["file_id"] for item in _fuse([[first, second], [first]], 2)] == ["a", "b"]
 
 
