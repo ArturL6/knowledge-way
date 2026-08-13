@@ -5,7 +5,7 @@ stage: R
 packets:
   - id: "R.0"
     title: "Governance dry run"
-    state: todo
+    state: pr_open
     branch: "packet/R.0-dryrun"
     verify: "true"
     blocked_by: []
