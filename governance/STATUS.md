@@ -18,10 +18,14 @@ packets:
     integration_merge: "76ca480dc0c6e776ddb3f0103518ca4b0eddc619"
   - id: "R.2"
     title: "Branch consolidation, main as base"
-    state: pr_open
+    state: review_blocked
     branch: "packet/R.2-branch-consolidation"
     verify: "governance/checks/stageR_branch.sh"
     blocked_by: ["R.1"]
+    review_required_actions:
+      - "Promote the recorded R.1 integration merge to origin/integration/roadmap-v2, then rebase or rebuild R.2 so PR #59 contains R.2 changes only."
+      - "Make governance/checks/stageR_branch.sh executable and rerun it through the exact STATUS verify command."
+      - "Commit implementation evidence that explicitly binds the complete gauntlet output to the resulting PR head SHA."
 
   - id: "R.3"
     title: "uv migration"
@@ -53,7 +57,7 @@ packets:
     branch: "packet/R.7-evidence-table"
     verify: "governance/checks/stageR_evidence.sh"
     blocked_by: ["R.6"]
-last_review: REVIEW-001
+last_review: REVIEW-004
 drift_flags: []
 ```
 
