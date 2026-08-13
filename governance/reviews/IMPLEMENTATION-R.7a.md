@@ -19,21 +19,36 @@
 
 The candidate exceeds both parents' tracked test-file count and restores the requested approximately-80 test collection ratchet (84 collected).
 
-## Local gauntlet results
+## Corrected implementation and local gauntlet
+
+**Corrected implementation SHA:** `42e8a10c8df44ab1ecbe2fca5e8081aa9d7a8163`
+
+This correction makes ADR-004, runtime defaults, and `.env.example` conform to
+HUMAN-DIRECTIVE-001: production embeddings are OpenRouter
+`openai/text-embedding-3-small` (1536 dimensions), production code cards use the existing
+OpenRouter card model, and reranking remains `none`. The keyless example still explicitly sets
+`EMBEDDING_PROVIDER=none`. It also replaces deleted `requirements.txt` CI installs with the
+locked root `uv` project and runs the web production build in CI.
 
 ```text
-python3 -m compileall -q apps/api/app apps/api/tests apps/mcp       PASS
-(cd apps/api && uv run pytest -q)                                    PASS — 84 passed
-(cd apps/mcp && uv run pytest -q)                                    PASS — 10 passed
-(cd apps/web && npm test -- --run)                                   PASS — 70 passed
-PYTHONPATH=apps/api uv run lint-imports                              PASS — 2 kept, 0 broken
-governance/checks/stageR_evidence.sh                                PASS — 12 passed
-governance/checks/stageR_import_boundary.sh                         PASS — deliberate violation rejected; HEAD passes
-(cd apps/web && npm run build && npm run test:e2e)                   PASS — build + 1 Playwright test
-git diff --check                                                    PASS
+uv lock --check                                                       PASS — 75 packages resolved
+uv sync --extra mcp --extra dev --frozen                              PASS
+python3 -m compileall -q apps/api/app apps/api/tests apps/mcp        PASS
+uv run pytest apps/api/tests -q                                       PASS — 85 passed
+uv run pytest apps/mcp/tests -q                                       PASS — 10 passed
+(cd apps/web && npm test -- --run)                                    PASS — 70 passed
+(cd apps/web && npm run build)                                        PASS
+(cd apps/web && npm run test:e2e)                                     PASS — 1 Playwright test
+PYTHONPATH=apps/api uv run lint-imports                               PASS — 2 kept, 0 broken
+governance/checks/stageR_evidence.sh                                 PASS — 12 passed
+governance/checks/stageR_import_boundary.sh                          PASS — deliberate violation rejected; HEAD passes
+git diff --check                                                      PASS
 ```
 
-`ruff` and a type checker are not configured in the locked project environment. An explicit `uvx ruff check apps/api` was attempted and failed on 153 pre-existing whole-tree lint findings; the configured import-boundary static check passed. No LLM, embedding, or card-provider call was made, so no spend was incurred.
+The test-count ratchet is preserved and increased: API collection is now 85 tests (from the
+recorded 84); MCP remains 10 and web unit tests remain 70. `ruff` and a type checker are not
+configured in the locked project environment; the configured import-boundary static check passes.
+No LLM, embedding, or card-provider call was made, so no spend was incurred.
 
 ## Quickstart
 
