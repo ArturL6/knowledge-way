@@ -11,10 +11,11 @@ packets:
     blocked_by: []
   - id: "R.1"
     title: "Governance bootstrap"
-    state: pr_open
+    state: done
     branch: "packet/R.1-governance-bootstrap"
     verify: "governance/checks/stageR_governance.sh"
     blocked_by: []
+    integration_merge: "76ca480dc0c6e776ddb3f0103518ca4b0eddc619"
   - id: "R.2"
     title: "Branch consolidation, main as base"
     state: todo
