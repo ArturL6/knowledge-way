@@ -1,4 +1,4 @@
-from app.config import settings
+from app.config import Settings, settings
 import pytest
 from app.providers import (OpenRouterEmbeddingProvider, VertexEmbeddingProvider,
                            clamp_embedding_input, embedding_provider, semantic_capability)
@@ -11,6 +11,14 @@ def test_semantic_provider_is_disabled_without_explicit_openrouter_key(monkeypat
     monkeypatch.setattr(settings, "openrouter_api_key", None)
     assert embedding_provider() is None
     assert semantic_capability()["state"] == "disabled"
+
+
+def test_owner_selected_provider_defaults_are_openrouter():
+    fields = Settings.model_fields
+    assert fields["embedding_provider"].default == "openrouter"
+    assert fields["openrouter_embedding_model"].default == "openai/text-embedding-3-small"
+    assert fields["code_card_provider"].default == "openrouter"
+    assert fields["rerank_provider"].default == "none"
 
 
 def test_openrouter_without_key_never_creates_provider(monkeypatch):

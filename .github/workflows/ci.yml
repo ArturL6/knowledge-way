@@ -17,10 +17,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - run: pip install -r apps/api/requirements.txt
-      - run: python -m pytest tests -q
-        working-directory: apps/api
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --extra mcp --extra dev --frozen
+      - run: uv run pytest apps/api/tests -q
 
   mcp:
     runs-on: ubuntu-latest
@@ -28,10 +28,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - run: pip install -r apps/mcp/requirements.txt
-      - run: python -m pytest tests -q
-        working-directory: apps/mcp
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --extra mcp --extra dev --frozen
+      - run: uv run pytest apps/mcp/tests -q
 
   web:
     runs-on: ubuntu-latest
@@ -43,4 +43,6 @@ jobs:
       - run: npm ci
         working-directory: apps/web
       - run: npm test
+        working-directory: apps/web
+      - run: npm run build
         working-directory: apps/web
