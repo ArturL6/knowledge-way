@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.db import Base, get_db
 from app.main import app
-from app.models import Repository, File, Symbol, SymbolEdge
+from app.models import Repository, Evidence, File, Symbol, SymbolEdge
 
 
 class Result:
@@ -85,14 +85,17 @@ def test_callers_and_callees_are_direction_filtered_and_paginated():
         db.add(Symbol(id=name, repository_id="repo", file_id="f", name=name, qualified_name=f"pkg.{name}",
                        symbol_type="function", start_line=1, end_line=1, start_byte=0, end_byte=1, source_text="x"))
     db.commit()
+    db.add(Evidence(id="evidence", repository_id="repo", indexed_commit_sha="a" * 40, path="a.py", start_line=1,
+                    end_line=1, extractor="test", extractor_version="v1", content_hash="e" * 64))
+    db.commit()
     for i, name in enumerate(["b0", "b1", "b2"]):
         db.add(SymbolEdge(id=f"caller-{name}", repository_id="repo", source_symbol_id=name, target_symbol_id="root",
-                           target_name="pkg.root", relationship_type="calls", source_file_id="f", line_number=i + 1))
+                           target_name="pkg.root", relationship_type="calls", source_file_id="f", line_number=i + 1, evidence_id="evidence"))
     db.add(SymbolEdge(id="callee-c", repository_id="repo", source_symbol_id="root", target_symbol_id="c",
-                       target_name="pkg.c", relationship_type="calls", source_file_id="f", line_number=1))
+                       target_name="pkg.c", relationship_type="calls", source_file_id="f", line_number=1, evidence_id="evidence"))
     # An edge with no resolved symbol on the related side must not surface as a caller.
     db.add(SymbolEdge(id="unresolved", repository_id="repo", source_symbol_id=None, target_symbol_id="root",
-                       target_name="pkg.ghost", relationship_type="calls", source_file_id="f", line_number=9))
+                       target_name="pkg.ghost", relationship_type="calls", source_file_id="f", line_number=9, evidence_id="evidence"))
     db.commit()
 
     api = _sql_client(db)

@@ -60,11 +60,11 @@ packets:
     integration_merge: "68d0f136dc1a015c7c0d183ec494a59f64d9da1d"
   - id: "R.7a"
     title: "Synchronize origin/main into integration"
-    state: in_progress
+    state: pr_open
     branch: "packet/R.7a-sync-main"
     verify: "governance/checks/stageR_sync_main.sh"
     blocked_by: ["R.7"]
-    notes: "Stage-R exit blocker. Merge the legacy main lead, run the full gauntlet and quickstart, and ratchet tests to approximately 80; plan now and execute on a full two-hour tick."
+    notes: "origin/main merged at 2823ded; 84-test ratchet and full local gauntlet are recorded in IMPLEMENTATION-R.7a. Quickstart remains owned by blocked packet 0.6 and must pass before Stage-R promotion."
   - id: "0.1"
     title: "Workspace selection: fastapi-stack"
     state: todo

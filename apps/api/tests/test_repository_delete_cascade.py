@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.db import Base, get_db
 from app.main import app
-from app.models import Repository, File, Symbol, SymbolEdge
+from app.models import Repository, Evidence, File, Symbol, SymbolEdge
 
 
 def test_delete_repository_cascades_to_files_symbols_and_edges():
@@ -34,10 +34,17 @@ def test_delete_repository_cascades_to_files_symbols_and_edges():
         qualified_name="a.x", symbol_type="variable", start_line=1, end_line=1,
         start_byte=0, end_byte=1, source_text="x = 1",
     ))
+    db.commit()
+    db.add(Evidence(
+        id="evidence-1", repository_id="repo-1", indexed_commit_sha="a" * 40,
+        path="a.py", start_line=1, end_line=1, extractor="test", extractor_version="v1",
+        content_hash="e" * 64,
+    ))
+    db.commit()
     db.add(SymbolEdge(
         id="edge-1", repository_id="repo-1", source_symbol_id="sym-1",
         target_name="y", relationship_type="references", source_file_id="file-1",
-        line_number=1,
+        line_number=1, evidence_id="evidence-1",
     ))
     db.commit()
 

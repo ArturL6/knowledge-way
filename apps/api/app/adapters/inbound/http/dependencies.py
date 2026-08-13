@@ -12,7 +12,7 @@ from app.code_cards import code_card_model
 from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, delete
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.orm import Session
 from redis import Redis
 from rq import Queue

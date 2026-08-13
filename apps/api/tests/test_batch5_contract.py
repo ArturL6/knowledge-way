@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from app.db import Base, get_db
 from app.main import app
-from app.models import File, Repository, Symbol, SymbolEdge
+from app.models import Evidence, File, Repository, Symbol, SymbolEdge
 
 
 def _session():
@@ -140,9 +140,11 @@ def test_callers_report_total_and_truncated_when_paginated():
     def sym(i): return Symbol(id=i, repository_id="repo", file_id="f", name=i, qualified_name=f"m.{i}",
                               symbol_type="function", start_line=1, end_line=1, start_byte=0, end_byte=1, source_text="x")
     db.add(sym("target")); [db.add(sym(f"c{i}")) for i in range(3)]; db.commit()
+    db.add(Evidence(id="evidence", repository_id="repo", indexed_commit_sha="a" * 40, path="a.py", start_line=1,
+                    end_line=1, extractor="test", extractor_version="v1", content_hash="e" * 64)); db.commit()
     for i in range(3):
         db.add(SymbolEdge(id=f"e{i}", repository_id="repo", source_symbol_id=f"c{i}", target_symbol_id="target",
-                          target_name="target", relationship_type="calls", source_file_id="f", line_number=i + 1))
+                          target_name="target", relationship_type="calls", source_file_id="f", line_number=i + 1, evidence_id="evidence"))
     db.commit()
     api = _client(db)
     page = api.get("/api/repositories/repo/symbols/target/callers", params={"limit": 2}).json()

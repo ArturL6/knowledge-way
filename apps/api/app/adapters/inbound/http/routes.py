@@ -1,12 +1,72 @@
 """FastAPI inbound adapter: route declarations only."""
 
+from typing import Literal
+from datetime import datetime
 from fastapi import APIRouter
+from sqlalchemy.exc import DBAPIError
 from app.adapters.inbound.http.dependencies import *
 
 router = APIRouter()
 
+def live_progress(r): return {} if r.indexing_status=='ready' else r.indexing_progress
+def repo_out(r): return {'id':r.id,'name':r.name,'clone_url':r.clone_url,'requested_revision':r.requested_revision,'default_branch':r.default_branch,'indexed_branch':r.indexed_branch,'indexed_commit_sha':r.indexed_commit_sha,'latest_detected_commit_sha':r.latest_detected_commit_sha,'indexing_status':r.indexing_status,'indexing_progress':live_progress(r),'error_message':r.error_message,'last_indexed_at':r.last_indexed_at,'last_sync_at':r.last_sync_at,'created_at':r.created_at}
+def workspace_out(w): return {'id':w.id,'name':w.name,'description':w.description,'created_at':w.created_at,'updated_at':w.updated_at}
+def workspace_dependency_out(d): return {'id':d.id,'workspace_id':d.workspace_id,'source_repository_id':d.source_repository_id,'target_repository_id':d.target_repository_id,'package_name':d.package_name,'import_path':d.import_path,'reason':d.reason,'note':d.note,'created_at':d.created_at,'updated_at':d.updated_at}
+def validate_dependency_membership(db,workspace_id,source_repository_id,target_repository_id):
+ if source_repository_id==target_repository_id: raise HTTPException(422,'Source and target repositories must differ')
+ members=set(db.scalars(select(WorkspaceRepository.repository_id).where(WorkspaceRepository.workspace_id==workspace_id)).all())
+ if source_repository_id not in members or target_repository_id not in members: raise HTTPException(422,'Source and target repositories must both belong to this workspace')
+def enqueue(repo_id,full=False):
+ try: return Queue('indexing',connection=Redis.from_url(settings.redis_url),default_timeout=settings.index_job_timeout).enqueue('app.ingestion.index_repository',repo_id,full).id
+ except Exception: return None
+MAX_GRAPH_NODES=100
+MAX_GRAPH_EDGES=500
+def symbol_out(s): return {'id':s.id,'repository_id':s.repository_id,'file_id':s.file_id,'name':s.name,'qualified_name':s.qualified_name,'type':s.symbol_type,'language':s.language,'start_line':s.start_line,'end_line':s.end_line,'start_byte':s.start_byte,'end_byte':s.end_byte,'parent_symbol_id':s.parent_symbol_id,'signature':s.signature,'source_text':s.source_text}
+def graph_symbol_out(s): return {k:v for k,v in symbol_out(s).items() if k!='source_text'}
+def edge_out(e): return {'id':e.id,'source_symbol_id':e.source_symbol_id,'target_symbol_id':e.target_symbol_id,'target_name':e.target_name,'type':e.relationship_type,'confidence':e.confidence,'resolution':'name-match' if e.confidence>=100 else 'ambiguous','line':e.line_number,'source_file_id':e.source_file_id}
+def edge_key(e): return (e.relationship_type,e.source_symbol_id or '',e.target_symbol_id or '',e.target_name,e.line_number,e.id)
+def collapse_code_edges(edge_dicts):
+ groups={}
+ for d in edge_dicts:
+  key=(d['source_symbol_id'],d['target_symbol_id'],d['type'])
+  if key in groups: groups[key]['count']+=1
+  else: groups[key]=dict(d,count=1)
+ return list(groups.values())
+def bfs_selected(symbol_id,edges,available,depth,max_nodes=None):
+ selected={symbol_id}; frontier={symbol_id}
+ for _ in range(depth):
+  candidates=[]
+  for e in edges:
+   if e.source_symbol_id in frontier and e.target_symbol_id in available: candidates.append(e.target_symbol_id)
+   if e.target_symbol_id in frontier and e.source_symbol_id in available: candidates.append(e.source_symbol_id)
+  next_frontier=[]
+  for node_id in sorted(set(candidates),key=lambda i:(available[i].qualified_name,i)):
+   if node_id not in selected:
+    if max_nodes is not None and len(selected)>=max_nodes: break
+    selected.add(node_id); next_frontier.append(node_id)
+  frontier=set(next_frontier)
+  if not frontier: break
+ return selected
+def scoped_symbol(db,repo_id,symbol_id):
+ s=next((x for x in db.scalars(select(Symbol).where(Symbol.repository_id==repo_id,Symbol.id==symbol_id)).all() if x.id==symbol_id and x.repository_id==repo_id),None)
+ if not s: raise HTTPException(404,'Symbol not found')
+ return s
+def scoped_edges(db,repo_id): return sorted((e for e in db.scalars(select(SymbolEdge).where(SymbolEdge.repository_id==repo_id)).all() if e.repository_id==repo_id),key=edge_key)
+def scoped_symbols(db,repo_id,ids): return {s.id:s for s in db.scalars(select(Symbol).where(Symbol.repository_id==repo_id,Symbol.id.in_(ids))).all() if s.repository_id==repo_id and s.id in ids}
+def scoped_files(db,repo_id): return {f.id:f for f in db.scalars(select(File).where(File.repository_id==repo_id)).all() if f.repository_id==repo_id}
+def citation(repo,file,item):
+ line_count=max(len((file.content or '').splitlines()),1); start=max(1,min(item.start_line,line_count)); end=max(start,min(item.end_line,line_count))
+ return {'repository_id':repo.id,'repository':repo.name,'indexed_commit_sha':getattr(item,'indexed_commit_sha',None) or file.indexed_commit_sha or repo.indexed_commit_sha,'file_id':file.id,'path':file.path,'start_line':start,'end_line':end,'symbol_id':getattr(item,'symbol_id',None) or getattr(item,'id',None)}
+def result_citation(db,repo,result):
+ file=db.get(File,result['file_id'])
+ if file:
+  item=type('Retrieved',(),{'start_line':result['start_line'],'end_line':result['end_line'],'symbol_id':result.get('symbol_id'),'indexed_commit_sha':result.get('indexed_commit_sha')})()
+  return citation(repo,file,item)
+ return {'repository_id':repo.id,'repository':repo.name,'indexed_commit_sha':result.get('indexed_commit_sha') or repo.indexed_commit_sha,'file_id':result['file_id'],'path':result['path'],'start_line':max(1,result['start_line']),'end_line':max(max(1,result['start_line']),result['end_line']),'symbol_id':result.get('symbol_id')}
 @router.get('/health')
 def health(): return {'status':'ok'}
+@router.get('/api/capabilities')
+def capabilities(): return {'semantic':semantic_capability()}
 @router.get('/api/workspaces')
 def workspaces(db:Session=Depends(get_db)): return [workspace_out(w) for w in db.scalars(select(Workspace).order_by(Workspace.created_at.desc())).all()]
 @router.post('/api/workspaces',status_code=201)
@@ -98,6 +158,7 @@ def repository(repo_id:str,db:Session=Depends(get_db)):
 def delete_repository(repo_id:str,db:Session=Depends(get_db)):
  r=db.get(Repository,repo_id)
  if not r: raise HTTPException(404,'Repository not found')
+ if r.indexing_status=='indexing': raise HTTPException(409,'Cannot delete a repository while it is indexing')
  db.execute(delete(WorkspaceDependency).where((WorkspaceDependency.source_repository_id==repo_id)|(WorkspaceDependency.target_repository_id==repo_id))); db.execute(delete(WorkspaceRepository).where(WorkspaceRepository.repository_id==repo_id)); db.delete(r);db.commit()
 @router.post('/api/repositories/{repo_id}/sync',status_code=202)
 def sync(repo_id:str,db:Session=Depends(get_db)):
@@ -115,7 +176,8 @@ def status(repo_id:str,db:Session=Depends(get_db)):
  if reconcile_indexing_jobs(db): db.expire_all()
  r=db.get(Repository,repo_id)
  if not r: raise HTTPException(404,'Repository not found')
- return {'status':r.indexing_status,'progress':r.indexing_progress,'error':r.error_message,'indexed_commit_sha':r.indexed_commit_sha}
+ total_chunks, embedded_chunks = db.execute(select(func.count(CodeChunk.id), func.count(CodeChunk.embedding)).where(CodeChunk.repository_id==repo_id)).one()
+ return {'status':r.indexing_status,'progress':live_progress(r),'error':r.error_message,'indexed_commit_sha':r.indexed_commit_sha,'total_chunks':total_chunks,'embedded_chunks':embedded_chunks}
 @router.post('/api/repositories/{repo_id}/code-cards',status_code=202)
 def generate_code_cards(repo_id:str,body:CodeCardRunIn,db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
@@ -150,70 +212,93 @@ def structural_card(repo_id:str,kind:str,path:str='',db:Session=Depends(get_db))
  card=db.scalar(select(StructuralCard).where(StructuralCard.repository_id==repo_id,StructuralCard.kind==kind,StructuralCard.path==path.strip('/')))
  if not card: raise HTTPException(404,'Structural card not found')
  return {'repository_id':repo_id,'kind':card.kind,'path':card.path,'facts':card.facts,'indexed_commit_sha':card.indexed_commit_sha,'content_fingerprint':card.content_fingerprint,'provenance_fingerprint':card.provenance_fingerprint,'schema_version':card.schema_version}
+def like_escape(value): return value.replace('\\','\\\\').replace('%','\\%').replace('_','\\_')
 @router.get('/api/repositories/{repo_id}/tree')
 def tree(repo_id:str,path:str='',db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
  prefix=path.strip('/')+'/' if path else ''
- files=db.scalars(select(File).where(File.repository_id==repo_id,File.path.like(prefix+'%'))).all(); children={}
- for f in files:
-  rest=f.path[len(prefix):]; first=rest.split('/')[0]
-  children[first]={'name':first,'type':'file' if '/' not in rest else 'directory','path':prefix+first,**({'file_id':f.id} if '/' not in rest else {})}
+ # Select only id/path -- File.content is a toasted column and this endpoint never uses it.
+ rows=db.execute(select(File.id,File.path).where(File.repository_id==repo_id,File.path.like(like_escape(prefix)+'%',escape='\\'))).all(); children={}
+ for file_id,file_path in rows:
+  rest=file_path[len(prefix):]; first=rest.split('/')[0]
+  children[first]={'name':first,'type':'file' if '/' not in rest else 'directory','path':prefix+first,**({'file_id':file_id} if '/' not in rest else {})}
  return sorted(children.values(),key=lambda x:(x['type']!='directory',x['name']))
+def file_or_404(db,file_id):
+ # A malformed id (e.g. a NUL byte) makes the PK lookup itself raise a DBAPIError instead of
+ # returning None, which would otherwise surface as a raw 500 -- treat that the same as "not found".
+ try: f=db.get(File,file_id)
+ except DBAPIError: db.rollback(); f=None
+ if not f: raise HTTPException(404,'File not found')
+ return f
 @router.get('/api/files/{file_id}')
 def file(file_id:str,db:Session=Depends(get_db)):
- f=db.get(File,file_id)
- if not f: raise HTTPException(404,'File not found')
+ f=file_or_404(db,file_id)
  return {'id':f.id,'repository_id':f.repository_id,'path':f.path,'language':f.language,'content':f.content,'indexed_commit_sha':f.indexed_commit_sha}
 @router.get('/api/files/{file_id}/symbols')
-def symbols(file_id:str,db:Session=Depends(get_db)): return [{'id':s.id,'name':s.name,'qualified_name':s.qualified_name,'type':s.symbol_type,'start_line':s.start_line,'end_line':s.end_line} for s in db.scalars(select(Symbol).where(Symbol.file_id==file_id)).all()]
+def symbols(file_id:str,db:Session=Depends(get_db)):
+ file_or_404(db,file_id)
+ return [{'id':s.id,'name':s.name,'qualified_name':s.qualified_name,'type':s.symbol_type,'start_line':s.start_line,'end_line':s.end_line} for s in db.scalars(select(Symbol).where(Symbol.file_id==file_id)).all()]
 @router.get('/api/repositories/{repo_id}/symbols/{symbol_id}')
 def symbol_detail(repo_id:str,symbol_id:str,db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
  return symbol_out(scoped_symbol(db,repo_id,symbol_id))
-def neighbors(repo_id,symbol_id,direction,db):
+def neighbors(repo_id,symbol_id,direction,db,limit,offset):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
  scoped_symbol(db,repo_id,symbol_id)
- edges=[e for e in scoped_edges(db,repo_id) if (e.target_symbol_id==symbol_id if direction=='callers' else e.source_symbol_id==symbol_id) and (e.source_symbol_id if direction=='callers' else e.target_symbol_id)]
- ids={e.source_symbol_id if direction=='callers' else e.target_symbol_id for e in edges}; related=scoped_symbols(db,repo_id,ids)
- result=[]
- for e in edges:
-  related_id=e.source_symbol_id if direction=='callers' else e.target_symbol_id
-  if related_id in related: result.append({'symbol':symbol_out(related[related_id]),'edge':edge_out(e)})
- return sorted(result,key=lambda x:(x['symbol']['qualified_name'],x['symbol']['id'],x['edge']['type'],x['edge']['line'],x['edge']['id']))
+ # Direction predicate lives in the WHERE (not a Python filter over every edge in the repo) and
+ # the join is what LIMIT/OFFSET paginate -- an unauthenticated, browser-reachable endpoint must
+ # not be able to force a full-repo edge scan by asking about a symbol with zero neighbors.
+ related_col=SymbolEdge.source_symbol_id if direction=='callers' else SymbolEdge.target_symbol_id
+ filter_col=SymbolEdge.target_symbol_id if direction=='callers' else SymbolEdge.source_symbol_id
+ scope=(SymbolEdge.repository_id==repo_id,Symbol.repository_id==repo_id,filter_col==symbol_id,related_col.is_not(None))
+ # total is counted with the same predicate (cheap: the source/target_symbol_id indexes cover it)
+ # so the caller can tell a truncated page from the whole set -- silent truncation on an
+ # unauthenticated endpoint would misreport "who calls X".
+ total=db.scalar(select(func.count()).select_from(SymbolEdge).join(Symbol,Symbol.id==related_col).where(*scope))
+ query=(select(SymbolEdge,Symbol).join(Symbol,Symbol.id==related_col).where(*scope)
+        .order_by(Symbol.qualified_name,Symbol.id,SymbolEdge.relationship_type,SymbolEdge.line_number,SymbolEdge.id)
+        .limit(limit).offset(offset))
+ items=[{'symbol':symbol_out(s),'edge':edge_out(e)} for e,s in db.execute(query)]
+ return items,total,offset+len(items)<total
 @router.get('/api/repositories/{repo_id}/symbols/{symbol_id}/callers')
-def callers(repo_id:str,symbol_id:str,db:Session=Depends(get_db)): return {'symbol_id':symbol_id,'callers':neighbors(repo_id,symbol_id,'callers',db)}
+def callers(repo_id:str,symbol_id:str,limit:int=Query(50,ge=1,le=200),offset:int=Query(0,ge=0),db:Session=Depends(get_db)):
+ items,total,truncated=neighbors(repo_id,symbol_id,'callers',db,limit,offset); return {'symbol_id':symbol_id,'callers':items,'total':total,'limit':limit,'offset':offset,'truncated':truncated}
 @router.get('/api/repositories/{repo_id}/symbols/{symbol_id}/callees')
-def callees(repo_id:str,symbol_id:str,db:Session=Depends(get_db)): return {'symbol_id':symbol_id,'callees':neighbors(repo_id,symbol_id,'callees',db)}
+def callees(repo_id:str,symbol_id:str,limit:int=Query(50,ge=1,le=200),offset:int=Query(0,ge=0),db:Session=Depends(get_db)):
+ items,total,truncated=neighbors(repo_id,symbol_id,'callees',db,limit,offset); return {'symbol_id':symbol_id,'callees':items,'total':total,'limit':limit,'offset':offset,'truncated':truncated}
 @router.get('/api/repositories/{repo_id}/symbols/{symbol_id}/subgraph')
 def subgraph(repo_id:str,symbol_id:str,depth:int=Query(1,ge=1,le=2),max_nodes:int=Query(MAX_GRAPH_NODES,ge=1,le=MAX_GRAPH_NODES),db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')
  scoped_symbol(db,repo_id,symbol_id)
  edges=[e for e in scoped_edges(db,repo_id) if e.source_symbol_id and e.target_symbol_id]
  available=scoped_symbols(db,repo_id,{x for e in edges for x in (e.source_symbol_id,e.target_symbol_id)}|{symbol_id})
- selected={symbol_id}; frontier={symbol_id}; truncated=False
- for _ in range(depth):
-  candidates=[]
-  for e in edges:
-   if e.source_symbol_id in frontier and e.target_symbol_id in available: candidates.append(e.target_symbol_id)
-   if e.target_symbol_id in frontier and e.source_symbol_id in available: candidates.append(e.source_symbol_id)
-  next_frontier=[]
-  for node_id in sorted(set(candidates),key=lambda i:(available[i].qualified_name,i)):
-   if node_id not in selected:
-    if len(selected)>=max_nodes: truncated=True; break
-    selected.add(node_id); next_frontier.append(node_id)
-  frontier=set(next_frontier)
-  if not frontier: break
+ full_selected=bfs_selected(symbol_id,edges,available,depth)
+ selected=bfs_selected(symbol_id,edges,available,depth,max_nodes)
+ total_edges=len({(e.source_symbol_id,e.target_symbol_id,e.relationship_type) for e in edges if e.source_symbol_id in full_selected and e.target_symbol_id in full_selected})
  graph_edges=[e for e in edges if e.source_symbol_id in selected and e.target_symbol_id in selected]
- return {'root_symbol_id':symbol_id,'depth':depth,'max_nodes':max_nodes,'truncated':truncated,'nodes':[symbol_out(available[i]) for i in sorted(selected,key=lambda i:(available[i].qualified_name,i))],'edges':[edge_out(e) for e in graph_edges]}
+ collapsed=sorted(collapse_code_edges([edge_out(e) for e in graph_edges]),key=lambda d:-d['count'])
+ edge_budget_hit=len(collapsed)>MAX_GRAPH_EDGES; collapsed=collapsed[:MAX_GRAPH_EDGES]
+ node_cap_hit=len(full_selected)>len(selected)
+ reason='node_cap' if node_cap_hit else 'edge_budget' if edge_budget_hit else None
+ nodes=[graph_symbol_out(available[i]) for i in sorted(selected,key=lambda i:(available[i].qualified_name,i))]
+ return {'root_symbol_id':symbol_id,'depth':depth,'max_nodes':max_nodes,'total_nodes':len(full_selected),'total_edges':total_edges,'returned_nodes':len(nodes),'returned_edges':len(collapsed),'truncated':node_cap_hit or edge_budget_hit,'reason':reason,'nodes':nodes,'edges':collapsed}
 @router.get('/api/repositories/{repo_id}/graph')
 def repository_graph(repo_id:str,max_nodes:int=Query(MAX_GRAPH_NODES,ge=10,le=MAX_GRAPH_NODES),db:Session=Depends(get_db)):
- """Return a bounded repository overview with structural and code relationship nodes."""
+ """Return a bounded repository overview with structural and code relationship nodes.
+ total_/returned_ describe the SYMBOL graph (symbols, distinct (source,target,type) code
+ relationships) so returned<=total always; the nodes/edges arrays additionally carry
+ repository/directory/file scaffolding and structural contains/defines edges for rendering."""
  repo=db.get(Repository,repo_id)
  if not repo: raise HTTPException(404,'Repository not found')
  files=scoped_files(db,repo_id); edges=[e for e in scoped_edges(db,repo_id) if e.source_symbol_id and e.target_symbol_id]
  symbols={s.id:s for s in db.scalars(select(Symbol).where(Symbol.repository_id==repo_id)).all() if s.repository_id==repo_id and s.file_id in files}
- degree={symbol_id:0 for symbol_id in symbols}
+ distinct_edges=[]; seen_relationships=set()
  for edge in edges:
+  relationship_key=(edge.source_symbol_id,edge.target_symbol_id,edge.relationship_type)
+  if relationship_key not in seen_relationships: seen_relationships.add(relationship_key); distinct_edges.append(edge)
+ total_edges=len(distinct_edges)
+ degree={symbol_id:0 for symbol_id in symbols}
+ for edge in distinct_edges:
   if edge.source_symbol_id in degree: degree[edge.source_symbol_id]+=1
   if edge.target_symbol_id in degree: degree[edge.target_symbol_id]+=1
  selected=[]; selected_files=set(); directories=set(); budget=max_nodes-1
@@ -227,9 +312,9 @@ def repository_graph(repo_id:str,max_nodes:int=Query(MAX_GRAPH_NODES,ge=10,le=MA
  graph_nodes=[{'id':f'repository:{repo.id}','name':getattr(repo,'name',repo.id),'kind':'repository'}]
  graph_nodes += [{'id':f'directory:{directory}','name':directory,'kind':'directory'} for directory in sorted(directories)]
  graph_nodes += [{'id':f'file:{file.id}','name':file.path,'path':file.path,'kind':'file'} for file_id,file in sorted(files.items(),key=lambda item:item[1].path) if file_id in selected_files]
- graph_nodes += [dict(symbol_out(symbols[symbol_id]),kind=symbols[symbol_id].symbol_type) for symbol_id in selected]
+ graph_nodes += [dict(graph_symbol_out(symbols[symbol_id]),kind=symbols[symbol_id].symbol_type) for symbol_id in selected]
  graph_edges=[]
- for directory in directories:
+ for directory in sorted(directories):
   parent=str(PurePosixPath(directory).parent)
   graph_edges.append({'source':f'directory:{parent}' if parent not in ('', '.') else f'repository:{repo.id}','target':f'directory:{directory}','relationship':'contains','confidence':1})
  for file_id in selected_files:
@@ -237,18 +322,26 @@ def repository_graph(repo_id:str,max_nodes:int=Query(MAX_GRAPH_NODES,ge=10,le=MA
   graph_edges.append({'source':f'directory:{parent}' if parent not in ('', '.') else f'repository:{repo.id}','target':f'file:{file.id}','relationship':'contains','confidence':1})
  for symbol_id in selected:
   graph_edges.append({'source':f'file:{symbols[symbol_id].file_id}','target':symbol_id,'relationship':'defines','confidence':1})
- graph_edges += [edge_out(edge) for edge in edges if edge.source_symbol_id in selected and edge.target_symbol_id in selected]
- return {'repository_id':repo.id,'max_nodes':max_nodes,'truncated':len(selected)<len(symbols),'nodes':graph_nodes,'edges':graph_edges}
+ code_edges=sorted(collapse_code_edges([edge_out(edge) for edge in edges if edge.source_symbol_id in selected and edge.target_symbol_id in selected]),key=lambda d:-d['count'])
+ edge_budget_hit=len(code_edges)>MAX_GRAPH_EDGES; shown_code_edges=code_edges[:MAX_GRAPH_EDGES]
+ graph_edges += shown_code_edges
+ node_cap_hit=len(selected)<len(symbols)
+ reason='node_cap' if node_cap_hit else 'edge_budget' if edge_budget_hit else None
+ return {'repository_id':repo.id,'max_nodes':max_nodes,'total_nodes':len(symbols),'total_edges':total_edges,'returned_nodes':len(selected),'returned_edges':len(shown_code_edges),'truncated':node_cap_hit or edge_budget_hit,'reason':reason,'nodes':graph_nodes,'edges':graph_edges}
 @router.get('/api/search')
-def text_search(q:str,mode:str='hybrid',limit:int=30,repository_id:str|None=None,rerank:bool=False,db:Session=Depends(get_db)):
+def text_search(q:str,mode:Literal['hybrid','text','exact','symbols','semantic']='hybrid',limit:int=Query(30,ge=1,le=100),repository_id:str|None=None,rerank:bool=False,db:Session=Depends(get_db)):
  if repository_id and not db.get(Repository,repository_id): raise HTTPException(404,'Repository not found')
- results, semantic = search_with_capability(db,q,mode,min(max(limit,1),100),repository_id=repository_id,rerank=rerank)
+ results, semantic = search_with_capability(db,q,mode,limit,repository_id=repository_id,rerank=rerank)
  return {'query':q,'mode':mode,'results':results,'semantic':semantic}
 @router.get('/api/search/symbols')
-def symbol_search(q:str,db:Session=Depends(get_db)): return {'results':search(db,q,'symbols')}
+def symbol_search(q:str,repository_id:str|None=None,db:Session=Depends(get_db)):
+ if repository_id and not db.get(Repository,repository_id): raise HTTPException(404,'Repository not found')
+ return {'results':search(db,q,'symbols',repository_id=repository_id)}
 @router.post('/api/search/semantic')
 def semantic_search(body:dict,db:Session=Depends(get_db)):
- results, semantic = search_with_capability(db,body.get('query',''),'semantic')
+ repository_id=body.get('repository_id')
+ if repository_id and not db.get(Repository,repository_id): raise HTTPException(404,'Repository not found')
+ results, semantic = search_with_capability(db,body.get('query',''),'semantic',repository_id=repository_id)
  return {'results':results,'semantic':semantic}
 @router.post('/api/explanations')
 def explanation(body:ExplanationIn,db:Session=Depends(get_db)):
@@ -273,6 +366,7 @@ def documentation(body:DocumentationIn,db:Session=Depends(get_db)):
  return {'markdown':markdown,'citations':citations,'scope':{'repository_id':repo.id,'indexed_commit_sha':repo.indexed_commit_sha}}
 @router.post('/api/chat')
 def chat(body:ChatIn,db:Session=Depends(get_db)):
+ if body.repository_id and not db.get(Repository,body.repository_id): raise HTTPException(404,'Repository not found')
  results, semantic = search_with_capability(db,body.question,'hybrid',12,repository_id=body.repository_id); citations=[{'repository':x['repository'],'file_id':x['file_id'],'path':x['path'],'start_line':x['start_line'],'end_line':x['end_line']} for x in results]
  context='\n\n'.join(f"[{i+1}] {x['repository']}/{x['path']}:{x['start_line']}-{x['end_line']}\n{x['snippet']}" for i,x in enumerate(results))
  answer=('No indexed code matched this question.' if not results else 'Grounded sources found for your question. Configure OPENAI_API_KEY to enable synthesized answers; the citations below are verified retrieval results.')
