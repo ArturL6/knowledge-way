@@ -41,7 +41,7 @@ packets:
     integration_merge: "e27e411d794383356865eba6a21623d9f85e5207"
   - id: "R.5"
     title: "Hexagon: split main.py"
-    state: todo
+    state: in_progress
     branch: "packet/R.5-split-main"
     verify: "pytest -q"
     blocked_by: ["R.4"]

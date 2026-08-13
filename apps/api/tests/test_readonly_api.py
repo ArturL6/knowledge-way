@@ -23,7 +23,7 @@ class Db:
 
 def client(monkeypatch, results=None):
  db=Db(); app.dependency_overrides[get_db]=lambda:db
- monkeypatch.setattr('app.main.search_with_capability',lambda *args,**kwargs:(results or [],{'enabled':False}))
+ monkeypatch.setattr('app.adapters.inbound.http.routes.search_with_capability',lambda *args,**kwargs:(results or [],{'enabled':False}))
  return TestClient(app)
 def teardown_function(): app.dependency_overrides.clear()
 
