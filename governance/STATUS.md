@@ -27,7 +27,7 @@ packets:
 
   - id: "R.3"
     title: "uv migration"
-    state: pr_open
+    state: review_blocked
     branch: "packet/R.3-uv-migration"
     verify: "governance/checks/stageR_uv.sh"
     blocked_by: ["R.2"]
@@ -55,7 +55,7 @@ packets:
     branch: "packet/R.7-evidence-table"
     verify: "governance/checks/stageR_evidence.sh"
     blocked_by: ["R.6"]
-last_review: REVIEW-004
+last_review: REVIEW-006
 drift_flags: []
 ```
 
