@@ -5,7 +5,7 @@ COPY pyproject.toml uv.lock ./
 RUN pip install --no-cache-dir uv==0.12.3 && uv sync --frozen --no-dev --no-install-project
 COPY . .
 WORKDIR /app/apps/api
-RUN chmod 0555 /app/apps/api/app/git_askpass.py
+RUN chmod 0555 /app/apps/api/app/adapters/outbound/git_cli/git_askpass.py
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH=/app/apps/api
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

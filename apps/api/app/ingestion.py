@@ -5,12 +5,12 @@ from pathlib import Path
 from sqlalchemy import delete, select
 
 from app.config import settings
-from app.git_auth import git_environment, redact_git_error
-from app.db import SessionLocal
-from app.models import CodeCard, CodeChunk, File, IndexingJob, Repository, Symbol, SymbolEdge
+from app.adapters.outbound.git_cli.git_auth import git_environment, redact_git_error
+from app.adapters.outbound.postgres.db import SessionLocal
+from app.adapters.outbound.postgres.models import CodeCard, CodeChunk, File, IndexingJob, Repository, Symbol, SymbolEdge
 from app.structural_cards import refresh_structural_cards
-from app.parser_facts import analyze_source
-from app.providers import embedding_provider
+from app.adapters.outbound.treesitter.parser_facts import analyze_source
+from app.adapters.outbound.llm_providers.providers import embedding_provider
 
 EXT={'.py':'python','.js':'javascript','.jsx':'jsx','.ts':'typescript','.tsx':'tsx','.go':'go','.java':'java','.rs':'rust','.c':'c','.h':'c','.cpp':'cpp','.cs':'csharp','.rb':'ruby','.php':'php','.sh':'bash','.sql':'sql','.json':'json','.yaml':'yaml','.yml':'yaml','.toml':'toml','.md':'markdown'}
 IGNORE={'.git','node_modules','vendor','dist','build','.next','coverage','target','.venv','venv','__pycache__'}
