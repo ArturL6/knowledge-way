@@ -2,11 +2,12 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from app import ingestion
 from app.db import Base
-from app.models import CodeCard, CodeChunk, File, IndexingJob, Repository, Symbol, SymbolEdge
+from app.models import CodeCard, CodeChunk, Evidence, File, IndexingJob, Repository, Symbol, SymbolEdge
 
 
 class _FakeEmbeddingProvider:
@@ -30,6 +31,18 @@ def _index_with_sqlite(monkeypatch, tmp_path):
         lambda *args, **kwargs: "test-sha" if args[1:3] == ("rev-parse", "HEAD") else "main",
     )
     return sessions
+
+
+def test_symbol_edge_requires_evidence_at_the_database_boundary(monkeypatch, tmp_path):
+    sessions = _index_with_sqlite(monkeypatch, tmp_path)
+    repo = Repository(name="example", clone_url="unused")
+    with sessions() as db:
+        db.add(repo); db.flush()
+        file = File(repository_id=repo.id, path="source.py", language="python", content="call()\n", content_hash="x" * 64, size_bytes=7, indexed_commit_sha="test-sha")
+        db.add(file); db.flush()
+        db.add(SymbolEdge(repository_id=repo.id, source_symbol_id=None, target_symbol_id=None, target_name="call", relationship_type="call", source_file_id=file.id, line_number=1, confidence=20))
+        with pytest.raises(IntegrityError):
+            db.flush()
 
 
 def test_full_index_builds_parser_graph_with_safe_resolution_and_source_provenance(monkeypatch, tmp_path):
@@ -71,6 +84,12 @@ def test_full_index_builds_parser_graph_with_safe_resolution_and_source_provenan
         call_edges = [edge for edge in edges if edge.relationship_type == "call"]
         assert all(edge.source_symbol_id for edge in call_edges)
         assert all(edge.source_file_id for edge in call_edges)
+        assert all(edge.evidence_id for edge in edges)
+        evidence = db.scalars(select(Evidence).where(Evidence.repository_id == repo.id)).all()
+        assert {(row.path, row.start_line, row.end_line, row.extractor, row.extractor_version) for row in evidence} >= {
+            ("source.py", 1, 1, "tree-sitter", ingestion.PARSER_VERSION),
+            ("source.py", 4, 4, "tree-sitter", ingestion.PARSER_VERSION),
+        }
         assert {edge.line_number for edge in call_edges} == {4, 5, 6}
 
 
@@ -83,7 +102,9 @@ def test_full_reindex_clears_old_edges_before_rebuilding(monkeypatch, tmp_path):
         db.add(file); db.flush()
         symbol = Symbol(repository_id=repo.id, file_id=file.id, name="old", qualified_name="old", symbol_type="function", language="python", start_line=1, end_line=1, start_byte=0, end_byte=0, source_text="", signature="def old()")
         db.add(symbol); db.flush()
-        db.add(SymbolEdge(repository_id=repo.id, source_symbol_id=symbol.id, target_symbol_id=None, target_name="stale", relationship_type="call", source_file_id=file.id, line_number=1, confidence=20))
+        evidence = Evidence(repository_id=repo.id, indexed_commit_sha="old", path="old.py", start_line=1, end_line=1, extractor="test", extractor_version="v1", content_hash="x" * 64)
+        db.add(evidence); db.flush()
+        db.add(SymbolEdge(repository_id=repo.id, source_symbol_id=symbol.id, target_symbol_id=None, target_name="stale", relationship_type="call", source_file_id=file.id, line_number=1, evidence_id=evidence.id, confidence=20))
         db.commit()
 
     root = Path(tmp_path) / repo.id

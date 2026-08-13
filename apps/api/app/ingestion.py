@@ -7,9 +7,9 @@ from sqlalchemy import delete, select
 from app.config import settings
 from app.adapters.outbound.git_cli.git_auth import git_environment, redact_git_error
 from app.adapters.outbound.postgres.db import SessionLocal
-from app.adapters.outbound.postgres.models import CodeCard, CodeChunk, File, IndexingJob, Repository, Symbol, SymbolEdge
+from app.adapters.outbound.postgres.models import CodeCard, CodeChunk, Evidence, File, IndexingJob, Repository, Symbol, SymbolEdge
 from app.structural_cards import refresh_structural_cards
-from app.adapters.outbound.treesitter.parser_facts import analyze_source
+from app.adapters.outbound.treesitter.parser_facts import PARSER_VERSION, analyze_source
 from app.adapters.outbound.llm_providers.providers import embedding_provider
 
 EXT={'.py':'python','.js':'javascript','.jsx':'jsx','.ts':'typescript','.tsx':'tsx','.go':'go','.java':'java','.rs':'rust','.c':'c','.h':'c','.cpp':'cpp','.cs':'csharp','.rb':'ruby','.php':'php','.sh':'bash','.sql':'sql','.json':'json','.yaml':'yaml','.yml':'yaml','.toml':'toml','.md':'markdown'}
@@ -127,11 +127,16 @@ def _persist_edges(db, repo_id, parser_files):
  def edge(source_file, source_symbol, target_name, relationship_type, line):
   matches = candidates.get(target_name, [])
   target = matches[0] if len(matches) == 1 else None
+  evidence_text = source_file.content.splitlines()[line - 1] if line <= len(source_file.content.splitlines()) else ''
+  evidence = Evidence(repository_id=repo_id, indexed_commit_sha=source_file.indexed_commit_sha,
+   path=source_file.path, start_line=line, end_line=line, extractor='tree-sitter',
+   extractor_version=PARSER_VERSION, content_hash=hashlib.sha256(evidence_text.encode()).hexdigest())
+  db.add(evidence); db.flush()
   db.add(SymbolEdge(
    repository_id=repo_id, source_symbol_id=source_symbol.id if source_symbol else None,
    target_symbol_id=target.id if target else None, target_name=target_name,
    relationship_type=relationship_type, source_file_id=source_file.id,
-   line_number=line, confidence=RESOLVED_CONFIDENCE if target else UNRESOLVED_CONFIDENCE,
+   line_number=line, evidence_id=evidence.id, confidence=RESOLVED_CONFIDENCE if target else UNRESOLVED_CONFIDENCE,
   ))
 
  for file, facts, symbols_by_qualified in parser_files:
