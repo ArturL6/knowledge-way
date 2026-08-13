@@ -15,6 +15,8 @@ from app.db import SessionLocal, get_db, verify_migration_ready
 from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, CodeCard, StructuralCard, IndexingJob, Conversation, Message
 from app.reconcile import reconcile_indexing_jobs
 from app.search import search, search_with_capability
+from app.providers import semantic_capability
+from app.repository_cards import build_repository_card
 
 app=FastAPI(title='knowledge-way API',version='0.1.0')
 app.add_middleware(CORSMiddleware,allow_origins=settings.cors_origins.split(','),allow_methods=['*'],allow_headers=['*'])
@@ -199,6 +201,12 @@ def code_card(repo_id:str,symbol_id:str,db:Session=Depends(get_db)):
  card=db.scalar(select(CodeCard).where(CodeCard.repository_id==repo_id,CodeCard.symbol_id==symbol_id))
  if not card: raise HTTPException(404,'No Code Card for this symbol')
  return {'symbol_id':card.symbol_id,'summary':card.summary,'details':card.details,'model':card.model,'prompt_version':card.prompt_version,'indexed_commit_sha':card.indexed_commit_sha,'input_tokens':card.input_tokens,'output_tokens':card.output_tokens}
+@app.get('/api/repositories/{repo_id}/repository-card')
+def repository_card(repo_id:str,db:Session=Depends(get_db)):
+ repo=db.get(Repository,repo_id)
+ if not repo: raise HTTPException(404,'Repository not found')
+ if not repo.indexed_commit_sha: raise HTTPException(409,'Repository has no indexed snapshot')
+ return build_repository_card(db,repo)
 @app.get('/api/repositories/{repo_id}/structural-cards')
 def structural_cards(repo_id:str,path:str='',kind:str|None=None,limit:int=Query(50,ge=1,le=100),db:Session=Depends(get_db)):
  if not db.get(Repository,repo_id): raise HTTPException(404,'Repository not found')

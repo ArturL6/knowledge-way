@@ -18,10 +18,11 @@ packets:
     integration_merge: "76ca480dc0c6e776ddb3f0103518ca4b0eddc619"
   - id: "R.2"
     title: "Branch consolidation, main as base"
-    state: todo
+    state: pr_open
     branch: "packet/R.2-branch-consolidation"
     verify: "governance/checks/stageR_branch.sh"
     blocked_by: ["R.1"]
+
 
   - id: "R.3"
     title: "uv migration"
@@ -53,7 +54,7 @@ packets:
     branch: "packet/R.7-evidence-table"
     verify: "governance/checks/stageR_evidence.sh"
     blocked_by: ["R.6"]
-last_review: REVIEW-001
+last_review: REVIEW-004
 drift_flags: []
 ```
 
