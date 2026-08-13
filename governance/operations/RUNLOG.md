@@ -6,3 +6,4 @@ Append-only. Each line is committed and pushed by the named scheduler before it 
 2026-08-13T06:52:31+00:00 | drift-audit | tick | audit integration, packet scope, boundaries, status, and trends
 2026-08-13T06:49:26+00:00 | drift-audit | tick | manually triggered dry-run heartbeat validation
 2026-08-13T06:49:27+00:00 | benchmark-run | tick | manually triggered; Stage 0 prerequisites absent
+2026-08-13T06:54:42+00:00 | benchmark-run | tick | check Stage 0 retrieval-harness prerequisites
