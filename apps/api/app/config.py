@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     code_card_provider: str = "vertex"
     openrouter_card_model: str = "deepseek/deepseek-v4-flash-0731"
     vertex_gemini_location: str = "global"
-    vertex_gemini_model: str = "gemini-2.5-flash-lite"
+    vertex_gemini_model: str = "gemini-3.5-flash-lite"
     code_card_max_source_characters: int = 12000
     # Bounded in-flight Gemini requests. Keep this deliberately small to respect quota.
     code_card_request_concurrency: int = 8

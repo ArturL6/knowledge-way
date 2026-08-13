@@ -25,7 +25,7 @@ PLAN.md directly and leaves ADR-003 PLAN change control in force.
    the primary repositories; Sol validates a random sample of ten.
 2. **Providers and budget.** The production defaults are Vertex AI
    `text-embedding-005` (768 dimensions) for embeddings and Vertex AI
-   `gemini-2.5-flash-lite` for optional code cards. OpenRouter remains an available
+   `gemini-3.5-flash-lite` for optional code cards. OpenRouter remains an available
    adapter/fallback, not the default. Reranking remains `none` until packet 1.8 demonstrates
    a measured benefit. The existing OpenRouter/Vertex adapters remain sufficient.
    The monthly LLM budget cap is USD 50. Each LLM-using run records cumulative estimated
