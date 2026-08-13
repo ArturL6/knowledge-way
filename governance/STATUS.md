@@ -49,7 +49,7 @@ packets:
 
   - id: "R.6"
     title: "Boundary enforcement"
-    state: todo
+    state: pr_open
     branch: "packet/R.6-boundary-enforcement"
     verify: "governance/checks/stageR_import_boundary.sh"
     blocked_by: ["R.5"]
