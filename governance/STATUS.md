@@ -11,7 +11,7 @@ packets:
     blocked_by: []
   - id: "R.1"
     title: "Governance bootstrap"
-    state: review_blocked
+    state: pr_open
     branch: "packet/R.1-governance-bootstrap"
     verify: "governance/checks/stageR_governance.sh"
     blocked_by: []
