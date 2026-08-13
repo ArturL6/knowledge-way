@@ -58,7 +58,7 @@ packets:
     branch: "packet/R.7-evidence-table"
     verify: "governance/checks/stageR_evidence.sh"
     blocked_by: ["R.6"]
-last_review: REVIEW-010
+last_review: REVIEW-011
 drift_flags: []
 ```
 
