@@ -5,7 +5,7 @@ stage: R
 packets:
   - id: "R.0"
     title: "Governance dry run"
-    state: review_blocked
+    state: done (dry run, closed unmerged)
     branch: "packet/R.0-dryrun"
     verify: "true"
     blocked_by: []
