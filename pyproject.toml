@@ -2,7 +2,7 @@
 name = "knowledge-way"
 version = "0.1.0"
 description = "Self-hosted code intelligence and grounded AI code search"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "alembic==1.14.0",
     "fastapi==0.115.6",
