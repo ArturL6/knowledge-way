@@ -41,10 +41,11 @@ packets:
     integration_merge: "e27e411d794383356865eba6a21623d9f85e5207"
   - id: "R.5"
     title: "Hexagon: split main.py"
-    state: pr_open
+    state: done
     branch: "packet/R.5-split-main"
     verify: "pytest -q"
     blocked_by: ["R.4"]
+    integration_merge: "5ba2409b764f82b3e14b8f2e035351e41ee88174"
 
   - id: "R.6"
     title: "Boundary enforcement"
