@@ -34,10 +34,14 @@ packets:
     integration_merge: "08f025b2445904dbba29ce2c41242e1f0eff4756"
   - id: "R.4"
     title: "Hexagon: extract ports and move adapters"
-    state: pr_open
+    state: review_blocked
     branch: "packet/R.4-hexagon-adapters"
     verify: "pytest -q"
     blocked_by: ["R.3"]
+    required_actions:
+      - "Publish the reviewed R.3 integration merge to integration/roadmap-v2, then update the packet branch so PR #61 contains only R.4 changes relative to its actual GitHub base."
+      - "Add in-memory fakes for all eight ports and use them in application/use-case contract tests, as required by PLAN.md's hexagonal test rule."
+      - "Rerun the full applicable gauntlet and commit IMPLEMENTATION-R.4 evidence explicitly bound to the resulting implementation SHA (accounting for any later evidence-only handoff commit)."
   - id: "R.5"
     title: "Hexagon: split main.py"
     state: todo
@@ -56,7 +60,7 @@ packets:
     branch: "packet/R.7-evidence-table"
     verify: "governance/checks/stageR_evidence.sh"
     blocked_by: ["R.6"]
-last_review: REVIEW-006
+last_review: REVIEW-008
 drift_flags: []
 ```
 
