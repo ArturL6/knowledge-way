@@ -49,10 +49,11 @@ packets:
 
   - id: "R.6"
     title: "Boundary enforcement"
-    state: pr_open
+    state: done
     branch: "packet/R.6-boundary-enforcement"
     verify: "governance/checks/stageR_import_boundary.sh"
     blocked_by: ["R.5"]
+    integration_merge: "3b34bc165f2e37869790788a023ba740d8a178eb"
   - id: "R.7"
     title: "Evidence table"
     state: todo
