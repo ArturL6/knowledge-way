@@ -18,10 +18,11 @@ packets:
     integration_merge: "76ca480dc0c6e776ddb3f0103518ca4b0eddc619"
   - id: "R.2"
     title: "Branch consolidation, main as base"
-    state: pr_open
+    state: done
     branch: "packet/R.2-branch-consolidation"
     verify: "governance/checks/stageR_branch.sh"
     blocked_by: ["R.1"]
+    integration_merge: "debf40c1eff58cdbbc459c8fdb0dcd2f52c9409e"
 
 
   - id: "R.3"
