@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     git_ssh_known_hosts_path: str | None = None
     git_https_token_file: str | None = None
     git_https_username: str = "x-access-token"
-    git_https_askpass_path: str = "/app/app/git_askpass.py"
+    git_https_askpass_path: str = "/app/app/adapters/outbound/git_cli/git_askpass.py"
 
 
 settings = Settings()

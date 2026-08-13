@@ -10,12 +10,12 @@ from redis import Redis
 from rq import Queue
 from app.code_cards import code_card_model
 from app.config import settings
-from app.git_auth import validate_clone_url
-from app.db import SessionLocal, get_db, verify_migration_ready
-from app.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, CodeCard, StructuralCard, IndexingJob, Conversation, Message
+from app.adapters.outbound.git_cli.git_auth import validate_clone_url
+from app.adapters.outbound.postgres.db import SessionLocal, get_db, verify_migration_ready
+from app.adapters.outbound.postgres.models import Repository, Workspace, WorkspaceRepository, WorkspaceDependency, File, Symbol, SymbolEdge, CodeChunk, CodeCard, StructuralCard, IndexingJob, Conversation, Message
 from app.reconcile import reconcile_indexing_jobs
 from app.search import search, search_with_capability
-from app.providers import semantic_capability
+from app.adapters.outbound.llm_providers.providers import semantic_capability
 from app.repository_cards import build_repository_card
 
 app=FastAPI(title='knowledge-way API',version='0.1.0')

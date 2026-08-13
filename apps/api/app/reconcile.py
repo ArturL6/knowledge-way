@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import IndexingJob, Repository
+from app.adapters.outbound.postgres.models import IndexingJob, Repository
 
 # A worker registers itself before it reports a current job, so ignore rows that just started.
 ORPHAN_GRACE = timedelta(seconds=60)

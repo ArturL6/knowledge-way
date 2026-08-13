@@ -4,8 +4,8 @@ import re
 from dataclasses import dataclass
 from sqlalchemy import select, or_
 from app.config import settings
-from app.models import Repository, File, Symbol, CodeChunk
-from app.providers import embedding_provider, rerank_provider, semantic_capability
+from app.adapters.outbound.postgres.models import Repository, File, Symbol, CodeChunk
+from app.adapters.outbound.llm_providers.providers import embedding_provider, rerank_provider, semantic_capability
 
 STOP_WORDS = {"a", "an", "and", "are", "defined", "do", "for", "how", "in", "is", "of", "the", "to", "what", "where", "which", "with"}
 

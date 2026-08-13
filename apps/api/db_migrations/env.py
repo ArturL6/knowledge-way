@@ -5,8 +5,8 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.config import settings
-from app.db import Base
-import app.models  # noqa: F401 -- registers all metadata before autogenerate runs
+from app.adapters.outbound.postgres.db import Base
+import app.adapters.outbound.postgres.models  # noqa: F401 -- registers all metadata before autogenerate runs
 
 config = context.config
 if config.config_file_name is not None:

@@ -13,9 +13,9 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import select
 
 from app.config import settings
-from app.db import SessionLocal
-from app.models import CodeCard, File, IndexingJob, Repository, Symbol, SymbolEdge
-from app.providers import VertexEmbeddingProvider
+from app.adapters.outbound.postgres.db import SessionLocal
+from app.adapters.outbound.postgres.models import CodeCard, File, IndexingJob, Repository, Symbol, SymbolEdge
+from app.adapters.outbound.llm_providers.providers import VertexEmbeddingProvider
 
 PROMPT_VERSION = "code-card-v2-bounded"
 MAX_RATE_LIMIT_RETRIES = 8

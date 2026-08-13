@@ -34,7 +34,7 @@ packets:
     integration_merge: "08f025b2445904dbba29ce2c41242e1f0eff4756"
   - id: "R.4"
     title: "Hexagon: extract ports and move adapters"
-    state: todo
+    state: pr_open
     branch: "packet/R.4-hexagon-adapters"
     verify: "pytest -q"
     blocked_by: ["R.3"]

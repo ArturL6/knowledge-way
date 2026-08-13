@@ -4,7 +4,7 @@ import json
 from collections import Counter, defaultdict
 from pathlib import PurePosixPath
 from sqlalchemy import delete, select
-from app.models import File, StructuralCard, Symbol, SymbolEdge
+from app.adapters.outbound.postgres.models import File, StructuralCard, Symbol, SymbolEdge
 
 SCHEMA_VERSION="structural-card-v1"
 MAX_BOUNDARY_EVIDENCE=20

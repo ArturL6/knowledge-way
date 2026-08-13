@@ -6,7 +6,7 @@ with the existing provider pipeline.
 """
 from collections import Counter
 from sqlalchemy import func, select
-from app.models import CodeCard, File, Repository, StructuralCard, Symbol
+from app.adapters.outbound.postgres.models import CodeCard, File, Repository, StructuralCard, Symbol
 
 SCHEMA_VERSION = "repository-card-poc-v1"
 MAX_MODULES = 12
