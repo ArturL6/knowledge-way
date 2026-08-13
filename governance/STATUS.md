@@ -56,7 +56,7 @@ packets:
     integration_merge: "3b34bc165f2e37869790788a023ba740d8a178eb"
   - id: "R.7"
     title: "Evidence table"
-    state: todo
+    state: pr_open
     branch: "packet/R.7-evidence-table"
     verify: "governance/checks/stageR_evidence.sh"
     blocked_by: ["R.6"]
