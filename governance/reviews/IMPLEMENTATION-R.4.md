@@ -1,36 +1,43 @@
 # Implementation evidence — R.4 Hexagon: extract ports and move adapters
 
-## Scope
+## Scope and SHA binding
 
-- Added the Stage R target package layout for `domain`, `application/ports`, and inbound/outbound adapters.
-- Defined the eight runtime-checkable application port Protocols: `RepoStore`, `SourceControl`, `LexicalSearch`, `VectorSearch`, `CodeParser`, `LLM`, `Embeddings`, and `JobQueue`.
-- Moved the PostgreSQL (`models.py`, `db.py`), tree-sitter, LLM-provider, Git CLI, and RQ-worker implementations to their specified outbound adapters.
-- Rewired application entry points and container askpass permissions to adapter paths.
-- Kept small legacy import shims so external callers and untouched tests remain behavior-compatible during the staged migration.
+- **Tested implementation SHA:** `2fcf9d7b1473f5169076ff7b78684c29b131f029` (`test(R.4): add in-memory port fakes`).
+- This implementation includes the original R.4 adapter extraction at `869eabdd133479081e1b6033e0e9e6d56970fd27` plus the reviewer-required, Docker-free in-memory fakes for every application port and their contract exercise.
+- The immediate successor is this evidence/STATUS-only handoff commit; it changes no executable application code. Its verification is explicitly bound to the tested implementation SHA above.
+- PostgreSQL (`models.py`, `db.py`), tree-sitter, LLM provider, Git CLI, and RQ worker implementations remain in their required outbound-adapter paths; legacy import shims preserve compatibility while the staged migration is incomplete.
 
-## Local gauntlet
+## Reviewer-required fake contracts
 
-Executed from the packet branch using the repository's Python 3.12 virtual environment:
+`apps/api/app/application/fakes.py` supplies in-memory implementations for all eight ports: `RepoStore`, `SourceControl`, `LexicalSearch`, `VectorSearch`, `CodeParser`, `LLM`, `Embeddings`, and `JobQueue`.
+
+`apps/api/tests/test_ports.py` verifies structural compatibility with every runtime-checkable Protocol and executes each operation without Docker or an outbound adapter.
+
+## Local gauntlet (executed at tested implementation SHA)
 
 ```text
-./.venv/bin/python --version
-Python 3.12.3
+./.venv/bin/python -m pytest -q apps/api/tests/test_ports.py
+1 passed in 0.02s
 
 ./.venv/bin/python -m pytest -q
-70 passed, 209 warnings in 1.81s
+70 passed, 209 warnings in 1.86s
 
 ./.venv/bin/python -m pytest -q apps/api/tests/test_readonly_api.py apps/api/tests/test_graph_api.py apps/api/tests/test_workspaces_api.py apps/api/tests/test_repository_cards.py
-7 passed, 39 warnings in 1.14s
+7 passed, 39 warnings in 1.07s
 
 ./.venv/bin/python -m compileall -q apps/api/app
 (exit 0)
 
 git diff --check
 (exit 0)
+
+UV_BIN=/home/hermes/.hermes/hermes-agent/venv/bin/uv governance/checks/stageR_uv.sh
+uv 0.12.3; lockfile sync completed
+70 passed, 209 warnings in 1.83s
 ```
 
-`uv` is not installed on the cron host (`uv: command not found`), so the required test suite was exercised with the committed project `.venv` (Python 3.12.3). No web/UI-facing contract changed; Playwright is not applicable. This behavior-preserving restructure does not touch retrieval behavior, so a retrieval scorecard is not applicable.
+Ruff, import-linter, and type checking are not configured yet; R.6 owns boundary enforcement. `apps/web` and UI-facing API contracts are untouched, so Playwright is not applicable. R.4 is behavior-preserving and makes no retrieval change, so a retrieval scorecard is not applicable.
 
 ## Packet verification
 
-`STATUS.md` verify command (`pytest -q`) passed as the 70-test suite above.
+The STATUS verify command, `pytest -q`, is covered by the 70-passing full suite above.
