@@ -34,10 +34,11 @@ packets:
     integration_merge: "08f025b2445904dbba29ce2c41242e1f0eff4756"
   - id: "R.4"
     title: "Hexagon: extract ports and move adapters"
-    state: pr_open
+    state: done
     branch: "packet/R.4-hexagon-adapters"
     verify: "pytest -q"
     blocked_by: ["R.3"]
+    integration_merge: "e27e411d794383356865eba6a21623d9f85e5207"
   - id: "R.5"
     title: "Hexagon: split main.py"
     state: todo
