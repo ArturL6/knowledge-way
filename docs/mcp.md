@@ -4,14 +4,12 @@
 
 ## Install and launch
 
-Install its small, separate dependency set (prefer a virtual environment):
+Install the locked project dependencies with uv:
 
 ```bash
-python -m venv .venv
-. .venv/bin/activate
-pip install -r apps/mcp/requirements.txt
+uv sync --frozen --extra mcp --extra dev
 KW_API_BASE_URL=http://localhost:8000 \
-  PYTHONPATH=apps/mcp python -m knowledge_way_mcp.server
+  PYTHONPATH=apps/mcp uv run python -m knowledge_way_mcp.server
 ```
 
 `KW_API_BASE_URL` is required and must be an absolute `http` or `https` URL (no query or fragment). It may be the server root (`http://localhost:8000`) or include `/api` (`http://localhost:8000/api`). `KW_API_BEARER_TOKEN` is optional and, when set, is sent as an `Authorization: Bearer` header; it only becomes protection when the deployed API or its reverse proxy validates that header. The server writes MCP protocol traffic to stdio, so do not use its terminal output as an interactive prompt.
@@ -25,15 +23,13 @@ docker compose up -d --build
 curl -fsS http://localhost:8000/health
 ```
 
-Create the separate MCP environment once, then point it at the local API. Do **not** start this command manually when a client such as Claude Code or Cursor is configured below: the client starts it automatically.
+Synchronize the MCP dependencies once, then point it at the local API. Do **not** start this command manually when a client such as Claude Code or Cursor is configured below: the client starts it automatically.
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -r apps/mcp/requirements.txt
+uv sync --frozen --extra mcp --extra dev
 
 KW_API_BASE_URL=http://localhost:8000 \
-  PYTHONPATH=apps/mcp python -m knowledge_way_mcp.server
+  PYTHONPATH=apps/mcp uv run python -m knowledge_way_mcp.server
 ```
 
 To test the bridge directly, use the automated MCP tests:

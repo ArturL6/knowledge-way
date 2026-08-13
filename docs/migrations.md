@@ -10,17 +10,17 @@ database role with permission to create that extension.
 
 ## Apply migrations
 
-From `apps/api`, with `DATABASE_URL` set:
+From the repository root, with `DATABASE_URL` set:
 
 ```bash
-pip install -r requirements.txt
-alembic -c alembic.ini upgrade head
+uv sync --frozen --extra dev
+uv run --directory apps/api alembic -c alembic.ini upgrade head
 ```
 
 Inspect the current database revision with:
 
 ```bash
-alembic -c alembic.ini current
+uv run --directory apps/api alembic -c alembic.ini current
 ```
 
 For an existing database created before Alembic was introduced, first back up
@@ -28,7 +28,7 @@ the database and verify that it matches the initial schema. Then record the
 baseline without re-running table creation:
 
 ```bash
-alembic -c alembic.ini stamp 20260808_0001
+uv run --directory apps/api alembic -c alembic.ini stamp 20260808_0001
 ```
 
 Only use `stamp` for a verified pre-existing schema. A new empty database must

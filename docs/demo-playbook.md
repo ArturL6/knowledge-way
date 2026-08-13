@@ -86,9 +86,7 @@ Install the MCP bridge into a virtual environment and configure a stdio MCP clie
 ```
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -r apps/mcp/requirements.txt
+uv sync --frozen --extra mcp --extra dev
 ```
 
 Restart/reload the MCP client, then call:
