@@ -25,7 +25,7 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = ["mcp>=1.9,<2.0"]
-dev = ["pytest==8.3.4"]
+dev = ["import-linter==2.1.0", "pytest==8.3.4"]
 
 [tool.uv]
 package = false
@@ -33,3 +33,35 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["apps/api/tests", "apps/mcp/tests"]
 pythonpath = ["apps/api", "apps/mcp"]
+
+[tool.importlinter]
+root_package = "app"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Domain and application do not depend on adapters"
+type = "forbidden"
+source_modules = ["app.domain", "app.application"]
+forbidden_modules = ["app.adapters"]
+
+[[tool.importlinter.contracts]]
+name = "Domain and application do not depend on framework or infrastructure SDKs"
+type = "forbidden"
+source_modules = ["app.domain", "app.application"]
+forbidden_modules = [
+    "fastapi",
+    "sqlalchemy",
+    "alembic",
+    "tree_sitter",
+    "tree_sitter_language_pack",
+    "redis",
+    "rq",
+    "openai",
+    "psycopg",
+    "pgvector",
+]
+
+[dependency-groups]
+dev = [
+    "import-linter==2.1.0",
+]
