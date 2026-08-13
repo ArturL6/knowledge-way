@@ -23,9 +23,10 @@ PLAN.md directly and leaves ADR-003 PLAN change control in force.
    HTTP-contract extractor is ready. The PostHog pair must not be indexed earlier.
    Gold tasks are mechanically derived from 25–40 closed issue / merged-fix-PR pairs in
    the primary repositories; Sol validates a random sample of ten.
-2. **Providers and budget.** Embeddings use OpenRouter
-   `openai/text-embedding-3-small` (1536 dimensions); code cards use the existing
-   OpenRouter default card model; reranking remains `none` until packet 1.8 demonstrates
+2. **Providers and budget.** The production defaults are Vertex AI
+   `text-embedding-005` (768 dimensions) for embeddings and Vertex AI
+   `gemini-2.5-flash-lite` for optional code cards. OpenRouter remains an available
+   adapter/fallback, not the default. Reranking remains `none` until packet 1.8 demonstrates
    a measured benefit. The existing OpenRouter/Vertex adapters remain sufficient.
    The monthly LLM budget cap is USD 50. Each LLM-using run records cumulative estimated
    spend in RUNLOG. At USD 40, LLM-consuming packets pause and STATUS records a drift flag;
