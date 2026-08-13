@@ -60,7 +60,7 @@ packets:
     integration_merge: "68d0f136dc1a015c7c0d183ec494a59f64d9da1d"
   - id: "R.7a"
     title: "Synchronize origin/main into integration"
-    state: pr_open
+    state: done
     branch: "packet/R.7a-sync-main"
     verify: "governance/checks/stageR_sync_main.sh"
     blocked_by: ["R.7"]
