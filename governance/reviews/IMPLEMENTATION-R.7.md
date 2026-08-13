@@ -4,7 +4,7 @@
 
 - **Packet:** R.7 — Evidence table
 - **Branch:** `packet/R.7-evidence-table`
-- **Tested implementation base:** `42b6b42351e8cbd59365d7dc715324e34cb63927`
+- **Tested implementation commit:** `7efe821375912ab927dba8983fbcc86fb87004d0` (`feat(R.7): require evidence for symbol edges`)
 - **Scope implemented:** adds the `evidence` persistence model and Alembic revision `20260813_0010`; adds a mandatory `symbol_edges.evidence_id` foreign key with `RESTRICT` deletion; deterministically backfills one immutable legacy-evidence row per existing edge from its `source_file_id` and `line_number`; and creates parser-derived, line-bounded tree-sitter evidence before every new symbol edge.
 - **Enforcement:** `SymbolEdge.evidence_id` is non-nullable at the ORM/schema boundary. The dedicated graph test confirms SQLite rejects an attempted edge without evidence. The migration creates/backfills `evidence_id`, makes it non-null, and then installs the PostgreSQL FK.
 - **Snapshot/provenance:** new parser evidence carries its repository, indexed commit SHA, source path, exact start/end line, extractor (`tree-sitter`), parser version, and SHA-256 content hash. Legacy backfill preserves the old file snapshot/path and marks extraction as `legacy-backfill`/`R.7`.
