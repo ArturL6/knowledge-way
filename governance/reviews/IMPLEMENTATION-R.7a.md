@@ -21,14 +21,15 @@ The candidate exceeds both parents' tracked test-file count and restores the req
 
 ## Corrected implementation and local gauntlet
 
-**Corrected implementation SHA:** `42e8a10c8df44ab1ecbe2fca5e8081aa9d7a8163`
+**Corrected implementation:** Vertex provider-policy alignment, recorded in the corrective
+commit following `1cbfb2de6480898209f73d31c34fb3b3b86cba0c`.
 
-This correction makes ADR-004, runtime defaults, and `.env.example` conform to
-HUMAN-DIRECTIVE-001: production embeddings are OpenRouter
-`openai/text-embedding-3-small` (1536 dimensions), production code cards use the existing
-OpenRouter card model, and reranking remains `none`. The keyless example still explicitly sets
-`EMBEDDING_PROVIDER=none`. It also replaces deleted `requirements.txt` CI installs with the
-locked root `uv` project and runs the web production build in CI.
+This correction updates ADR-004 to record the superseding current owner decision: production
+embeddings use Vertex AI `text-embedding-005` (768 dimensions), optional code cards use Vertex
+AI `gemini-3.5-flash-lite`, OpenRouter remains a fallback adapter, and reranking remains `none`.
+Runtime defaults and `.env.example` now match that policy while retaining the explicit keyless
+`EMBEDDING_PROVIDER=none` override. The provider-default contract test asserts the selected
+models and dimensions. No GitHub Actions workflow is restored.
 
 ```text
 uv lock --check                                                       PASS — 75 packages resolved

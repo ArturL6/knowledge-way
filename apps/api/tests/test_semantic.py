@@ -13,11 +13,13 @@ def test_semantic_provider_is_disabled_without_explicit_openrouter_key(monkeypat
     assert semantic_capability()["state"] == "disabled"
 
 
-def test_owner_selected_provider_defaults_are_openrouter():
+def test_owner_selected_provider_defaults_are_vertex():
     fields = Settings.model_fields
-    assert fields["embedding_provider"].default == "openrouter"
-    assert fields["openrouter_embedding_model"].default == "openai/text-embedding-3-small"
-    assert fields["code_card_provider"].default == "openrouter"
+    assert fields["embedding_provider"].default == "vertex"
+    assert fields["vertex_embedding_model"].default == "text-embedding-005"
+    assert fields["vertex_embedding_dimensions"].default == 768
+    assert fields["code_card_provider"].default == "vertex"
+    assert fields["vertex_gemini_model"].default == "gemini-3.5-flash-lite"
     assert fields["rerank_provider"].default == "none"
 
 

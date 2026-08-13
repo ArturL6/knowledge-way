@@ -23,15 +23,15 @@ PLAN.md directly and leaves ADR-003 PLAN change control in force.
    HTTP-contract extractor is ready. The PostHog pair must not be indexed earlier.
    Gold tasks are mechanically derived from 25–40 closed issue / merged-fix-PR pairs in
    the primary repositories; Sol validates a random sample of ten.
-2. **Providers and budget.** The production defaults are OpenRouter
-   `openai/text-embedding-3-small` (1536 dimensions) for embeddings and OpenRouter using the
-   existing configured card model for optional code cards. Vertex remains an available
-   adapter/fallback, not the default. Reranking remains `none` until packet 1.8 demonstrates
-   a measured benefit. The existing OpenRouter/Vertex adapters remain sufficient.
-   The monthly LLM budget cap is USD 50. Each LLM-using run records cumulative estimated
-   spend in RUNLOG. At USD 40, LLM-consuming packets pause and STATUS records a drift flag;
-   deterministic packets may continue. Provider/model changes require an ADR that states
-   the complete re-embedding cost.
+2. **Providers and budget.** The current owner decision supersedes the older OpenRouter-only
+   wording in HUMAN-DIRECTIVE-001: production embeddings use Vertex AI
+   `text-embedding-005` (768 dimensions), and optional code cards use Vertex AI
+   `gemini-3.5-flash-lite`. OpenRouter remains an available adapter/fallback. Reranking remains
+   `none` until packet 1.8 demonstrates a measured benefit. The existing OpenRouter/Vertex
+   adapters remain sufficient. The monthly LLM budget cap is USD 50. Each LLM-using run records
+   cumulative estimated spend in RUNLOG. At USD 40, LLM-consuming packets pause and STATUS
+   records a drift flag; deterministic packets may continue. Provider/model changes require an
+   ADR that states the complete re-embedding cost.
 3. **Local quickstart invariant.** Packet 0.6 supplies a keyless quickstart with
    `EMBEDDING_PROVIDER=none`, Docker Compose startup, a `fastapi-stack` seed/index command,
    API-doc and UI URLs, and a clean-machine scripted verification that includes search and
@@ -58,6 +58,6 @@ PLAN.md directly and leaves ADR-003 PLAN change control in force.
 
 - STATUS adds R.7a as the Stage-R-exit blocker and Stage 0 packets 0.1–0.6.
 - `.env.example` retains `EMBEDDING_PROVIDER=none` as the zero-key quickstart default while
-  documenting the production OpenRouter decision.
+  documenting the production Vertex AI decision.
 - Reviewer checks this ADR against HUMAN-DIRECTIVE-001 substantively, enforces the quickstart
   and test-count ratchet, and rejects descoped hardening as scope drift.
