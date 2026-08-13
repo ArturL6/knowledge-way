@@ -114,6 +114,10 @@ Three hardening principles are binding:
 1. **Artifacts, never summaries.** Reviews consume the actual diff, test output, and scorecards — not the implementer's narrative.
 2. **Local gauntlet enforces, reviewer judges.** Import-linter, pytest, and `governance/checks/*.sh` are run and their output is committed or attached to the PR; drift cannot merge even if a review is missed.
 3. **One packet per branch/PR**, merged only on recorded green local gauntlet + reviewer verdict.
+4. **PLAN change control.** Any change to this file requires an ADR in the same PR.
+   A PLAN.md diff without one is an automatic drift finding (ADR-003). Reviewer verdicts
+   must re-execute verify + tests on the packet branch (ADR-003); implementer-committed
+   output alone is never sufficient evidence.
 
 ### Repository artifacts (committed in `governance/`)
 
