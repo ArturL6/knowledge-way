@@ -10,7 +10,10 @@ The repository already contains a Next.js + React 19 application with dashboard,
 
 ## Decision
 
-Retain Next.js + React 19. Stage R adds the Playwright smoke flow and CI enforcement; later stages evolve the existing UI only when the API contracts and benchmarks justify it.
+Retain Next.js + React 19. Packet R.2 adds the Playwright smoke flow
+(add repo → index → search → open evidence). Playwright is enforced by the binding
+local test gauntlet on any change touching apps/web or a UI-facing contract; CI remains
+optional advisory automation per ADR-003.
 
 ## Consequences
 
