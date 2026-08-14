@@ -83,9 +83,9 @@ packets:
     pr: 72
     reviewed_head_sha: "55b56f7d8c66e22290d6dd856c1be35c5655e289"
     required_actions:
-      - "Rebase or merge current origin/integration/roadmap-v2 into the packet branch and resolve the append-only governance/operations/RUNLOG.md conflict without dropping either history."
+      - "Rebase or merge current origin/integration/roadmap-v2 into the packet branch; preserve current governance/STATUS.md board state and both append-only governance/operations/RUNLOG.md histories while resolving conflicts."
       - "Keep the validated benchmark task payload unchanged unless conflict resolution requires a justified correction; rerun packet verify and the applicable gauntlet, then request exact-head re-review."
-    notes: "REVIEW-039 supersedes earlier on_track authorizations because integration advanced; exact-head tests remain green, but GitHub reports PR #72 CONFLICTING with current integration."
+    notes: "REVIEW-040 reconfirms review_blocked after fresh exact-head execution: tests remain green, but GitHub reports PR #72 CONFLICTING/DIRTY and merge-tree finds STATUS.md plus append-only RUNLOG.md conflicts with current integration."
   - id: "0.3"
     title: "Retrieval scorecard baseline harness"
     state: todo
@@ -112,7 +112,7 @@ packets:
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
-last_review: REVIEW-039
+last_review: REVIEW-040
 drift_flags: []
 next_instruction:
   issued_by: sol-navigator
