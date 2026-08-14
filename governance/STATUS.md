@@ -106,8 +106,9 @@ packets:
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "May proceed in parallel with 0.2–0.5. Keyless default uses EMBEDDING_PROVIDER=none."
-last_review: REVIEW-015
+last_review: REVIEW-028
 drift_flags: []
+next_instruction: null
 ```
 
 The YAML block is the machine-readable source used by scheduled jobs. Packet state changes require a corresponding committed review artifact or PR evidence.

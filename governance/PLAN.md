@@ -149,10 +149,9 @@ drift_flags: []
 
 | Job | Schedule | Prompt contract |
 |---|---|---|
-| `implementer-run` | nightly (or every N hours) | Read PLAN.md + STATUS.md. **First: merge main → integration if main moved; merge integration → current packet branch if stale.** Pick the lowest-numbered `todo` packet with no unmet `blocked_by`. Set `in_progress`. Implement on `packet/<id>-<slug>` branched from integration. Run the **full test gauntlet** (static checks, unit, API endpoint tests, Playwright if web/UI touched, packet `verify`, scorecard if retrieval touched). Open PR **into integration** containing: diff, gauntlet + verify output, STATUS.md update to `pr_open`. **Never** start a packet from a future stage. **Never** merge. |
-| `reviewer-run` | every morning | For each `pr_open` packet: fetch diff + recorded local gauntlet output + verify output. Check against PLAN.md packet definition and standing rules. Write `governance/reviews/REVIEW-NNN.md` with the verdict contract below. Verdict `on_track` → approve merge. `drift` → set `review_blocked` with required actions. |
-| `drift-audit` | weekly | Diff the integration branch against PLAN.md stage scope. Check: hexagon boundary intact, no unplanned dependencies, scorecard trend not regressing, STATUS.md matches reality, integration current with main. Output: audit review + updated `drift_flags`. |
-| `benchmark-run` | weekly (from Stage 0 on) | Run the gold-task harness against integration; commit scorecard to `benchmarks/results/`; flag any regression as a drift finding. |
+| `sol-navigator-run` | every 20 minutes | Read STATUS, PLAN, open PRs, and reviews. Review one `pr_open` packet with exact-head re-execution and a verdict; otherwise nudge stale in-progress work or write one PLAN-traceable `next_instruction`. Run the drift audit every 24 hours. Never write application code. |
+| `implementer-run` | every 20 minutes | Read STATUS. Execute one addressed, unblocked instruction on a packet branch from integration; resolve its `review_blocked` PR; merge only after an approving verdict; or no-op. Run the full gauntlet and never self-select a packet. |
+| `benchmark-run` | every 20 minutes | Once the Stage 0 harness exists, run it when integration changes and commit scorecards. Once scripted, compare GitNexus on the same tasks; flag regressions for Sol. |
 
 ### Reviewer verdict contract (every review, no exceptions)
 
@@ -177,7 +176,7 @@ scope_creep_risk: low | medium | high
 
 ### Packets
 
-- **R.1 — Governance bootstrap.** Create `governance/` (PLAN=this file, STATUS, ADR-001 RQ, ADR-002 Next.js, empty reviews/, checks/). Configure the four cron jobs per the table above. Verify: cron jobs execute a dry run end-to-end (implementer picks a dummy packet, reviewer reviews it).
+- **R.1 — Governance bootstrap.** Create `governance/` (PLAN=this file, STATUS, ADR-001 RQ, ADR-002 Next.js, empty reviews/, checks/). Configure the three state-based cron jobs per the table above. Verify: cron jobs execute a dry run end-to-end (navigator issues an instruction, implementer executes it, navigator reviews it).
 - **R.2 — Branch consolidation, main as base.** Create `integration/roadmap-v2` **from `main`** (main is the fresh start). Merge `feat/hierarchical-retrieval-poc` into it (4 files, +249 lines — resolve trivially). Freeze all other feature branches — no further work lands on them. Verify: full test suite green (≥ 80 tests); `git merge-base` confirms integration descends from current main.
 - **R.3 — uv migration.** `pyproject.toml` + lockfile replaces `requirements.txt`; the local gauntlet installs via uv. Verify: clean-checkout local run green.
 - **R.4 — Hexagon: extract ports + move adapters.** Create the layout above; move `models.py/db.py`→postgres adapter, `parser_facts.py`→treesitter adapter, `providers.py`→llm adapter, `git_*`→git adapter, `worker.py`→rq adapter; define the eight port Protocols. Behavior-preserving; tests untouched and green.
@@ -187,7 +186,7 @@ scope_creep_risk: low | medium | high
 
 ### Exit criteria
 - [ ] `governance/checks/stageR.sh` passes: tests green, import-linter green, evidence constraint enforced, uv-only install works, Playwright smoke green.
-- [ ] All four cron jobs have completed at least one real cycle (one packet implemented, reviewed, merged autonomously).
+- [ ] All three state-based cron jobs have completed at least one real cycle: Sol navigates and reviews, the implementer executes and merges after approval, and benchmark-run records its applicable result.
 
 ### Non-goals
 No retrieval changes, no new features, no new endpoints.

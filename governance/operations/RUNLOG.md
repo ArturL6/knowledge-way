@@ -1,6 +1,9 @@
 # Knowledge-Way scheduler heartbeat log
 
-Append-only. Each line is committed and pushed by the named scheduler before it takes any other action.
+Append-only. Action ticks are committed and pushed immediately. No-op ticks may be
+recorded locally and are pushed in at most one consolidated heartbeat commit per
+hour. Product LLM calls record cumulative estimated USD spend; scheduler-agent
+costs are outside the USD 50 product-LLM cap.
 2026-08-13T06:50:01+00:00 | implementer-run | tick | review packet state and implement next eligible packet
 2026-08-13T06:50:45+00:00 | reviewer-run | tick | review open roadmap-v2 packets
 2026-08-13T06:52:31+00:00 | drift-audit | tick | audit integration, packet scope, boundaries, status, and trends
@@ -9,3 +12,5 @@ Append-only. Each line is committed and pushed by the named scheduler before it 
 2026-08-13T06:54:42+00:00 | benchmark-run | tick | check Stage 0 retrieval-harness prerequisites
 2026-08-13T06:55:01+00:00 | reviewer-run | tick | review open roadmap-v2 packets
 2026-08-14T08:37:57+00:00 | benchmark-run | tick | no-op; retrieval benchmark harness absent on integration/roadmap-v2
+2026-08-14T09:22:46+00:00 | implementer-run | tick | bootstrap HUMAN-DIRECTIVE-003 governance ratification PR
+2026-08-14T09:28:59+00:00 | sol-navigator-run | tick | REVIEW-028 approves PR #70; 24-hour drift audit recorded
