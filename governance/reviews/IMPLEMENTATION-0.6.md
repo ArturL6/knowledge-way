@@ -28,3 +28,30 @@ scripts/quickstart_smoke.sh                                        PASS — API 
 ```
 
 The direct quickstart run built the API, worker, migration, and web images; created an isolated Postgres volume/network; ran migrations; passed both HTTP probes; and cleaned up the generated `.env` afterward. It made no LLM, embedding, card, or rerank request.
+
+## REVIEW-024 remediation (2026-08-14)
+
+The reviewed root-only smoke was replaced with a functional isolated-stack proof. Before building
+Next.js, the script reserves independent loopback API and web ports, injects the API URL into the
+web build/runtime environment, and allows that exact web origin through the isolated API CORS
+configuration. It also starts the RQ adapter's real module entry point (the legacy compatibility
+module does not execute its worker loop when run as `-m`).
+
+The new `scripts/quickstart_playwright.mjs` drives the Compose browser artifact: it uses the
+repository dashboard to add `fastapi/fastapi`, pins the fixture through the public reindex endpoint
+to `f336ff831c4af3d4f625c2593a27b1e0cae93eb7`, waits for a ready snapshot, searches `FastAPI`, and
+opens the resulting source evidence. The exact packet verification returned:
+
+```text
+PASS API docs: http://127.0.0.1:46901/docs
+PASS web UI: http://127.0.0.1:56879
+PASS browser add/index/search/evidence: 0dcb822b-c95d-4b27-a06f-d9c9749b3cd0 @ f336ff831c4af3d4f625c2593a27b1e0cae93eb7
+PASS keyless local quickstart smoke test
+```
+
+The complete local gauntlet after remediation returned: `uv run pytest -q` — **95 passed**;
+`PYTHONPATH=apps/api uv run lint-imports` — **2 kept, 0 broken**;
+`stageR_import_boundary.sh`, `stageR_uv.sh`, `stageR_evidence.sh`, and `stageR_sync_main.sh` —
+**PASS**; web unit tests — **70 passed**; `npm run build` — **PASS**; existing web Playwright —
+**1 passed**; and `bash -n`, `node --check`, and `git diff --check` — **PASS**. No provider call
+was made, so cumulative estimated monthly LLM/embedding/card/rerank spend remains USD 0.00.

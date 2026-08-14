@@ -17,6 +17,12 @@ fi
 created_env=false
 override_file="$(mktemp)"
 project_name="knowledge-way-quickstart-${RANDOM}${RANDOM}"
+# Pick loopback ports before Compose builds the browser bundle.  The API endpoint is baked into
+# Next.js client code, so an ephemeral Docker mapping discovered after build cannot work.
+pick_port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()'; }
+api_port=$(pick_port)
+web_port=$(pick_port)
+while [[ "$web_port" == "$api_port" ]]; do web_port=$(pick_port); done
 compose=(docker compose --project-name "$project_name" -f docker-compose.yml -f "$override_file")
 cleanup() {
   status=$?
@@ -49,17 +55,16 @@ require_setting EMBEDDING_PROVIDER none
 require_setting CODE_CARDS_ENABLED false
 require_setting RERANK_PROVIDER none
 
-# A separate compose project and ephemeral API/web ports keep this smoke test independent of a
-# developer's already-running Knowledge-Way stack. Redis and Postgres stay internal: only the two
-# browser-facing services need host ports.
+# A separate compose project and preselected loopback ports keep this smoke test independent of
+# another stack while letting the web build point its browser requests at this API. Redis and
+# Postgres remain internal.
 printf '%s\n' 'services:' > "$override_file"
-printf '%s\n' '  postgres:' '    ports: !reset []' '  redis:' '    ports: !reset []' >> "$override_file"
-printf '%s\n' '  api:' '    ports: !override' '      - "127.0.0.1::8000"' '  web:' '    ports: !override' '      - "127.0.0.1::3000"' >> "$override_file"
+printf '%s\n' '  postgres:' '    ports: !reset []' '  redis:' '    ports: !reset []' '  worker:' '    command: python -m app.adapters.outbound.rq_jobs.worker' >> "$override_file"
+printf '%s\n' '  api:' '    environment:' "      CORS_ORIGINS: http://127.0.0.1:${web_port}" '    ports: !override' "      - \"127.0.0.1:${api_port}:8000\"" >> "$override_file"
+printf '%s\n' '  web:' '    build:' '      args:' "        NEXT_PUBLIC_API_URL: http://127.0.0.1:${api_port}/api" '    environment:' "      NEXT_PUBLIC_API_URL: http://127.0.0.1:${api_port}/api" '    ports: !override' "      - \"127.0.0.1:${web_port}:3000\"" >> "$override_file"
 
 printf '%s\n' 'Starting keyless Knowledge-Way stack (EMBEDDING_PROVIDER=none)...'
 "${compose[@]}" up --build --wait
-api_port=$("${compose[@]}" port api 8000 | sed -E 's/.*:([0-9]+)$/\1/')
-web_port=$("${compose[@]}" port web 3000 | sed -E 's/.*:([0-9]+)$/\1/')
 
 # Probe inside each container: this remains reliable on hosts where a firewall or a competing
 # developer stack prevents loopback access to Docker's ephemeral published port. Compose considers
@@ -89,6 +94,13 @@ wait_for_api
 printf 'PASS API docs: http://127.0.0.1:%s/docs\n' "$api_port"
 wait_for_web
 printf 'PASS web UI: http://127.0.0.1:%s\n' "$web_port"
+
+# This Playwright flow is intentionally against the just-built Compose web artifact, not the
+# repository's mock-routed test server. It adds a pinned public fixture through the browser,
+# waits for the keyless worker to index it, searches it, and opens the returned source evidence.
+fastapi_revision='f336ff831c4af3d4f625c2593a27b1e0cae93eb7'
+printf '%s\n' "Running browser seed/index/search/evidence flow for fastapi/fastapi @ ${fastapi_revision}..."
+node scripts/quickstart_playwright.mjs "http://127.0.0.1:${web_port}" "http://127.0.0.1:${api_port}/api" "$fastapi_revision"
 
 printf '%s\n' 'PASS keyless local quickstart smoke test'
 if "$keep_running"; then

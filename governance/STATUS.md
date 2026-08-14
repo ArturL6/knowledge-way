@@ -101,7 +101,7 @@ packets:
     blocked_by: ["0.3"]
   - id: "0.6"
     title: "Local quickstart v1"
-    state: review_blocked
+    state: pr_open
     branch: "packet/0.6-local-quickstart"
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
