@@ -14,3 +14,4 @@ costs are outside the USD 50 product-LLM cap.
 2026-08-14T12:14:53+00:00 | benchmark-run | tick | no-op; retrieval benchmark harness absent on integration/roadmap-v2
 2026-08-14T13:14:54+00:00 | benchmark-run | tick | no-op; retrieval benchmark harness absent on integration/roadmap-v2
 2026-08-14T14:14:55+00:00 | benchmark-run | tick | no-op; retrieval benchmark harness absent on integration/roadmap-v2
+2026-08-14T15:15:05+00:00 | benchmark-run | tick | no-op; refreshed integration/roadmap-v2 to eb03f95; Stage 0 retrieval scorecard harness absent
