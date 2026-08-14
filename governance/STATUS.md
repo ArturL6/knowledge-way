@@ -76,11 +76,16 @@ packets:
     notes: "Prefilled owner selection: fastapi/fastapi, encode/starlette, pydantic/pydantic. PR #66 merged at dfc4c6bef000994fc4fbe83cc11128da7dcada9f after committed REVIEW-033 on_track authorization for exact head 42e74e6d8086ef8e9888c4125023801e497a48d9; GitHub approval was not a gate."
   - id: "0.2"
     title: "Gold tasks from historical issue/fix-PR pairs"
-    state: todo
+    state: review_blocked
     branch: "packet/0.2-gold-tasks"
     verify: "python benchmarks/validate_tasks.py"
     blocked_by: ["0.1"]
-    notes: "25–40 closed issues; labels mechanically derived from merged fix PRs; Sol samples 10."
+    pr: 72
+    reviewed_head_sha: "55b56f7d8c66e22290d6dd856c1be35c5655e289"
+    required_actions:
+      - "Rebase or merge current origin/integration/roadmap-v2 into the packet branch and resolve the append-only governance/operations/RUNLOG.md conflict without dropping either history."
+      - "Keep the validated benchmark task payload unchanged unless conflict resolution requires a justified correction; rerun packet verify and the applicable gauntlet, then request exact-head re-review."
+    notes: "REVIEW-039 supersedes earlier on_track authorizations because integration advanced; exact-head tests remain green, but GitHub reports PR #72 CONFLICTING with current integration."
   - id: "0.3"
     title: "Retrieval scorecard baseline harness"
     state: todo
@@ -107,7 +112,7 @@ packets:
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
-last_review: REVIEW-038
+last_review: REVIEW-039
 drift_flags: []
 next_instruction:
   issued_by: sol-navigator
