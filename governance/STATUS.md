@@ -72,7 +72,7 @@ packets:
     branch: "packet/0.1-fastapi-stack-corpus"
     verify: "test -f benchmarks/corpora.json"
     blocked_by: ["R.7a"]
-    notes: "Prefilled owner selection: fastapi/fastapi, encode/starlette, pydantic/pydantic."
+    notes: "Prefilled owner selection: fastapi/fastapi, encode/starlette, pydantic/pydantic. REVIEW-033 independently authorizes merge only at exact head 42e74e6d8086ef8e9888c4125023801e497a48d9; GitHub approval is not a gate."
   - id: "0.2"
     title: "Gold tasks from historical issue/fix-PR pairs"
     state: todo
@@ -106,7 +106,7 @@ packets:
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
-last_review: REVIEW-032
+last_review: REVIEW-033
 drift_flags: []
 next_instruction: null
 ```
