@@ -1,8 +1,18 @@
 # Hermes scheduler contracts
 
 These are the active Knowledge-Way scheduler contracts ratified by ADR-005. The
-append-only [`RUNLOG.md`](RUNLOG.md) is the durable heartbeat record. All times
-use the Hermes scheduler timezone (`Europe/Berlin`).
+append-only per-job heartbeat files (`RUNLOG-implementer.md`,
+`RUNLOG-sol-navigator.md`, and `RUNLOG-benchmark.md`) are the durable record.
+All times use the Hermes scheduler timezone (`Europe/Berlin`).
+
+## Conflict-resistant governance writes
+
+`governance/operations/RUNLOG*.md` uses Git's `union` merge driver through
+`.gitattributes`. Packet branches must not modify `governance/STATUS.md` or any
+RUNLOG file. The acting scheduler commits packet-state transitions and its own
+heartbeats directly on `integration/roadmap-v2`; packet PRs contain only their
+packet implementation/evidence. This preserves both concurrent job histories
+without making a packet rebase depend on mutable governance state.
 
 | Job | Scheduler job ID | Exact schedule | Contract |
 |---|---|---|---|
