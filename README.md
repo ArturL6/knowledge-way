@@ -23,6 +23,21 @@ docker compose up --build
 
 Open http://localhost:3000. API docs are at http://localhost:8000/docs.
 
+### Keyless local quickstart
+
+For a reproducible local smoke test with no LLM, embedding, or reranking calls, run:
+
+```bash
+./scripts/quickstart_smoke.sh
+```
+
+When `.env` is absent, the script creates it from `.env.example` for the run and removes it
+afterward. The default profile is deliberately keyless: `EMBEDDING_PROVIDER=none`,
+`CODE_CARDS_ENABLED=false`, and `RERANK_PROVIDER=none`. If an existing `.env` changes any of
+those values, the script stops before starting containers rather than risk billable requests.
+Pass `--keep-running` to retain the successful stack for manual exploration; otherwise the
+script stops the compose project when its API-docs and web-UI checks finish.
+
 Before starting the API against a new database, apply the Alembic migrations.
 See [database migration instructions](docs/migrations.md).
 
