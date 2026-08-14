@@ -122,18 +122,20 @@ packets:
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
 next_instruction:
   issued_by: sol-navigator
-  issued_at: "2026-08-14T16:08:45+00:00"
-  packet: "0.3"
-  objective: "Build the PLAN 0.3 retrieval scorecard harness on packet/0.3-scorecard-harness and produce the reproducible current-search baseline over the committed fastapi-stack gold tasks."
+  issued_at: "2026-08-14T18:08:22+00:00"
+  packet: "0.4"
+  objective: "Execute the PLAN 0.4 GitNexus local test drive against the committed fastapi-stack workspace and gold-task question classes, producing a reproducible, license-clean comparative findings artifact."
   constraints:
-    - "Branch from refreshed integration/roadmap-v2; packet branches must not modify governance/STATUS.md or any governance/operations/RUNLOG*."
-    - "Implement benchmarks/run_retrieval.py to query /api/search in each supported single mode and hybrid, scoring file and symbol hit@1/hit@5, MRR, and p50/p95 latency with machine-readable committed output."
-    - "Use the committed corpora and task provenance; record unsupported or unavailable modes honestly rather than manufacturing scores, and make repeated runs reproducible."
-    - "Run the harness against the current search and commit the baseline required by PLAN Stage 0; include enough exact command/config/snapshot evidence for independent replay."
-    - "Apply HUMAN-DIRECTIVE-005 section 3: run the full baseline regardless of Vertex state; if Vertex is unconfigured record semantic: unconfigured. If Vertex environment values are present, first probe at most 10 chunks with text-embedding-005, verify 768 dimensions, and record readiness/cost in governance/operations/vertex-readiness.md before semantic baseline work. Never silently use a fallback embedding provider."
-    - "Run the full applicable local gauntlet, including benchmark validation/tests, API tests, pytest, import-boundary checks, packet verify, and Playwright only if a web or UI-facing contract is touched."
+    - "Branch packet/0.4-gitnexus-test-drive from refreshed integration/roadmap-v2; packet branches must not modify governance/STATUS.md or any governance/operations/RUNLOG*."
+    - "Follow HUMAN-DIRECTIVE-005 section 4 exactly: install GitNexus with GITNEXUS_SKIP_OPTIONAL_GRAMMARS=1 and ONNXRUNTIME_NODE_INSTALL=skip, use eval-server for scripted calls, and resolve symbol UIDs before trace calls."
+    - "Study behavior and record results only; never copy or mechanically rewrite PolyForm Noncommercial GitNexus source code."
+    - "Evaluate the PLAN Appendix A.7 question classes on the committed fastapi-stack corpus and applicable gold tasks; record correct/partial/incorrect/not-representable plus latency, commands, versions, corpus snapshots, and enough raw evidence for independent replay."
+    - "Capture context/impact epistemic exact-or-lower-bound fields and boundary explanations. Dedupe CodeRelation rows before graph counts. Keep cross-repository group evaluation out of scope until Stage 3."
+    - "Verify LadybugDB FTS extension availability; if egress or repair-fts fails, label keyword results environment-limited rather than treating degradation as a product result. Record analyze timing and compare it honestly with the owner-observed ~9.5s Starlette bar."
+    - "Use subset-first, BYOK, product-budget-accounted execution for any chat/LLM mode; do not require chat to complete deterministic graph/search evaluation, and never manufacture unavailable results."
+    - "Create benchmarks/gitnexus-findings.md and any reproducible runner/result fixtures needed for the packet; run the full applicable local gauntlet and packet verify. Playwright is required only if a web or UI-facing contract is touched."
     - "Open exactly one PR into integration/roadmap-v2 with evidence bound to its exact head; do not merge without a committed exact-head on_track reviewer verdict."
-  done_when: "python benchmarks/run_retrieval.py --help passes; a reproducible baseline scorecard from an actual harness run is committed; the full applicable gauntlet is green; and the exact-head packet 0.3 PR is open into integration/roadmap-v2."
+  done_when: "benchmarks/gitnexus-findings.md exists with reproducible GitNexus results over the fastapi-stack workspace, all 12 PLAN Appendix A.7 classes are classified (including honest not-representable/environment-limited outcomes), required epistemic/latency/version/snapshot evidence is captured, the applicable gauntlet passes, and the exact-head packet 0.4 PR is open into integration/roadmap-v2."
 last_review: REVIEW-048
 drift_flags: []
 ```
