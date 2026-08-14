@@ -1,23 +1,25 @@
 # Hermes scheduler contracts
 
-These are the active Knowledge-Way scheduler contracts ratified by ADR-005. The
-append-only [`RUNLOG.md`](RUNLOG.md) is the durable heartbeat record. All times
-use the Hermes scheduler timezone (`Europe/Berlin`).
+These are the active Knowledge-Way scheduler contracts. The append-only
+[`RUNLOG.md`](RUNLOG.md) is the durable heartbeat record. All times use the Hermes
+scheduler timezone (`Europe/Berlin`).
 
 | Job | Scheduler job ID | Exact schedule | Contract |
 |---|---|---|---|
-| `sol-navigator-run` | runtime configured | `every 20m` | Sol reads STATUS, PLAN, open PRs, and reviews. It reviews a `pr_open` packet with re-execution and a verdict, nudges stale in-progress work, or writes one PLAN-traceable `next_instruction`. It runs the drift audit every 24 hours and never writes application code. |
-| `implementer-run` | runtime configured | `every 20m` | Works only in `/home/hermes/projects/knowledge-way-roadmap-v2`. It executes one addressed, unblocked instruction, resolves its review-blocked PR, merges only after an approving verdict, or no-ops. It never self-selects packets. |
-| `benchmark-run` | runtime configured | `every 20m` | After the Stage 0 harness exists, runs it when integration changes and commits results. Once scripted, it compares GitNexus on identical tasks and flags regressions for Sol. |
+| `implementer-run` | `dc21e8d234ae` | `every 120m` | Works only in `/home/hermes/projects/knowledge-way-roadmap-v2`; syncs `main` into integration, selects the lowest eligible packet, implements only that packet, records a local gauntlet, opens/updates a PR into integration, and never merges. It stops for `drift_flags`. |
+| `reviewer-run` | `11110c170694` | `every 120m` | Codex Sol high independently reviews every `pr_open` packet against `PLAN.md`, re-executes verify and unit tests on the packet branch, commits an append-only `REVIEW-NNN.md` verdict, and never merges. |
+| `drift-audit` | `e742b46675e8` | `0 9 * * 1` | Codex Sol high performs a read-only weekly audit of integration/current packet scope, branch freshness, boundary/dependency drift, scorecards, and STATUS consistency. |
+| `benchmark-run` | `df479074a062` | `0 10 * * 1` | Runs the Stage 0 retrieval harness against integration when its corpus and harness exist; otherwise records that Stage 0 prerequisites are absent. |
+| `approved-promotion` | `5ea7228f47d0` | `every 120m` | A separate merge-only agent re-verifies an eligible packet and merges it into integration only after a committed Sol-high `on_track` verdict and green local evidence. |
 
 ## Binding heartbeat behavior
 
-Each job appends a concise line for a tick that takes action:
+Before any other action, each of the four roadmap jobs (`implementer-run`,
+`reviewer-run`, `drift-audit`, `benchmark-run`) appends and pushes exactly one line:
 
 ```text
 <ISO-8601 timestamp> | <job-name> | tick | <action taken>
 ```
 
-Action ticks push immediately. No-op ticks are recorded locally but are pushed in
-at most one consolidated heartbeat commit per hour. Product LLM calls additionally
-record cumulative estimated USD spend; at USD 40, LLM-consuming packets pause.
+The configured prompts require that behavior. `approved-promotion` is deliberately
+not one of the four R.1 jobs and is not part of the R.1 heartbeat criterion.

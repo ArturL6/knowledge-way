@@ -108,7 +108,6 @@ packets:
     notes: "May proceed in parallel with 0.2–0.5. Keyless default uses EMBEDDING_PROVIDER=none."
 last_review: REVIEW-015
 drift_flags: []
-next_instruction: null
 ```
 
 The YAML block is the machine-readable source used by scheduled jobs. Packet state changes require a corresponding committed review artifact or PR evidence.
