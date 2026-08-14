@@ -108,7 +108,7 @@ packets:
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
-last_review: REVIEW-044
+last_review: REVIEW-045
 drift_flags: []
 ```
 
