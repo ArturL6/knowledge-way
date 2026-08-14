@@ -127,8 +127,8 @@
       "latency_ms": 0.525,
       "raw_response": "Error: Target 'undefined' not found",
       "id": "06-impact",
-      "classification": "partial",
-      "rationale": "impact response reports lower-bound epistemic status"
+      "classification": "not-representable",
+      "rationale": "resolved UID was sent, but eval-server returned Target 'undefined' not found; no impact result or epistemic field is available"
     },
     {
       "tool": "query",

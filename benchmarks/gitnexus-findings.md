@@ -36,11 +36,12 @@ real attempted trace result, classified **not-representable** for this HTTP
 interface—not a substituted context result. The raw request and error are in
 observation 05.
 
-Context and UID-targeted upstream impact both report `epistemic: lower-bound`.
-Impact reports 27 symbols, depth counts 3/11/13, and the boundary that
-`BaseRoute` has four implementations whose interface/dynamic-dispatch callers
-are not traced. These fields are recorded verbatim in the fixture; they are not
-claimed as complete impact.
+The committed UID-targeted upstream-impact attempt does **not** return an
+impact result: its HTTP-200 body is `Error: Target 'undefined' not found`.
+Accordingly, it is classified **not-representable** for this eval-server
+contract. It yields no symbol count, depth count, boundary explanation, or
+epistemic field; none is inferred from context or claimed here. The raw request
+and body are observation 06 in the fixture.
 
 ## Appendix A.7 results
 
@@ -51,7 +52,7 @@ claimed as complete impact.
 | 3 | Who calls it? | context UID | partial | 51.075 | import callers, lower-bound graph |
 | 4 | What does it call? | context UID | partial | 50.879 | members/inheritance, not complete calls |
 | 5 | Trace X to Y | trace UIDs | not-representable | 0.601 | eval-server endpoint unsupported |
-| 6 | What changes if X changes? | impact UID | partial | 0.525 | 27, lower-bound impact |
+| 6 | What changes if X changes? | impact UID | not-representable | 0.525 | resolved UID attempt returned `Target 'undefined' not found` |
 | 7 | Which repo consumes endpoint X? | query | not-representable | 223.622 | repository groups deferred to Stage 3 |
 | 8 | Which tests should run? | context UID | correct | 63.241 | test-file imports listed |
 | 9 | Where does a value originate? | context UID | partial | 67.402 | no complete value provenance |
@@ -76,8 +77,9 @@ present. Cross-repository task evaluation remains out of scope until Stage 3.
 ## Staleness-remediation lineage
 
 The packet branch was refreshed with a normal merge of
-`integration/roadmap-v2` at `bbbfe25c86c16ba6bb2bc9224017d7687de1e707` before
-this evidence clarification commit. The merge introduces no packet-side
+`integration/roadmap-v2` at `f56e5a4b5551d59498dc8aa0b134bd0a3f81a00c` before
+this evidence correction commit. The merge introduces no packet-side
 `STATUS` or `RUNLOG` changes: the three packet artifacts above remain the
-complete diff from that integration tree. This records branch provenance only;
-it does not relabel, regenerate, or manufacture the observed GitNexus results.
+complete diff from that integration tree. This correction aligns the fixture's
+recorded classification with its preserved raw response; it does not manufacture
+an unavailable impact result.

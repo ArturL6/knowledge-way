@@ -66,7 +66,7 @@ def main() -> int:
     observe("03-callers", "context", {"uid": route_uid}, "partial", "context returns imports but reports lower-bound traversal")
     observe("04-callees", "context", {"uid": route_uid}, "partial", "context returns inheritance/members, not a complete call graph")
     observe("05-trace", "trace", {"from_uid": route_uid, "to_uid": base_route_uid}, "not-representable", "eval-server attempted with resolved UIDs; v1.6.9 endpoint does not support trace")
-    observe("06-impact", "impact", {"uid": route_uid, "direction": "upstream"}, "partial", "impact response reports lower-bound epistemic status")
+    observe("06-impact", "impact", {"uid": route_uid, "direction": "upstream"}, "not-representable", "resolved UID was sent, but eval-server returned Target 'undefined' not found; no impact result or epistemic field is available")
     observe("07-cross-repository-consumer", "query", {"query": "Which repository consumes Starlette Route?"}, "not-representable", "single-repository index; groups are Stage 3 scope")
     observe("08-tests", "context", {"uid": route_uid}, "correct", "context lists test-file imports")
     observe("09-value-origin", "context", {"uid": route_uid}, "partial", "symbol context is not a value-provenance trace")
