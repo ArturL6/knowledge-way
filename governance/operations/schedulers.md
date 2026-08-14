@@ -18,7 +18,7 @@ without making a packet rebase depend on mutable governance state.
 |---|---|---|---|
 | `sol-navigator-run` | runtime configured | `every 20m` | Sol reads STATUS, PLAN, open PRs, and reviews. It reviews a `pr_open` packet with re-execution and a verdict, nudges stale in-progress work, or writes one PLAN-traceable `next_instruction`. It runs the drift audit every 24 hours and never writes application code. |
 | `implementer-run` | runtime configured | `every 20m` | Works only in `/home/hermes/projects/knowledge-way-roadmap-v2`. It executes one addressed, unblocked instruction, resolves its review-blocked PR, merges only after an approving verdict, or no-ops. It never self-selects packets. |
-| `benchmark-run` | runtime configured | `every 20m` | After the Stage 0 harness exists, runs it when integration changes and commits results. Once scripted, it compares GitNexus on identical tasks and flags regressions for Sol. |
+| `benchmark-run` | runtime configured | `every 20m` | Runs only hermetic scorecards when integration changes: self-provisions an ephemeral keyless stack at the exact integration SHA, seeds pinned corpus snapshots, verifies served==pinned, commits results, then tears down. It never scores a pre-existing API. See [hermetic benchmark runs](hermetic-benchmark-runs.md). |
 
 ## Binding heartbeat behavior
 
