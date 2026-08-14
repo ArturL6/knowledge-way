@@ -1,0 +1,112 @@
+{
+  "id": "pydantic-pydantic-issue-13621",
+  "corpus": "fastapi-stack/pydantic",
+  "category": "historical_issue_fix",
+  "description": "### Initial Checks\n\n- [x] I confirm that I'm using Pydantic V2\n\n### Description\n\nTransient `BaseModel` classes are not collected when either:\n* A model field references an `Enum` whose class defines a Python method.\n* A model field uses `Field(exclude_if=<Python callable>)`.\n\nAfter the defining module is removed from `sys.modules` and every ordinary strong reference is dropped, weak references to the model and enum classes remain alive after repeated full `gc.collect()` calls. Repeating this construction in disposable module namespaces causes linear memory growth.\n\nControls using an enum without methods or a field without `exclude_if` are collected normally.\n\nI encountered this in combination with a Temporal workflow sandbox. With a large interconnected model graph and high volume Temporal workflows this can result in multi-GiB process growth relatively quickly.\n\nThe likely cause is missing `PyGcTraverse` edges for Python objects held by pydantic-core:\n* `SerField` owns `serialization_exclude_if`, but traverses only `serializer`: https://github.com/pydantic/pydantic/blob/c67a1397327c6abc1a2e2e921af01aebbbeedf1c/pydantic-core/src/serializers/fields.rs#L26-L38\n* `EnumSerializer` owns `class`, but traverses only `serializer`: https://github.com/pydantic/pydantic/blob/c67a1397327c6abc1a2e2e921af01aebbbeedf1c/pydantic-core/src/serializers/type_serializers/enum_.rs\n* Each `EnumValidator<T>` owns `lookup`, but traverses only `class` and `missing`: https://github.com/pydantic/pydantic/blob/c67a1397327c6abc1a2e2e921af01aebbbeedf1c/pydantic-core/src/validators/enum_.rs\n\nTraversing `py_schema` does not compensate for another unreported direct reference: CPython\u2019s collector accounts for every actual strong edge individually.\n\nI tested a temporary build from Pydantic `main` at `c67a1397327c6abc1a2e2e921af01aebbbeedf1c`. Adding only these traversal edges made all objects in the reproduction collectible:\n* Add `serialization_exclude_if` to `SerField` traversal.\n* Add `class` to `EnumSerializer` traversal.\n* Add `lookup` to every `EnumValidator<T>` traversal.\n\nFor the enum case, changing only the serializer or only the validator was insufficient; both missing edges were required.\n\nThis appears related to earlier missing-traversal fixes such as:\n\n* https://github.com/pydantic/pydantic/issues/5136\n* https://github.com/pydantic/pydantic-core/pull/787\n* https://github.com/pydantic/pydantic-core/pull/1100\n\nI would be happy to submit a focused patch.\n\n(please note that this analysis was LLM assisted)\n\n### Example Code\n\n```Python\nimport gc\nimport sys\nimport types\nimport weakref\n\ndef transient_module(name, source, class_names):\n    module = types.ModuleType(name)\n    sys.modules[name] = module\n    exec(compile(source, f\"<{name}>\", \"exec\"), module.__dict__)\n    refs = tuple(\n        weakref.ref(module.__dict__[class_name])\n        for class_name in class_names\n    )\n    del sys.modules[name]\n    del module\n    return refs\n\nenum_ref, enum_model_ref = transient_module(\n    \"_pydantic_enum_gc_repro\",\n    \"\"\"\nfrom enum import Enum\nfrom pydantic import BaseModel\nclass Membership(str, Enum):\n    FULL = \"full\"\n    def label(self) -> str:\n        return self.value\nclass Model(BaseModel):\n    membership: Membership\n\"\"\",\n    (\"Membership\", \"Model\"),\n)\n\n(exclude_if_model_ref,) = transient_module(\n    \"_pydantic_exclude_if_gc_repro\",\n    \"\"\"\nfrom pydantic import BaseModel, Field\nclass Model(BaseModel):\n    value: int = Field(exclude_if=lambda value: False)\n\"\"\",\n    (\"Model\",),\n)\n\nfor _ in range(5):\n    gc.collect()\n\n# All three should be False because no intentional strong references remain.\nprint(\"enum alive:\", enum_ref() is not None)\nprint(\"enum model alive:\", enum_model_ref() is not None)\nprint(\"exclude_if model alive:\", exclude_if_model_ref() is not None)\n```\n\n### Python, Pydantic & OS Version\n\n```Text\npydantic version: 2.12.5\n        pydantic-core version: 2.41.5\n          pydantic-core build: profile=release pgo=false\n               python version: 3.11.15 (main, Aug  5 2026, 03:58:57) [GCC 12.2.0]\n                     platform: Linux-6.5.0-1018-oem-x86_64-with-glibc2.36\n             related packages: typing_extensions-4.15.0 pydantic-extra-types-2.10.5 mypy-1.16.0\n                       commit: unknown\n```",
+  "source_issue": {
+    "number": 13621,
+    "url": "https://github.com/pydantic/pydantic/issues/13621",
+    "title": "Memory leak: transient models using Enum methods or Field(exclude_if=...) survive GC"
+  },
+  "fix_pr": {
+    "number": 13624,
+    "url": "https://github.com/pydantic/pydantic/pull/13624",
+    "merged_at": "2026-08-11T10:41:32Z",
+    "merge_commit_sha": "8affe9bacade6713774fccbff11cb5264c3b1c7b",
+    "head_sha": "4c5595f7f0f9006fcae4f7c3f767b07b23762e35"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "pydantic-core/src/serializers/fields.rs",
+        "status": "modified",
+        "sha": "8631d0b0980c17477126c3e1bbcc757ca98bddb0",
+        "changes": 5
+      },
+      {
+        "path": "pydantic-core/src/serializers/type_serializers/enum_.rs",
+        "status": "modified",
+        "sha": "b4e76133c4172d58ea5400eef98f5b4644016955",
+        "changes": 4
+      },
+      {
+        "path": "pydantic-core/src/validators/enum_.rs",
+        "status": "modified",
+        "sha": "28a32a8740d317c12c49d45006258a9c68ddc4d4",
+        "changes": 8
+      },
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "status": "modified",
+        "sha": "7ac338f771dabf2a303ece42699389a4369073dc",
+        "changes": 122
+      }
+    ],
+    "symbols": [
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "symbol": "test_gc_enum_serializer_class",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "symbol": "EnumBase",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "symbol": "MyEnum",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "symbol": "test_gc_enum_validator_lookup",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "symbol": "EnumBase",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "symbol": "MyEnum",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "symbol": "test_gc_field_exclude_if",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "symbol": "Dummy",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "symbol": "BaseModel",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "symbol": "__init_subclass__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/tests/test_garbage_collection.py",
+        "symbol": "MyModel",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "pydantic-core/tests/test_garbage_collection.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/pydantic/pydantic/pulls/13624/files"
+  }
+}

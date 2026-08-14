@@ -1,0 +1,580 @@
+{
+  "id": "pydantic-pydantic-issue-13448",
+  "corpus": "fastapi-stack/pydantic",
+  "category": "historical_issue_fix",
+  "description": "### Initial Checks\n\n- [x] I confirm that I'm using Pydantic V2\n\n### Description\n\nWe've recently switched the `defer_build` flag to `False` by default in our code base, and have experienced a decent reduction in memory usage and library load time, which is great, since there is a good amount of nested model usage.\n\nHowever a weird issue surfaced: A particular BaseModel in our repo has a field that is defined via NamedTuple, and one of its fields is a BaseModel. For some reason, if the inner model has `defer_build=True` then we get an error:\n```\nError serializing to JSON: TypeError: 'MockValSer' object cannot be converted to 'SchemaSerializer'\n```\nI have managed to simplify to a minimal reproducible example here, and noticed that the issue only surfaced for `NamedTuple` and not regular tuple.\n\n### Example Code\n\n```Python\nimport datetime\nfrom typing import NamedTuple\n\nimport pydantic\nimport pydantic_core\n\nclass LazyBar(pydantic.BaseModel, defer_build=True):\n    x: int\n\nclass Bar(pydantic.BaseModel):\n    x: int\n\nclass EagerNamedTupleFoo(NamedTuple):\n\n    u: float\n    bar: Bar\n\nclass LazyNamedTupleFoo(NamedTuple):\n\n    u: float\n    bar: LazyBar\n\nEagerFooTuple = tuple[float, Bar]\nLazyFooTuple = tuple[float, LazyBar]\n\n\nclass Baz(pydantic.BaseModel, defer_build=False):\n\n    eager_tuple: EagerFooTuple\n    eager_namedtuple: EagerNamedTupleFoo\n    lazy_tuple: LazyFooTuple\n    lazy_namedtuple: LazyNamedTupleFoo\n\n\nfailing_payload = {\n    \"eager_tuple\": [0.0, {\"x\": 2}],\n    \"eager_namedtuple\": [0.0, {\"x\": 2}],\n    \"lazy_tuple\": [0.0, {\"x\": 2}],\n    \"lazy_namedtuple\": [0.0, {\"x\": 2}],\n}\nbaz = Baz.model_validate(failing_payload)\n\nprint(baz.model_dump_json(include=(\"eager_tuple\")))\nprint(baz.model_dump_json(include=(\"eager_namedtuple\")))\nprint(baz.model_dump_json(include=(\"lazy_tuple\")))\ntry:\n    print(baz.model_dump_json(include=(\"lazy_namedtuple\")))\nexcept pydantic_core.PydanticSerializationError as e:\n    # Error serializing to JSON: TypeError: 'MockValSer' object is not an instance of 'SchemaSerializer'\n    print(e)\n```\n\n### Python, Pydantic & OS Version\n\n```Text\npydantic version: 2.13.4\n        pydantic-core version: 2.46.4\n          pydantic-core build: profile=release pgo=false\n               python version: 3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]\n                     platform: Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.39\n             related packages: typing_extensions-4.15.0 pydantic-extra-types-2.11.1 pydantic-settings-2.14.1\n                       commit: unknown\n```",
+  "source_issue": {
+    "number": 13448,
+    "url": "https://github.com/pydantic/pydantic/issues/13448",
+    "title": "Model serialization issue with def_build + named tuple"
+  },
+  "fix_pr": {
+    "number": 13505,
+    "url": "https://github.com/pydantic/pydantic/pull/13505",
+    "merged_at": "2026-08-05T10:48:14Z",
+    "merge_commit_sha": "53b39c38c0628fc75010d24c198cf9bcfbe3698e",
+    "head_sha": "2b906e60b05376aeb7fb0346aa778bccc1345477"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "docs/api/standard_library_types.md",
+        "status": "modified",
+        "sha": "0677fd0f489cccdecacad0c40b5d22ad6a77e589",
+        "changes": 1
+      },
+      {
+        "path": "docs/errors/validation_errors.md",
+        "status": "modified",
+        "sha": "bdc536ea8907511b0c513346964707ee44a15dbc",
+        "changes": 42
+      },
+      {
+        "path": "docs/plugins/conversion_table.py",
+        "status": "modified",
+        "sha": "927312b86e95dc94333a07b8ba4edff8bf71115b",
+        "changes": 38
+      },
+      {
+        "path": "pydantic-core/python/pydantic_core/core_schema.py",
+        "status": "modified",
+        "sha": "85f6a8c04eaed678f154fbb80abf1fd3d60362d7",
+        "changes": 113
+      },
+      {
+        "path": "pydantic-core/src/errors/types.rs",
+        "status": "modified",
+        "sha": "748d2d5bfe0ce4b6ff23efb73f68d69e69d74a05",
+        "changes": 10
+      },
+      {
+        "path": "pydantic-core/src/serializers/shared.rs",
+        "status": "modified",
+        "sha": "baf2dcc0759627aa13814833ba8482b27a2fbc58",
+        "changes": 2
+      },
+      {
+        "path": "pydantic-core/src/serializers/type_serializers/mod.rs",
+        "status": "modified",
+        "sha": "0fea0fb00de586e9b7ee62b95f98052d4488d755",
+        "changes": 1
+      },
+      {
+        "path": "pydantic-core/src/serializers/type_serializers/named_tuple.rs",
+        "status": "added",
+        "sha": "b27d44744a46798827cf6ebcaf9d9e049fdee424",
+        "changes": 235
+      },
+      {
+        "path": "pydantic-core/src/validators/mod.rs",
+        "status": "modified",
+        "sha": "326ef5cd34926c40b608552232d54baf5a55acd4",
+        "changes": 5
+      },
+      {
+        "path": "pydantic-core/src/validators/named_tuple.rs",
+        "status": "added",
+        "sha": "ae944092a5a84f077e7960de6e9ea530e57030bc",
+        "changes": 385
+      },
+      {
+        "path": "pydantic-core/tests/test_errors.py",
+        "status": "modified",
+        "sha": "00b6d263edd7e1fd7bf2003470394449ca63fa4f",
+        "changes": 5
+      },
+      {
+        "path": "pydantic-core/tests/test_schema_functions.py",
+        "status": "modified",
+        "sha": "8bb07dfb868de1a61c642cc930e2fbc524b06e00",
+        "changes": 15
+      },
+      {
+        "path": "pydantic/_internal/_generate_schema.py",
+        "status": "modified",
+        "sha": "53971d2059c59899518d41886d8c5f2c939fc69d",
+        "changes": 47
+      },
+      {
+        "path": "pydantic/_internal/_schema_gather.py",
+        "status": "modified",
+        "sha": "f176629c86343fdf081c717690fe66e2fea35aa1",
+        "changes": 3
+      },
+      {
+        "path": "pydantic/json_schema.py",
+        "status": "modified",
+        "sha": "f6da6fc3417271b63a235f2bb33bc7cee9e741d4",
+        "changes": 49
+      },
+      {
+        "path": "tests/test_json_schema.py",
+        "status": "modified",
+        "sha": "077116ffa38c61195abedfba440f83c7b5e9b057",
+        "changes": 13
+      },
+      {
+        "path": "tests/test_types_namedtuple.py",
+        "status": "removed",
+        "sha": "7c72db4d431b539a5982228a0ebb68a6981f4599",
+        "changes": 256
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "status": "added",
+        "sha": "8660e091217b3cf6b45ce786168373292ce7a5f7",
+        "changes": 535
+      }
+    ],
+    "symbols": [
+      {
+        "path": "pydantic-core/python/pydantic_core/core_schema.py",
+        "symbol": "NamedTupleField",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/python/pydantic_core/core_schema.py",
+        "symbol": "named_tuple_field",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/python/pydantic_core/core_schema.py",
+        "symbol": "NamedTupleSchema",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/python/pydantic_core/core_schema.py",
+        "symbol": "named_tuple_schema",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/python/pydantic_core/core_schema.py",
+        "symbol": "Point",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/tests/test_schema_functions.py",
+        "symbol": "MyNamedTuple",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic/_internal/_generate_schema.py",
+        "symbol": "_generate_namedtuple_field_schema",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic/json_schema.py",
+        "symbol": "named_tuple_field_schema",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic/json_schema.py",
+        "symbol": "named_tuple_schema",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_simple",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Event",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_schema",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Position1",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_right_length",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Point",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_postponed_annotation",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Tup",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_different_module",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "other_module",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Tup",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_arbitrary_type",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "CustomClass",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Tup",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "ModelNoArbitraryTypes",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_recursive_namedtuple",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "MyNamedTuple",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_recursive_generic_namedtuple",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "MyNamedTuple",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_defaults",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "NT",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_inheritance_with_annotations",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Foo",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Bar",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_smart_union_preserves_class",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "A",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "B",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_field_serializers",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "NT",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_defer_build_serialization",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "LazyModel",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "LazyNT",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_from_attributes_error_locs",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "NT",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Attributes",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "__init__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_strict_ignored",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "NT",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_instances_revalidated",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "NT",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_invalid_input_type",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Point",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_missing_errors",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Point",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_validation_alias",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Point",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_mapping_input",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Map",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "__init__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "__iter__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "__len__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "__getitem__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Point",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_other_class_converted",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "A",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "B",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_serialization",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Point",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_serialization_warnings",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Point",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_serialization_include_exclude",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Point",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_as_dict_key_serialization",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "Point",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "test_namedtuple_union_serialization_preserves_class",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "A",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_namedtuple.py",
+        "symbol": "B",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "pydantic-core/tests/test_errors.py",
+      "pydantic-core/tests/test_schema_functions.py",
+      "tests/test_json_schema.py",
+      "tests/test_types_namedtuple.py",
+      "tests/types/test_namedtuple.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/pydantic/pydantic/pulls/13505/files"
+  }
+}

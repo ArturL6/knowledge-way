@@ -1,0 +1,71 @@
+{
+  "id": "pydantic-pydantic-issue-11862",
+  "corpus": "fastapi-stack/pydantic",
+  "category": "historical_issue_fix",
+  "description": "### Initial Checks\n\n- [x] I confirm that I'm using Pydantic V2\n\n### Description\n\nAttempting to use the `include` parameter to `model_dump` when the model has a `@model_serializer` method causes a `PydanticOmit` exception to be returned.\n\n### Example Code\n\n```Python\nfrom pydantic import BaseModel, model_serializer\n\nclass Foo(BaseModel):\n    bar:int\n    baz:int\n\n    @model_serializer(mode='wrap')\n    def _serialize(self, next_serializer, info):\n        return next_serializer(self, info)\n\nf = Foo(bar=123, baz=456)\n\nprint(f.model_dump(include={'bar'}))\n```\n\nOutput:\n```\nTraceback (most recent call last):\n  File \"/home/phemmer/.config/JetBrains/PyCharm2025.1/scratches/scratch_12.py\", line 9, in _serialize\n    return next_serializer(self, info)\npydantic_core._pydantic_core.PydanticOmit: PydanticOmit()\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/home/phemmer/.config/JetBrains/PyCharm2025.1/scratches/scratch_12.py\", line 13, in <module>\n    print(f.model_dump(include={'bar'}))\n          ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/home/phemmer/.local/lib/python3.13/site-packages/pydantic/main.py\", line 463, in model_dump\n    return self.__pydantic_serializer__.to_python(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        self,\n        ^^^^^\n    ...<11 lines>...\n        serialize_as_any=serialize_as_any,\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\npydantic_core._pydantic_core.PydanticSerializationError: Error calling function `_serialize`: PydanticOmit: PydanticOmit()\n```\n\n### Python, Pydantic & OS Version\n\n```Text\npydantic version: 2.11.4\n        pydantic-core version: 2.33.2\n          pydantic-core build: profile=release pgo=false\n               python version: 3.13.2 (main, Feb  4 2025, 00:00:00) [GCC 14.2.1 20240912 (Red Hat 14.2.1-3)]\n                     platform: Linux-6.10.4-200.fc40.x86_64-x86_64-with-glibc2.39\n             related packages: typing_extensions-4.12.2 pydantic-settings-2.8.1 fastapi-0.115.9\n                       commit: unknown\n```",
+  "source_issue": {
+    "number": 11862,
+    "url": "https://github.com/pydantic/pydantic/issues/11862",
+    "title": "Cannot use model_dump(include=...) with @model_serializer (raises PydanticOmit)"
+  },
+  "fix_pr": {
+    "number": 13506,
+    "url": "https://github.com/pydantic/pydantic/pull/13506",
+    "merged_at": "2026-08-05T11:03:23Z",
+    "merge_commit_sha": "57d0ad870110765089b6037313e8c4f507b7c4de",
+    "head_sha": "764cff4af95b5f5ecd570dee9558b898b0a14a74"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "pydantic-core/src/serializers/type_serializers/function.rs",
+        "status": "modified",
+        "sha": "5944310cc51eaa2eaef79e9974b8a26860417635",
+        "changes": 13
+      },
+      {
+        "path": "pydantic/functional_serializers.py",
+        "status": "modified",
+        "sha": "aad3a8b8dfea18f5bc9fff6fed4899175c76be04",
+        "changes": 49
+      },
+      {
+        "path": "tests/test_serialize.py",
+        "status": "modified",
+        "sha": "57832ca0a73842199e69f980f80bbed0a9675778",
+        "changes": 18
+      }
+    ],
+    "symbols": [
+      {
+        "path": "pydantic/functional_serializers.py",
+        "symbol": "convert_to_utc",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_serialize.py",
+        "symbol": "test_model_serializer_index_key_type_error",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_serialize.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_serialize.py",
+        "symbol": "_serialize",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "tests/test_serialize.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/pydantic/pydantic/pulls/13506/files"
+  }
+}
