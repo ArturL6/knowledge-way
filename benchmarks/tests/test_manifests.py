@@ -23,7 +23,10 @@ class BenchmarkManifestTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             temporary = pathlib.Path(temporary)
             corpus_root = temporary / "corpora"
-            for name in ("click-small", "flask-suite/flask", "flask-suite/werkzeug", "flask-suite/jinja"):
+            for name in (
+                "fastapi-stack/fastapi", "fastapi-stack/starlette", "fastapi-stack/pydantic",
+                "click-small", "flask-suite/flask", "flask-suite/werkzeug", "flask-suite/jinja",
+            ):
                 checkout = corpus_root / name
                 checkout.mkdir(parents=True)
                 subprocess.run(["git", "init"], cwd=checkout, check=True, capture_output=True)

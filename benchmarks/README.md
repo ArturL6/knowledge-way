@@ -6,7 +6,7 @@ No adapter or script installs, invokes, downloads, or assumes any competitor. A 
 
 ## Layout
 
-- `corpora.json` — public Git sources and pinned release refs. The resolved commit SHA is captured at execution.
+- `corpora.json` — public Git sources and pinned release refs. `fastapi-stack` is the owner-selected permanent Stage 0–2 workspace: FastAPI (consumer), Starlette (framework provider), and Pydantic (model/schema provider). Its three tag resolutions are recorded in the manifest; the resolved checkout SHA is captured again at execution.
 - `tasks.json` — curated task IDs and relevance/edge oracles. The initial task set is deliberately small and reviewable; expand it through pull requests with source citations.
 - `result.schema.json` — interchange and validation contract for completed runs.
 - `scripts/validate.py` — offline manifest/schema consistency validation.
