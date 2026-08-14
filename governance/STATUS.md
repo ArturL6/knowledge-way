@@ -94,11 +94,11 @@ packets:
     notes: "PR #72 merged at 259d28fbe6c5b441ed72b90e9466a6fe771e89ae from exact reviewed head bdc788a625117aac8bb54ffeb666e09d32aec3d0 after committed REVIEW-043 on_track authorization; packet verify, benchmark checks, 95 tests, and boundary contracts passed. GitHub approval was not a gate."
   - id: "0.3"
     title: "Retrieval scorecard baseline harness"
-    state: pr_open
+    state: review_blocked
     branch: "packet/0.3-scorecard-harness"
     verify: "python benchmarks/run_retrieval.py --help"
     blocked_by: ["0.1", "0.2"]
-    notes: "PR #74 is open at exact head 71328846c04cb7f1e17ec43c6eb2259e99ca9b0c. It records a live, selected fastapi-stack 25-task current-search baseline; semantic is honestly unconfigured because no Vertex environment values were present. Await committed exact-head reviewer verdict."
+    notes: "PR #74 at exact head 71328846c04cb7f1e17ec43c6eb2259e99ca9b0c is blocked by REVIEW-047. Tests and current-integration merge simulation pass, but the harness does not bind results to served repository snapshot SHAs, hashes task filenames rather than task contents, treats unexpected API failures as successful unavailable rows, and lacks focused harness tests. Remediate, rerun the actual baseline, and request exact-head re-review."
   - id: "0.4"
     title: "GitNexus local test drive"
     state: todo
@@ -133,7 +133,7 @@ next_instruction:
     - "Run the full applicable local gauntlet, including benchmark validation/tests, API tests, pytest, import-boundary checks, packet verify, and Playwright only if a web or UI-facing contract is touched."
     - "Open exactly one PR into integration/roadmap-v2 with evidence bound to its exact head; do not merge without a committed exact-head on_track reviewer verdict."
   done_when: "python benchmarks/run_retrieval.py --help passes; a reproducible baseline scorecard from an actual harness run is committed; the full applicable gauntlet is green; and the exact-head packet 0.3 PR is open into integration/roadmap-v2."
-last_review: REVIEW-046
+last_review: REVIEW-047
 drift_flags: []
 ```
 
