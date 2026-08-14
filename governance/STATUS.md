@@ -94,10 +94,11 @@ packets:
     notes: "PR #72 merged at 259d28fbe6c5b441ed72b90e9466a6fe771e89ae from exact reviewed head bdc788a625117aac8bb54ffeb666e09d32aec3d0 after committed REVIEW-043 on_track authorization; packet verify, benchmark checks, 95 tests, and boundary contracts passed. GitHub approval was not a gate."
   - id: "0.3"
     title: "Retrieval scorecard baseline harness"
-    state: in_progress
+    state: pr_open
     branch: "packet/0.3-scorecard-harness"
     verify: "python benchmarks/run_retrieval.py --help"
     blocked_by: ["0.1", "0.2"]
+    notes: "PR #74 is open at exact head 71328846c04cb7f1e17ec43c6eb2259e99ca9b0c. It records a live, selected fastapi-stack 25-task current-search baseline; semantic is honestly unconfigured because no Vertex environment values were present. Await committed exact-head reviewer verdict."
   - id: "0.4"
     title: "GitNexus local test drive"
     state: todo
