@@ -1,0 +1,102 @@
+{
+  "schema_version": "1.0",
+  "repo": "kw-starlette-0-4",
+  "observations": [
+    {
+      "id": "01-implementation",
+      "tool": "query",
+      "query": "Where is route registration implemented?",
+      "classification": "correct",
+      "latency_ms": 269.802,
+      "raw_output": "Found 2 execution flow(s):\n\n1. Get_schema \u2192 _remove_converter (3 steps, 1 symbols)\n   undefined get_endpoints \u2192 starlette/schemas.py:35\n\n2. __call__ \u2192 Get_route_path (3 steps, 2 symbols)\n   undefined get_path \u2192 starlette/staticfiles.py:100\n   undefined get_route_path \u2192 starlette/_utils.py:85\n\nStandalone definitions:\n  Symbol BaseSchemaGenerator \u2192 starlette/schemas.py\n  Symbol endpoints_info \u2192 starlette/schemas.py\n  Symbol host \u2192 starlette/routing.py\n  Symbol add_route \u2192 starlette/routing.py\n  Symbol add_websocket_route \u2192 starlette/routing.py\n  Symbol add_websocket_route \u2192 starlette/applications.py\n  Symbol route \u2192 starlette/applications.py\n  Symbol websocket_route \u2192 starlette/applications.py\n  ... and 12 more\n---\nNext: Pick a symbol above and run gitnexus-context \"<name>\" to see all its callers, callees, and execution flows."
+    },
+    {
+      "id": "02-symbol-purpose",
+      "tool": "context",
+      "query": "Route",
+      "classification": "correct",
+      "latency_ms": 65.376,
+      "raw_output": "Class Route \u2192 starlette/routing.py:207-301\n\nCalled/imported by (22):\n  \u2190 [imports] undefined test_testclient.py \u2192 tests/test_testclient.py\n  \u2190 [imports] undefined test_templates.py \u2192 tests/test_templates.py\n  \u2190 [imports] undefined test_staticfiles.py \u2192 tests/test_staticfiles.py\n  \u2190 [imports] undefined test_schemas.py \u2192 tests/test_schemas.py\n  \u2190 [imports] undefined test_routing.py \u2192 tests/test_routing.py\n  \u2190 [imports] undefined test_formparsers.py \u2192 tests/test_formparsers.py\n  \u2190 [imports] undefined test_exceptions.py \u2192 tests/test_exceptions.py\n  \u2190 [imports] undefined test_endpoints.py \u2192 tests/test_endpoints.py\n  \u2190 [imports] undefined test_convertors.py \u2192 tests/test_convertors.py\n  \u2190 [imports] undefined test_concurrency.py \u2192 tests/test_concurrency.py\n\nCalls/imports (10):\n  \u2192 [method_overrides] undefined matches \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __init__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined matches \u2192 starlette/routing.py\n  \u2192 [has_method] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [has_method] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __eq__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __repr__ \u2192 starlette/routing.py\n  \u2192 [extends] undefined BaseRoute \u2192 starlette/routing.py\n---\nNext: To check what breaks if you change this, run gitnexus-impact \"<name>\" upstream"
+    },
+    {
+      "id": "03-callers",
+      "tool": "context",
+      "query": "Route",
+      "classification": "partial",
+      "latency_ms": 56.585,
+      "raw_output": "Class Route \u2192 starlette/routing.py:207-301\n\nCalled/imported by (22):\n  \u2190 [imports] undefined test_testclient.py \u2192 tests/test_testclient.py\n  \u2190 [imports] undefined test_templates.py \u2192 tests/test_templates.py\n  \u2190 [imports] undefined test_staticfiles.py \u2192 tests/test_staticfiles.py\n  \u2190 [imports] undefined test_schemas.py \u2192 tests/test_schemas.py\n  \u2190 [imports] undefined test_routing.py \u2192 tests/test_routing.py\n  \u2190 [imports] undefined test_formparsers.py \u2192 tests/test_formparsers.py\n  \u2190 [imports] undefined test_exceptions.py \u2192 tests/test_exceptions.py\n  \u2190 [imports] undefined test_endpoints.py \u2192 tests/test_endpoints.py\n  \u2190 [imports] undefined test_convertors.py \u2192 tests/test_convertors.py\n  \u2190 [imports] undefined test_concurrency.py \u2192 tests/test_concurrency.py\n\nCalls/imports (10):\n  \u2192 [method_overrides] undefined matches \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __init__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined matches \u2192 starlette/routing.py\n  \u2192 [has_method] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [has_method] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __eq__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __repr__ \u2192 starlette/routing.py\n  \u2192 [extends] undefined BaseRoute \u2192 starlette/routing.py\n---\nNext: To check what breaks if you change this, run gitnexus-impact \"<name>\" upstream"
+    },
+    {
+      "id": "04-callees",
+      "tool": "context",
+      "query": "Route",
+      "classification": "partial",
+      "latency_ms": 53.74,
+      "raw_output": "Class Route \u2192 starlette/routing.py:207-301\n\nCalled/imported by (22):\n  \u2190 [imports] undefined test_testclient.py \u2192 tests/test_testclient.py\n  \u2190 [imports] undefined test_templates.py \u2192 tests/test_templates.py\n  \u2190 [imports] undefined test_staticfiles.py \u2192 tests/test_staticfiles.py\n  \u2190 [imports] undefined test_schemas.py \u2192 tests/test_schemas.py\n  \u2190 [imports] undefined test_routing.py \u2192 tests/test_routing.py\n  \u2190 [imports] undefined test_formparsers.py \u2192 tests/test_formparsers.py\n  \u2190 [imports] undefined test_exceptions.py \u2192 tests/test_exceptions.py\n  \u2190 [imports] undefined test_endpoints.py \u2192 tests/test_endpoints.py\n  \u2190 [imports] undefined test_convertors.py \u2192 tests/test_convertors.py\n  \u2190 [imports] undefined test_concurrency.py \u2192 tests/test_concurrency.py\n\nCalls/imports (10):\n  \u2192 [extends] undefined BaseRoute \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined matches \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __init__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined matches \u2192 starlette/routing.py\n  \u2192 [has_method] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [has_method] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __eq__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __repr__ \u2192 starlette/routing.py\n---\nNext: To check what breaks if you change this, run gitnexus-impact \"<name>\" upstream"
+    },
+    {
+      "id": "05-trace",
+      "tool": "context",
+      "query": "Route",
+      "classification": "not-representable",
+      "latency_ms": 46.436,
+      "raw_output": "Class Route \u2192 starlette/routing.py:207-301\n\nCalled/imported by (22):\n  \u2190 [imports] undefined test_testclient.py \u2192 tests/test_testclient.py\n  \u2190 [imports] undefined test_templates.py \u2192 tests/test_templates.py\n  \u2190 [imports] undefined test_staticfiles.py \u2192 tests/test_staticfiles.py\n  \u2190 [imports] undefined test_schemas.py \u2192 tests/test_schemas.py\n  \u2190 [imports] undefined test_routing.py \u2192 tests/test_routing.py\n  \u2190 [imports] undefined test_formparsers.py \u2192 tests/test_formparsers.py\n  \u2190 [imports] undefined test_exceptions.py \u2192 tests/test_exceptions.py\n  \u2190 [imports] undefined test_endpoints.py \u2192 tests/test_endpoints.py\n  \u2190 [imports] undefined test_convertors.py \u2192 tests/test_convertors.py\n  \u2190 [imports] undefined test_concurrency.py \u2192 tests/test_concurrency.py\n\nCalls/imports (10):\n  \u2192 [method_overrides] undefined matches \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __init__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined matches \u2192 starlette/routing.py\n  \u2192 [has_method] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [has_method] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __eq__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __repr__ \u2192 starlette/routing.py\n  \u2192 [extends] undefined BaseRoute \u2192 starlette/routing.py\n---\nNext: To check what breaks if you change this, run gitnexus-impact \"<name>\" upstream"
+    },
+    {
+      "id": "06-impact",
+      "tool": "impact",
+      "query": "Route",
+      "classification": "partial",
+      "latency_ms": 62.213,
+      "raw_output": "Blast radius for  Route (undefined): 19 symbol(s) this depends on\n\u26a0\ufe0f  Lower bound \u2014 unresolved indirection on the path (callers binding via DI / dynamic dispatch are not traced; actual impact may be higher):\n    \u2022 BaseRoute is an interface with 4 implementations; callers that bind via the interface (e.g. a DI container or dynamic dispatch) are not traced to the concrete symbol \u2014 actual impact may be higher.\n\nd=1: WILL BREAK (direct) (15)\n  undefined websockets.py \u2192 starlette/websockets.py [IMPORTS]\n  undefined types.py \u2192 starlette/types.py [IMPORTS]\n  undefined responses.py \u2192 starlette/responses.py [IMPORTS]\n  undefined requests.py \u2192 starlette/requests.py [IMPORTS]\n  undefined exceptions.py \u2192 starlette/exceptions.py [IMPORTS]\n  undefined datastructures.py \u2192 starlette/datastructures.py [IMPORTS]\n  undefined convertors.py \u2192 starlette/convertors.py [IMPORTS]\n  undefined concurrency.py \u2192 starlette/concurrency.py [IMPORTS]\n  undefined _utils.py \u2192 starlette/_utils.py [IMPORTS]\n  undefined _exception_handler.py \u2192 starlette/_exception_handler.py [IMPORTS]\n  ... and 5 more\n\nd=2: LIKELY AFFECTED (indirect) (4)\n  undefined formparsers.py \u2192 starlette/formparsers.py [IMPORTS]\n  undefined background.py \u2192 starlette/background.py [IMPORTS]\n  undefined _compat.py \u2192 starlette/_compat.py [IMPORTS]\n  undefined exceptions.py \u2192 starlette/middleware/exceptions.py [IMPORTS]\n---\nNext: Review d=1 items first (WILL BREAK). Read the source with cat to understand the code, then make your fix."
+    },
+    {
+      "id": "07-cross-repository-consumer",
+      "tool": "query",
+      "query": "Which repository consumes Starlette Route?",
+      "classification": "not-representable",
+      "latency_ms": 484.825,
+      "raw_output": "Found 2 execution flow(s):\n\n1. Json \u2192 Stream (3 steps, 1 symbols)\n   undefined stream \u2192 starlette/requests.py:210\n\n2. Form \u2192 Stream (3 steps, 1 symbols)\n\nStandalone definitions:\n  Symbol router \u2192 starlette/requests.py\n  Symbol requests.py \u2192 starlette/requests.py\n  Symbol wrapped_receive \u2192 starlette/middleware/base.py\n  Symbol _CachedRequest \u2192 starlette/middleware/base.py\n  Symbol stream \u2192 starlette/middleware/base.py\n  Symbol router \u2192 tests/test_exceptions.py\n  Symbol test_exceptions.py \u2192 tests/test_exceptions.py\n  Symbol test_request_in_app_and_handler_is_the_same_object \u2192 tests/test_exceptions.py\n  ... and 12 more\n---\nNext: Pick a symbol above and run gitnexus-context \"<name>\" to see all its callers, callees, and execution flows."
+    },
+    {
+      "id": "08-tests",
+      "tool": "context",
+      "query": "Route",
+      "classification": "correct",
+      "latency_ms": 95.52,
+      "raw_output": "Class Route \u2192 starlette/routing.py:207-301\n\nCalled/imported by (22):\n  \u2190 [imports] undefined test_testclient.py \u2192 tests/test_testclient.py\n  \u2190 [imports] undefined test_templates.py \u2192 tests/test_templates.py\n  \u2190 [imports] undefined test_staticfiles.py \u2192 tests/test_staticfiles.py\n  \u2190 [imports] undefined test_schemas.py \u2192 tests/test_schemas.py\n  \u2190 [imports] undefined test_routing.py \u2192 tests/test_routing.py\n  \u2190 [imports] undefined test_formparsers.py \u2192 tests/test_formparsers.py\n  \u2190 [imports] undefined test_exceptions.py \u2192 tests/test_exceptions.py\n  \u2190 [imports] undefined test_endpoints.py \u2192 tests/test_endpoints.py\n  \u2190 [imports] undefined test_convertors.py \u2192 tests/test_convertors.py\n  \u2190 [imports] undefined test_concurrency.py \u2192 tests/test_concurrency.py\n\nCalls/imports (10):\n  \u2192 [extends] undefined BaseRoute \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined matches \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __init__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined matches \u2192 starlette/routing.py\n  \u2192 [has_method] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [has_method] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __eq__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __repr__ \u2192 starlette/routing.py\n---\nNext: To check what breaks if you change this, run gitnexus-impact \"<name>\" upstream"
+    },
+    {
+      "id": "09-value-origin",
+      "tool": "context",
+      "query": "Route",
+      "classification": "partial",
+      "latency_ms": 84.471,
+      "raw_output": "Class Route \u2192 starlette/routing.py:207-301\n\nCalled/imported by (22):\n  \u2190 [imports] undefined test_testclient.py \u2192 tests/test_testclient.py\n  \u2190 [imports] undefined test_templates.py \u2192 tests/test_templates.py\n  \u2190 [imports] undefined test_staticfiles.py \u2192 tests/test_staticfiles.py\n  \u2190 [imports] undefined test_schemas.py \u2192 tests/test_schemas.py\n  \u2190 [imports] undefined test_routing.py \u2192 tests/test_routing.py\n  \u2190 [imports] undefined test_formparsers.py \u2192 tests/test_formparsers.py\n  \u2190 [imports] undefined test_exceptions.py \u2192 tests/test_exceptions.py\n  \u2190 [imports] undefined test_endpoints.py \u2192 tests/test_endpoints.py\n  \u2190 [imports] undefined test_convertors.py \u2192 tests/test_convertors.py\n  \u2190 [imports] undefined test_concurrency.py \u2192 tests/test_concurrency.py\n\nCalls/imports (10):\n  \u2192 [method_overrides] undefined matches \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [method_overrides] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __init__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined matches \u2192 starlette/routing.py\n  \u2192 [has_method] undefined url_path_for \u2192 starlette/routing.py\n  \u2192 [has_method] undefined handle \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __eq__ \u2192 starlette/routing.py\n  \u2192 [has_method] undefined __repr__ \u2192 starlette/routing.py\n  \u2192 [extends] undefined BaseRoute \u2192 starlette/routing.py\n---\nNext: To check what breaks if you change this, run gitnexus-impact \"<name>\" upstream"
+    },
+    {
+      "id": "10-equivalent-functionality",
+      "tool": "query",
+      "query": "route registration",
+      "classification": "partial",
+      "latency_ms": 254.707,
+      "raw_output": "Found 2 execution flow(s):\n\n1. Get_schema \u2192 _remove_converter (3 steps, 1 symbols)\n   undefined get_endpoints \u2192 starlette/schemas.py:35\n\n2. __call__ \u2192 Get_route_path (3 steps, 2 symbols)\n   undefined get_path \u2192 starlette/staticfiles.py:100\n   undefined get_route_path \u2192 starlette/_utils.py:85\n\nStandalone definitions:\n  Symbol BaseSchemaGenerator \u2192 starlette/schemas.py\n  Symbol endpoints_info \u2192 starlette/schemas.py\n  Symbol host \u2192 starlette/routing.py\n  Symbol add_route \u2192 starlette/routing.py\n  Symbol add_websocket_route \u2192 starlette/routing.py\n  Symbol add_websocket_route \u2192 starlette/applications.py\n  Symbol route \u2192 starlette/applications.py\n  Symbol websocket_route \u2192 starlette/applications.py\n  ... and 12 more\n---\nNext: Pick a symbol above and run gitnexus-context \"<name>\" to see all its callers, callees, and execution flows."
+    },
+    {
+      "id": "11-cross-repository-user-flow",
+      "tool": "query",
+      "query": "FastAPI request flow",
+      "classification": "not-representable",
+      "latency_ms": 305.391,
+      "raw_output": "Found 9 execution flow(s):\n\n1. __call__ \u2192 Format_line (5 steps, 2 symbols)\n   undefined __call__ \u2192 starlette/middleware/errors.py:149\n   undefined debug_response \u2192 starlette/middleware/errors.py:249\n\n2. __call__ \u2192 Generate_plain_text (3 steps, 2 symbols)\n\n3. __call__ \u2192 Is_not_modified (4 steps, 2 symbols)\n   undefined file_response \u2192 starlette/staticfiles.py:168\n   undefined is_not_modified \u2192 starlette/staticfiles.py:198\n\n4. __init__ \u2192 Is_async_callable (3 steps, 1 symbols)\n   undefined request_response \u2192 starlette/routing.py:57\n\n5. __await__ \u2192 Is_async_callable (3 steps, 1 symbols)\n   undefined dispatch \u2192 starlette/endpoints.py:30\n\n6. __await__ \u2192 Run_in_threadpool (3 steps, 1 symbols)\n\n7. __call__ \u2192 Is_allowed_origin (3 steps, 1 symbols)\n   undefined preflight_response \u2192 starlette/middleware/cors.py:103\n\n8. Send \u2192 Add_vary_header (3 steps, 1 symbols)\n   undefined send \u2192 starlette/middleware/cors.py:145\n\n9. Form \u2192 Parse (3 steps, 1 symbols)\n   undefined parse \u2192 starlette/formparsers.py:74\n\nStandalone definitions:\n  Symbol test_lifespan_app_subclass \u2192 tests/test_applications.py\n  Symbol App \u2192 tests/test_applications.py\n  Symbol get \u2192 tests/test_applications.py\n  Symbol OpenAPIResponse \u2192 starlette/schemas.py\n  Symbol render \u2192 starlette/schemas.py\n  Symbol schemas.py \u2192 starlette/schemas.py\n  Symbol dispatch \u2192 tests/middleware/test_base.py\n  Symbol dispatch \u2192 tests/middleware/test_base.py\n  ... and 12 more\n---\nNext: Pick a symbol above and run gitnexus-context \"<name>\" to see all its callers, callees, and execution flows."
+    },
+    {
+      "id": "12-missing-architecture",
+      "tool": "cypher",
+      "query": "MATCH (n) RETURN count(n)",
+      "classification": "partial",
+      "latency_ms": 3.981,
+      "raw_output": "{\n  \"markdown\": \"| COUNT(n._ID) |\\n| --- |\\n| 2333 |\",\n  \"row_count\": 1\n}\n---\nNext: To explore a result symbol in depth, run gitnexus-context \"<name>\""
+    }
+  ]
+}
