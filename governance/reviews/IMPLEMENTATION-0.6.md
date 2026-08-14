@@ -89,3 +89,20 @@ node --check scripts/quickstart_playwright.mjs; bash -n scripts/quickstart_smoke
 The run uses `EMBEDDING_PROVIDER=none`, `CODE_CARDS_ENABLED=false`, and `RERANK_PROVIDER=none`;
 no LLM, embedding, card, or rerank request was made. Cumulative estimated monthly spend remains
 USD 0.00.
+
+## REVIEW-031 conflict remediation (2026-08-14)
+
+Merged refreshed `origin/integration/roadmap-v2` (`96e6fbb`) into the packet branch as
+`f81e3c2f2dc3ac0f1ee837a795a569aaf059321b`. The only merge conflicts were
+`governance/STATUS.md` and `governance/operations/RUNLOG.md`; resolution retains all newer
+integration directives and reviews, the REVIEW-031 `review_blocked` state, and both histories'
+append-only RUNLOG entries.
+
+The applicable full gauntlet was rerun on that merged candidate: `uv sync --all-groups`; Python
+suite **95 passed**; import lint **2 kept, 0 broken**; `stageR_import_boundary.sh`,
+`stageR_uv.sh`, `stageR_evidence.sh`, and `stageR_sync_main.sh` **PASS**; web tests **70 passed**;
+web production build **PASS**; web Playwright **1 passed**; and `scripts/quickstart_smoke.sh`
+**PASS**. The smoke used isolated ephemeral loopback ports (API docs `http://127.0.0.1:41023/docs`,
+web `http://127.0.0.1:54809`) and completed the browser add/index/search/evidence flow for all
+three selected fastapi-stack repositories and two recorded dependencies. It made no LLM,
+embedding, card, or rerank request; cumulative estimated product spend remains **USD 0.00**.
