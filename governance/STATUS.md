@@ -68,7 +68,7 @@ packets:
     notes: "origin/main merged at 2823ded; 84-test ratchet and full local gauntlet are recorded in IMPLEMENTATION-R.7a. Quickstart remains owned by blocked packet 0.6 and must pass before Stage-R promotion."
   - id: "0.1"
     title: "Workspace selection: fastapi-stack"
-    state: todo
+    state: pr_open
     branch: "packet/0.1-fastapi-stack-corpus"
     verify: "test -f benchmarks/corpora.json"
     blocked_by: ["R.7a"]
@@ -106,7 +106,7 @@ packets:
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "May proceed in parallel with 0.2–0.5. Keyless default uses EMBEDDING_PROVIDER=none."
-last_review: REVIEW-028
+last_review: REVIEW-029
 drift_flags: []
 next_instruction: null
 ```
