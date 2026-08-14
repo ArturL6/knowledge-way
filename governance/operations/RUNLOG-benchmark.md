@@ -17,3 +17,4 @@ costs are outside the USD 50 product-LLM cap.
 2026-08-14T15:15:05+00:00 | benchmark-run | tick | no-op; refreshed integration/roadmap-v2 to eb03f95; Stage 0 retrieval scorecard harness absent
 2026-08-14T16:15:02+00:00 | benchmark-run | tick | no-op; refreshed integration/roadmap-v2 to c5d9fda; Stage 0 retrieval scorecard adapter/GitNexus runner absent
 2026-08-14T17:15:05+00:00 | benchmark-run | tick | no-op; refreshed integration/roadmap-v2 to 0e4df0f; Stage 0 retrieval scorecard harness absent
+2026-08-14T18:15:38+00:00 | benchmark-run | action | refreshed integration/roadmap-v2 to 82694c8; Stage 0 harness present and last scorecard was 5ae69f0, but run blocked by live API snapshot mismatch: fastapi expected 40e33e492dbf4af6172997f4e3238a32e56cbe26, served 244d66308d6c525f394d0c2ce32dabceb2ed262b; no scorecard committed
