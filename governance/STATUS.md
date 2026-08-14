@@ -82,7 +82,8 @@ packets:
     blocked_by: ["0.1"]
     pr: 72
     head_sha: "bdc788a625117aac8bb54ffeb666e09d32aec3d0"
-    notes: "Rebased on conflict-resistant integration governance at 4d7e66f. Packet payload is unchanged; STATUS and RUNLOG changes were intentionally removed from the packet branch, both histories are preserved on integration, and the local gauntlet passed again. Exact-head re-review is required."
+    reviewed_head_sha: "bdc788a625117aac8bb54ffeb666e09d32aec3d0"
+    notes: "REVIEW-043 independently re-executed packet verify, benchmark checks, 95 tests, and boundary contracts at the rebased exact head; mergeability against integration 2602521 passes. Exact-SHA on_track merge authorization is recorded."
   - id: "0.3"
     title: "Retrieval scorecard baseline harness"
     state: todo
@@ -109,7 +110,7 @@ packets:
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
-last_review: REVIEW-042
+last_review: REVIEW-043
 drift_flags: []
 next_instruction:
   issued_by: sol-navigator
