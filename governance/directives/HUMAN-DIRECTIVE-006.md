@@ -60,6 +60,14 @@ For every task where GitNexus finds one or more gold files and Knowledge-Way doe
 
 If a demonstrated winning mechanism has no adequate Stage 1 coverage, propose the necessary packet adjustment through an ADR; do not copy or translate GitNexus source. This is behavioral analysis only. Finalize Stage 1's exit bar from the committed comparative numbers and mechanism study.
 
+## Licensing boundary — benchmark reference only
+
+GitNexus is licensed under **PolyForm Noncommercial 1.0.0** and is a benchmark reference only. It must never be integrated into Knowledge-Way in any form: not as a dependency, library, subprocess, bundled binary, vendored code, Docker-image/runtime component, or required/invoked product-code path.
+
+Its only permitted location is the isolated benchmark environment: `benchmarks/` runner material and ephemeral evaluation containers. It is installed at evaluation time and torn down afterwards. No content from `benchmarks/gitnexus-*` artifacts may be copied into product code. Findings may inform packet design only through the ADR channel.
+
+The independent reviewer treats any GitNexus reference in product code, product dependencies, or product Docker images as an immediate `drift` finding. If the project moves toward commercial operation, even benchmark usage must be re-reviewed with counsel before continuing. This directive is operational policy, not legal advice or a license interpretation.
+
 ## Gold-task quality escalation
 
 If GitNexus's comparable aggregate score is **below 0.2**, treat that as a **gold-task-quality flag**, not a product verdict. Record the flag, pause Stage 1 start, and have Sol review the task set/oracles before Stage 1 begins. Do not weaken or rewrite gold tasks merely to clear the threshold; any task-set correction requires independent review and rebinding of results.
