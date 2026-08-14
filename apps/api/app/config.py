@@ -31,7 +31,9 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_chat_model: str = "gpt-4.1-mini"
     # Semantic retrieval is opt-in. "none" makes no embedding network requests.
-    embedding_provider: str = "none"
+    # The owner-selected production default is Vertex AI text-embedding-005 at 768 dimensions.
+    # The keyless local quickstart overrides this to "none"; OpenRouter remains a fallback adapter.
+    embedding_provider: str = "vertex"
     embedding_batch_size: int = 32
     openrouter_api_key: str | None = None
     openrouter_embedding_model: str = "openai/text-embedding-3-small"
@@ -48,10 +50,10 @@ class Settings(BaseSettings):
     code_cards_enabled: bool = False
     # "vertex" uses ADC and Gemini; "openrouter" reuses OPENROUTER_API_KEY. The model must support
     # structured outputs, because a card is only persisted if it validates against CodeCardDetails.
-    code_card_provider: str = "openrouter"
+    code_card_provider: str = "vertex"
     openrouter_card_model: str = "deepseek/deepseek-v4-flash-0731"
     vertex_gemini_location: str = "global"
-    vertex_gemini_model: str = "gemini-3.5-flash"
+    vertex_gemini_model: str = "gemini-3.5-flash-lite"
     code_card_max_source_characters: int = 12000
     # Bounded in-flight Gemini requests. Keep this deliberately small to respect quota.
     code_card_request_concurrency: int = 8

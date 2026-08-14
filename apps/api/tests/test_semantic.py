@@ -1,4 +1,4 @@
-from app.config import settings
+from app.config import Settings, settings
 import pytest
 from app.providers import (OpenRouterEmbeddingProvider, VertexEmbeddingProvider,
                            clamp_embedding_input, embedding_provider, semantic_capability)
@@ -11,6 +11,16 @@ def test_semantic_provider_is_disabled_without_explicit_openrouter_key(monkeypat
     monkeypatch.setattr(settings, "openrouter_api_key", None)
     assert embedding_provider() is None
     assert semantic_capability()["state"] == "disabled"
+
+
+def test_owner_selected_provider_defaults_are_vertex():
+    fields = Settings.model_fields
+    assert fields["embedding_provider"].default == "vertex"
+    assert fields["vertex_embedding_model"].default == "text-embedding-005"
+    assert fields["vertex_embedding_dimensions"].default == 768
+    assert fields["code_card_provider"].default == "vertex"
+    assert fields["vertex_gemini_model"].default == "gemini-3.5-flash-lite"
+    assert fields["rerank_provider"].default == "none"
 
 
 def test_openrouter_without_key_never_creates_provider(monkeypatch):
@@ -108,8 +118,8 @@ def test_vertex_splits_a_payload_vertex_rejects(monkeypatch):
 
 
 def test_hybrid_fusion_is_deterministic():
-    first = {"type": "chunk", "file_id": "a", "start_line": 1, "end_line": 2, "score": .2}
-    second = {"type": "chunk", "file_id": "b", "start_line": 1, "end_line": 2, "score": .9}
+    first = {"type": "chunk", "result_id": "a", "file_id": "a", "start_line": 1, "end_line": 2, "score": .2}
+    second = {"type": "chunk", "result_id": "b", "file_id": "b", "start_line": 1, "end_line": 2, "score": .9}
     assert [item["file_id"] for item in _fuse([[first, second], [first]], 2)] == ["a", "b"]
 
 
