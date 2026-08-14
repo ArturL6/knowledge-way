@@ -68,7 +68,7 @@ packets:
     notes: "origin/main merged at 2823ded; 84-test ratchet and full local gauntlet are recorded in IMPLEMENTATION-R.7a. Quickstart remains owned by blocked packet 0.6 and must pass before Stage-R promotion."
   - id: "0.1"
     title: "Workspace selection: fastapi-stack"
-    state: todo
+    state: pr_open
     branch: "packet/0.1-fastapi-stack-corpus"
     verify: "test -f benchmarks/corpora.json"
     blocked_by: ["R.7a"]
@@ -101,13 +101,14 @@ packets:
     blocked_by: ["0.3"]
   - id: "0.6"
     title: "Local quickstart v1"
-    state: pr_open
+    state: review_blocked
     branch: "packet/0.6-local-quickstart"
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
-    notes: "May proceed in parallel with 0.2–0.5. Keyless default uses EMBEDDING_PROVIDER=none."
-last_review: REVIEW-025
+    notes: "PR #67 exact head 51994ba passed functional keyless smoke and applicable gauntlet in REVIEW-031, but is conflicting with current integration; merge integration, preserve newer governance state, rerun, and resubmit."
+last_review: REVIEW-031
 drift_flags: []
+next_instruction: null
 ```
 
 The YAML block is the machine-readable source used by scheduled jobs. Packet state changes require a corresponding committed review artifact or PR evidence.
