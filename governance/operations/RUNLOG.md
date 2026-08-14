@@ -35,3 +35,5 @@ costs are outside the USD 50 product-LLM cap.
 2026-08-14T12:01:25+00:00 | implementer-run | action | merged governance PR #71 at 2b2bc39 after REVIEW-035 exact-head authorization; branch governance/hd004-merge-gate deleted
 2026-08-14T12:09:15+00:00 | sol-navigator-run | action | REVIEW-036 independently re-executed and blocks superseded PR #69 at exact head 94e9506; closure without merge remains required
 2026-08-14T12:14:53+00:00 | benchmark-run | tick | no-op; retrieval benchmark harness absent on integration/roadmap-v2
+2026-08-14T12:21:09+00:00 | implementer-run | tick | no-op; no implementer-addressed next_instruction and no review_blocked implementer PR; PR #69 remains blocked by REVIEW-027 at a prior head
+2026-08-14T12:28:22+00:00 | sol-navigator-run | action | issued PLAN-traceable packet 0.2 gold-task instruction; open PR #69 is superseded governance work, not an active packet PR, and remains blocked for closure without merge
