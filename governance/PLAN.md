@@ -145,14 +145,15 @@ last_review: REVIEW-014
 drift_flags: []
 ```
 
-### Scheduled jobs (set up as Hermes cron jobs in packet R.1)
+### Scheduled jobs (ADR-005 / HUMAN-DIRECTIVE-003)
 
 | Job | Schedule | Prompt contract |
 |---|---|---|
-| `implementer-run` | nightly (or every N hours) | Read PLAN.md + STATUS.md. **First: merge main → integration if main moved; merge integration → current packet branch if stale.** Pick the lowest-numbered `todo` packet with no unmet `blocked_by`. Set `in_progress`. Implement on `packet/<id>-<slug>` branched from integration. Run the **full test gauntlet** (static checks, unit, API endpoint tests, Playwright if web/UI touched, packet `verify`, scorecard if retrieval touched). Open PR **into integration** containing: diff, gauntlet + verify output, STATUS.md update to `pr_open`. **Never** start a packet from a future stage. **Never** merge. |
-| `reviewer-run` | every morning | For each `pr_open` packet: fetch diff + recorded local gauntlet output + verify output. Check against PLAN.md packet definition and standing rules. Write `governance/reviews/REVIEW-NNN.md` with the verdict contract below. Verdict `on_track` → approve merge. `drift` → set `review_blocked` with required actions. |
-| `drift-audit` | weekly | Diff the integration branch against PLAN.md stage scope. Check: hexagon boundary intact, no unplanned dependencies, scorecard trend not regressing, STATUS.md matches reality, integration current with main. Output: audit review + updated `drift_flags`. |
-| `benchmark-run` | weekly (from Stage 0 on) | Run the gold-task harness against integration; commit scorecard to `benchmarks/results/`; flag any regression as a drift finding. |
+| `sol-navigator-run` | every 20 minutes | Read STATUS.md, PLAN.md, directives, open PRs, and reviews. Do exactly one: independently review a `pr_open` packet with ADR-003 re-execution and issue a verdict; nudge an `in_progress` packet stale for over six hours; issue one PLAN-backed `next_instruction` when no PR is open; or no-op. Perform the drift audit at least once every 24 hours. Never write application code. |
+| `implementer-run` | every 20 minutes | Read STATUS.md and do exactly one: execute an unblocked `next_instruction` addressed to it on a fresh packet branch from integration; resolve its `review_blocked` PR; merge only after Sol's approving verdict; or no-op. Run the full gauntlet, open/update the PR into integration, and never self-select a packet. LLM/embedding changes require the subset-first evidence defined in ADR-005. |
+| `benchmark-run` | every 20 minutes | Until the Stage 0 harness exists, no-op. When integration changed since the last scorecard, run and commit the retrieval scorecard. Once packet 0.4 supplies it, run the scripted GitNexus comparison on the same gold tasks; write a STATUS drift flag for regressions. Never modify application code. |
+
+No-op ticks append local RUNLOG heartbeats and push at most one consolidated heartbeat commit per hour; action ticks push immediately. Product LLM spend is logged against the USD 50 cap and LLM packets pause at USD 40.
 
 ### Reviewer verdict contract (every review, no exceptions)
 
