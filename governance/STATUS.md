@@ -2,6 +2,11 @@
 
 ```yaml
 stage: R
+owner_testable: true
+owner_quickstart:
+  - "git clone --branch integration/roadmap-v2 https://github.com/ArturL6/knowledge-way.git"
+  - "cd knowledge-way"
+  - "./scripts/quickstart_smoke.sh --keep-running"
 packets:
   - id: "R.0"
     title: "Governance dry run"

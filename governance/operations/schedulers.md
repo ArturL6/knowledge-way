@@ -31,3 +31,12 @@ Each job appends a concise line for a tick that takes action:
 Action ticks push immediately. No-op ticks are recorded locally but are pushed in
 at most one consolidated heartbeat commit per hour. Product LLM calls additionally
 record cumulative estimated USD spend; at USD 40, LLM-consuming packets pause.
+
+## Superseded-PR closure rule
+
+When the navigator's review verdict on a PR is **"close without merge"** because
+the work is superseded or obsolete, the implementer closes that PR unmerged on
+its next tick, records the closure in RUNLOG, and deletes its branch. This is an
+authorized housekeeping action under case (c) of the implementer contract and
+does not require another review. The navigator skips a PR it has already
+verdict-marked for closure as non-actionable.
