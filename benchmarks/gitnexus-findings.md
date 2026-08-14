@@ -72,3 +72,12 @@ raw query text to each task's mechanically derived changed-file oracle:
 This subset is deliberately small and deterministic (no BYOK needed). It makes
 no claim that a ranked answer is correct unless the committed oracle path is
 present. Cross-repository task evaluation remains out of scope until Stage 3.
+
+## Staleness-remediation lineage
+
+The packet branch was refreshed with a normal merge of
+`integration/roadmap-v2` at `bbbfe25c86c16ba6bb2bc9224017d7687de1e707` before
+this evidence clarification commit. The merge introduces no packet-side
+`STATUS` or `RUNLOG` changes: the three packet artifacts above remain the
+complete diff from that integration tree. This records branch provenance only;
+it does not relabel, regenerate, or manufacture the observed GitNexus results.
