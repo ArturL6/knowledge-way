@@ -60,10 +60,11 @@ packets:
     integration_merge: "68d0f136dc1a015c7c0d183ec494a59f64d9da1d"
   - id: "R.7a"
     title: "Synchronize origin/main into integration"
-    state: pr_open
+    state: done
     branch: "packet/R.7a-sync-main"
     verify: "governance/checks/stageR_sync_main.sh"
     blocked_by: ["R.7"]
+    integration_merge: "ec1e86e0057f617cfb260a178c7ffecd9095bd7a"
     notes: "origin/main merged at 2823ded; 84-test ratchet and full local gauntlet are recorded in IMPLEMENTATION-R.7a. Quickstart remains owned by blocked packet 0.6 and must pass before Stage-R promotion."
   - id: "0.1"
     title: "Workspace selection: fastapi-stack"
