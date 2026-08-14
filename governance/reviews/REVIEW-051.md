@@ -1,4 +1,4 @@
-# REVIEW-051 — Packet 0.4 GitNexus exact-head re-review
+# REVIEW-051 — Packet 0.4 external comparator exact-head re-review
 
 ```yaml
 verdict: blocked
@@ -17,7 +17,7 @@ criteria_checked:
   - "Stage-R import boundary check: PASS (2 live contracts kept; deliberate violation rejected)"
   - "Findings claims match committed raw evidence for UID-targeted impact and epistemic fields: FAIL"
 drift_findings:
-  - "benchmarks/gitnexus-findings.md claims that UID-targeted upstream impact reports 27 symbols, depth counts 3/11/13, a dynamic-dispatch boundary, and epistemic lower-bound, allegedly verbatim in the fixture. The committed observation 06 instead has HTTP 200 with raw_response `Error: Target 'undefined' not found` and contains none of those fields. The runner's request uses `uid`; the captured endpoint did not accept it as a target. This repeats the evidence/prose contradiction blocked in REVIEW-049 and cannot authorize merge."
+  - "benchmarks/external-comparator-findings.md claims that UID-targeted upstream impact reports 27 symbols, depth counts 3/11/13, a dynamic-dispatch boundary, and epistemic lower-bound, allegedly verbatim in the fixture. The committed observation 06 instead has HTTP 200 with raw_response `Error: Target 'undefined' not found` and contains none of those fields. The runner's request uses `uid`; the captured endpoint did not accept it as a target. This repeats the evidence/prose contradiction blocked in REVIEW-049 and cannot authorize merge."
 required_actions:
   - "Correct the eval-server impact invocation so the committed raw observation actually exercises the resolved Route target and captures the returned epistemic, boundary, symbol-count, and depth fields; determine the v1.6.9 payload contract from public CLI/help or observed interface behavior without copying source."
   - "Regenerate the fixture and findings together. Every quantitative and epistemic statement must be directly supported by the committed raw response; if impact remains unavailable, classify it honestly as not-representable or environment-limited and remove unsupported numbers."

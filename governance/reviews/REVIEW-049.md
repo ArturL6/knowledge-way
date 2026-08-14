@@ -1,4 +1,4 @@
-# REVIEW-049 — Packet 0.4 GitNexus local test drive
+# REVIEW-049 — Packet 0.4 external comparator local test drive
 
 ```yaml
 verdict: blocked
@@ -9,7 +9,7 @@ reviewed_at: "2026-08-14T18:28:57+00:00"
 criteria_checked:
   - "Exact PR head matches refreshed refs/pull/75/head: PASS"
   - "Packet branch excludes STATUS and RUNLOG governance writes: PASS"
-  - "Packet verify (benchmarks/gitnexus-findings.md exists): PASS"
+  - "Packet verify (benchmarks/external-comparator-findings.md exists): PASS"
   - "Gold-task validation: PASS (25 provenance-backed tasks)"
   - "Full Python suite: PASS (95 tests)"
   - "Stage-R import boundary check: PASS (2 contracts kept; deliberate violation rejected)"

@@ -52,8 +52,8 @@ The owner will test the application locally. Two packets:
 2. **Descoped until after the Stage 4 verdict:** packet 5.4 (ops/auth/logging hardening), Zoekt (5.2), SCIP (5.3), Stage 6 UI expansion beyond what the quickstart needs. The existing Next.js UI is kept working (Playwright smoke) but not extended.
 3. **Kept fully in scope:** Stage 0 (measurement), Stage 1 (retrieval solidity — this is the core of "running well"), Stage 2 (graph honesty), Stage 3 (cross-repo extraction), Stage 4 (impact + ablation), incremental indexing basics (5.1) since local testing needs tolerable reindex times.
 4. **Reliability outranks breadth; cadence stays 2-hourly;** conflict-heavy tasks (R.7a) don't start with a partial session budget — plan in STATUS, execute next tick.
-5. **GitNexus (0.4):** run the CLI locally on the `fastapi-stack` repos — core indexing/graph/search evaluation needs **no API keys**; only its chat-agent answers use BYOK via the existing OpenRouter key. Concepts yes, code never (PolyForm Noncommercial).
-6. **Test-count ratchet** and **GitNexus parity table at Stage 4 exit** as previously directed.
+5. **external comparator (0.4):** run the CLI locally on the `fastapi-stack` repos — core indexing/graph/search evaluation needs **no API keys**; only its chat-agent answers use BYOK via the existing OpenRouter key. Concepts yes, code never (third-party licensing).
+6. **Test-count ratchet** and **external comparator parity table at Stage 4 exit** as previously directed.
 
 ## 5. Processing instructions
 

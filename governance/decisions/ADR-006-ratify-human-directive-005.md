@@ -8,7 +8,7 @@
 ## Context
 
 HUMAN-DIRECTIVE-005 supplies standing housekeeping, promotion, Vertex-readiness,
-and GitNexus evaluation rules while retaining ADR-003 PLAN change control and the
+and external comparator evaluation rules while retaining ADR-003 PLAN change control and the
 HD-004 merge gate. This ADR ratifies sections 1–4 of that directive.
 
 ## Decisions
@@ -30,10 +30,10 @@ vectors. Record outcome and approximate cost in
 verification. Packet 0.3 records `semantic: unconfigured` honestly when needed,
 then reruns its binding baseline after readiness. Embedding-generating packets
 hard-pause and flag the owner when credentials are absent or unverified.
-4. Packet 0.4 uses the owner-verified GitNexus v1.6.9 runner facts: install with
-`GITNEXUS_SKIP_OPTIONAL_GRAMMARS=1 ONNXRUNTIME_NODE_INSTALL=skip npm install -g gitnexus`,
+4. Packet 0.4 uses the owner-verified external comparator v1.6.9 runner facts: install with
+`EXTERNAL_COMPARATOR_SKIP_OPTIONAL_GRAMMARS=1 ONNXRUNTIME_NODE_INSTALL=skip npm install -g external-comparator`,
 measure equivalent timings, mark unavailable LadybugDB FTS as environment-limited,
-use `eval-server`/`cypher` without copying PolyForm Noncommercial code, capture
+use `eval-server`/`cypher` without copying third-party licensing code, capture
 `epistemic` completeness fields, resolve trace UIDs before tracing, use
 subset-first/accounted chat modes, and defer cross-repository groups to Stage 3.
 
@@ -42,4 +42,4 @@ subset-first/accounted chat modes, and defer cross-repository groups to Stage 3.
 - Scheduler operations and RUNLOG follow the authorized closure rule.
 - The default local owner path remains keyless (`EMBEDDING_PROVIDER=none`).
 - Vertex readiness is a recorded prerequisite, not an implicit fallback.
-- GitNexus evaluation compares observed behavior and results only.
+- external comparator evaluation compares observed behavior and results only.

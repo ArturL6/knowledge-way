@@ -1,4 +1,4 @@
-# HUMAN-DIRECTIVE-005 — Housekeeping, promotion, Vertex readiness, GitNexus runner intel
+# HUMAN-DIRECTIVE-005 — Housekeeping, promotion, Vertex readiness, external comparator runner intel
 
 **From:** Project owner
 **To:** sol-navigator-run, implementer-run, benchmark-run
@@ -32,18 +32,18 @@ The owner will provision Vertex credentials in the agents' runtime environment: 
 3. **Packet 1.4 and any embedding-generating packet:** hard-pause + owner flag if credentials are absent or unverified (corpus-consistency rule, ADR-004/005 era — never silently embed with the fallback).
 4. Keyless quickstart (`EMBEDDING_PROVIDER=none`) is unaffected and stays the default local path.
 
-## 4. GitNexus runner intel — owner-verified by live test (v1.6.9), binding input for packet 0.4
+## 4. external comparator runner intel — owner-verified by live test (v1.6.9), binding input for packet 0.4
 
-The owner executed GitNexus in a clean Linux container today. Build the scripted runner on these facts:
+The owner executed external comparator in a clean Linux container today. Build the scripted runner on these facts:
 
-1. **Install (no C++ toolchain needed):** `GITNEXUS_SKIP_OPTIONAL_GRAMMARS=1 ONNXRUNTIME_NODE_INSTALL=skip npm install -g gitnexus`. Plain `npx gitnexus` failed under npm 11 in this environment; the global install with flags worked in ~33s.
-2. **Performance bar:** `gitnexus analyze` indexed starlette in **~9.5s keyless** — 2,820 nodes, 4,821 edges, 121 clusters, 70 flows. Record equivalent timings for our system in the comparative scorecard; this is also the UX bar for our quickstart indexing.
-3. **FTS/BM25 fairness caveat:** keyword search needs a one-time LadybugDB extension download from `extension.ladybugdb.com`. Verify egress or prefetch the extension; if unavailable, GitNexus's keyword half is degraded and the comparison must mark it as environment-limited, not a product result. Repair with `gitnexus analyze --repair-fts` once reachable.
-4. **Programmatic access:** use `gitnexus eval-server` for fast tool calls during evaluation; `gitnexus cypher` gives raw graph access (edges live in a `CodeRelation` table with a `type` property, e.g. `CALLS`; expect duplicate edge rows — dedupe before counting).
-5. **Capture the `epistemic` field** (`exact` | `lower-bound`, with boundary explanations) returned by `context` and `impact` — GitNexus already implements completeness honesty; our Stage 2 packet 2.1 benchmarks against it, so this data must be in the 0.4 results.
+1. **Install (no C++ toolchain needed):** `EXTERNAL_COMPARATOR_SKIP_OPTIONAL_GRAMMARS=1 ONNXRUNTIME_NODE_INSTALL=skip npm install -g external-comparator`. Plain `npx external-comparator` failed under npm 11 in this environment; the global install with flags worked in ~33s.
+2. **Performance bar:** `external-comparator analyze` indexed starlette in **~9.5s keyless** — 2,820 nodes, 4,821 edges, 121 clusters, 70 flows. Record equivalent timings for our system in the comparative scorecard; this is also the UX bar for our quickstart indexing.
+3. **FTS/BM25 fairness caveat:** keyword search needs a one-time LadybugDB extension download from `extension.ladybugdb.com`. Verify egress or prefetch the extension; if unavailable, external comparator's keyword half is degraded and the comparison must mark it as environment-limited, not a product result. Repair with `external-comparator analyze --repair-fts` once reachable.
+4. **Programmatic access:** use `external-comparator eval-server` for fast tool calls during evaluation; `external-comparator cypher` gives raw graph access (edges live in a `CodeRelation` table with a `type` property, e.g. `CALLS`; expect duplicate edge rows — dedupe before counting).
+5. **Capture the `epistemic` field** (`exact` | `lower-bound`, with boundary explanations) returned by `context` and `impact` — external comparator already implements completeness honesty; our Stage 2 packet 2.1 benchmarks against it, so this data must be in the 0.4 results.
 6. **Symbol ambiguity:** `trace` requires `--from-uid`/`--to-uid` for reliable runs — the runner should resolve uids first, never pass bare names.
-7. **Chat/LLM modes:** subset-first per HD-003 §4, BYOK via the existing key, product-budget accounted. Cross-repo (`gitnexus group`) is exercised at Stage 3, not now.
-8. License discipline unchanged: PolyForm Noncommercial — behaviors and results, never code.
+7. **Chat/LLM modes:** subset-first per HD-003 §4, BYOK via the existing key, product-budget accounted. Cross-repo (`external-comparator group`) is exercised at Stage 3, not now.
+8. License discipline unchanged: third-party licensing — behaviors and results, never code.
 
 ## 5. Processing
 

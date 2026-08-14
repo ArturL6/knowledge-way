@@ -1,4 +1,4 @@
-# REVIEW-050 — Packet 0.4 GitNexus remediation PR
+# REVIEW-050 — Packet 0.4 external comparator remediation PR
 
 ```yaml
 verdict: blocked
@@ -10,7 +10,7 @@ reviewed_at: "2026-08-14T20:06:17+00:00"
 criteria_checked:
   - "Exact GitHub PR head equals refreshed refs/pull/77/head: PASS"
   - "Packet diff is limited to three benchmark artifacts and excludes STATUS/RUNLOG: PASS"
-  - "Packet verify (benchmarks/gitnexus-findings.md exists): PASS"
+  - "Packet verify (benchmarks/external-comparator-findings.md exists): PASS"
   - "Gold-task validation: PASS (25 provenance-backed tasks)"
   - "Runner py_compile and git diff --check: PASS"
   - "Full Python suite: PASS (95 tests)"
@@ -19,7 +19,7 @@ criteria_checked:
 drift_findings:
   - "Refreshed integration head cca8530 is not an ancestor of PR #77 head c8b962d. Their merge base is fbea697, and integration has six later governance commits. The PR therefore does not satisfy the binding HD-006 §1 staleness-remediation protocol even though its packet checks are green."
 required_actions:
-  - "Do not rebase and do not force-push, including --force-with-lease. Merge current origin/integration/roadmap-v2 into packet/0.4-gitnexus-test-drive-v3 with a normal merge commit."
+  - "Do not rebase and do not force-push, including --force-with-lease. Merge current origin/integration/roadmap-v2 into packet/0.4-external-comparator-test-drive-v3 with a normal merge commit."
   - "Resolve the merge without introducing packet-branch edits to governance/STATUS.md or governance/operations/RUNLOG*. Add at least one subsequent remediation commit as HD-006 §1 requires."
   - "Re-run packet verify, validate_tasks, 95-test suite, import boundaries, py_compile, diff check, and verify current integration is an ancestor; push normally and request exact-head re-review."
 scope_creep_risk: low

@@ -28,7 +28,7 @@ product-LLM budget does not include scheduler-agent execution costs.
    approving verdict, or no-op. It never self-selects work or merges without
    that verdict.
 4. The benchmark scheduler runs the Stage 0 scorecard after integration
-   changes, commits results, compares the scripted GitNexus result once that
+   changes, commits results, compares the scripted external comparator result once that
    runner exists, and records regressions for Sol.
 5. Any LLM- or embedding-changing packet must first use one repository or the
    smallest binding limit of 200 files, 500 chunks, or 50 cards. Its committed

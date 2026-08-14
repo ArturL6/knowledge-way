@@ -47,9 +47,9 @@ PLAN.md directly and leaves ADR-003 PLAN change control in force.
    Stage 4 verdict, defer 5.4 operations/auth/logging hardening, Zoekt (5.2), SCIP (5.3),
    and Stage 6 UI work beyond the quickstart. Keep the existing UI working through its smoke
    test. Stages 0–4 and basic incremental indexing (5.1) remain in scope.
-6. **GitNexus.** Packet 0.4 evaluates GitNexus locally against `fastapi-stack`; use no-key
-   core indexing/graph/search capability and do not copy PolyForm Noncommercial code. BYOK
-   OpenRouter is allowed only for its chat-agent answers. Stage 4 records a GitNexus parity
+6. **external comparator.** Packet 0.4 evaluates external comparator locally against `fastapi-stack`; use no-key
+   core indexing/graph/search capability and do not copy third-party licensing code. BYOK
+   OpenRouter is allowed only for its chat-agent answers. Stage 4 records a external comparator parity
    table.
 7. **Cadence.** Autonomous implementer/reviewer cadence is two-hourly. Idle reviewer and
    promotion jobs remain silent; they do not produce user-facing no-work notifications.

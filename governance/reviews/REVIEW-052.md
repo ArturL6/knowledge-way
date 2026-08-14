@@ -1,4 +1,4 @@
-# REVIEW-052 — Packet 0.4 GitNexus evidence-remediation re-review
+# REVIEW-052 — Packet 0.4 external comparator evidence-remediation re-review
 
 ```yaml
 verdict: on_track
