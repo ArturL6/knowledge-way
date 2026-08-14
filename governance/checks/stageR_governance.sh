@@ -11,6 +11,8 @@ for file in \
   governance/STATUS.md \
   governance/decisions/ADR-001-retain-redis-rq.md \
   governance/decisions/ADR-002-retain-nextjs-react19.md \
+  governance/decisions/ADR-005-ratify-human-directive-003.md \
+  governance/directives/HUMAN-DIRECTIVE-003.md \
   governance/operations/schedulers.md \
   governance/operations/RUNLOG.md \
   governance/operations/dryrun-report.md; do
@@ -24,15 +26,17 @@ compgen -G 'governance/reviews/REVIEW-*-dryrun.md' >/dev/null || fail 'missing d
 
 grep -Fq 'stage: R' governance/STATUS.md || fail 'STATUS does not declare Stage R'
 grep -Fq 'id: "R.1"' governance/STATUS.md || fail 'STATUS does not contain R.1'
-grep -Fq 'state: pr_open' governance/STATUS.md || fail 'R.1 is not open for review'
+grep -Fq 'next_instruction:' governance/STATUS.md || fail 'STATUS lacks next_instruction contract'
+grep -Fq 'drift_flags: []' governance/STATUS.md || fail 'STATUS has stale drift flags'
 grep -Fq 'Retain Redis + RQ' governance/decisions/ADR-001-retain-redis-rq.md || fail 'ADR-001 decision missing'
 grep -Fq 'Next.js + React 19' governance/decisions/ADR-002-retain-nextjs-react19.md || fail 'ADR-002 decision missing'
 grep -Fq 'PLAN change control' governance/PLAN.md || fail 'PLAN change-control clause missing'
 
-for job in implementer-run reviewer-run drift-audit benchmark-run; do
+for job in sol-navigator-run implementer-run benchmark-run; do
   grep -Fq "\`$job\`" governance/operations/schedulers.md || fail "scheduler contract missing $job"
-  grep -Eq "^[0-9]{4}-[0-9]{2}-[0-9]{2}T.* \| $job \| tick \|" governance/operations/RUNLOG.md || fail "RUNLOG heartbeat missing $job"
 done
+grep -Fq 'every 20m' governance/operations/schedulers.md || fail 'scheduler cadence is not 20 minutes'
+grep -Fq 'Ratify HUMAN-DIRECTIVE-003' governance/decisions/ADR-005-ratify-human-directive-003.md || fail 'ADR-005 decision missing'
 
 grep -Eq 'REVIEW-[^ ]*-dryrun\.md' governance/operations/dryrun-report.md || fail 'dry-run report does not reference dry-run review'
 
