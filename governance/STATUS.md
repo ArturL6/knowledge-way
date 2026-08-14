@@ -94,7 +94,7 @@ packets:
     notes: "PR #72 merged at 259d28fbe6c5b441ed72b90e9466a6fe771e89ae from exact reviewed head bdc788a625117aac8bb54ffeb666e09d32aec3d0 after committed REVIEW-043 on_track authorization; packet verify, benchmark checks, 95 tests, and boundary contracts passed. GitHub approval was not a gate."
   - id: "0.3"
     title: "Retrieval scorecard baseline harness"
-    state: todo
+    state: in_progress
     branch: "packet/0.3-scorecard-harness"
     verify: "python benchmarks/run_retrieval.py --help"
     blocked_by: ["0.1", "0.2"]
