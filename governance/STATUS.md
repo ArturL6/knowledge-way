@@ -115,6 +115,19 @@ packets:
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
 last_review: REVIEW-045
 drift_flags: []
+next_instruction:
+  issued_by: sol-navigator
+  issued_at: "2026-08-14T15:28:17+00:00"
+  packet: "stage-R-exit"
+  objective: "Independently verify the Stage-R exit criteria and keyless quickstart on the current integration head, whose pre-instruction candidate is 5b08783c2962fff203eb264d957272e5b3b76b06, then write an exact-head stage-exit verdict authorizing integration/roadmap-v2 promotion to main if and only if every criterion passes."
+  constraints:
+    - "Refresh integration, main, and PR refs immediately before verification; record and work from the resulting exact integration head (which must contain candidate 5b08783c2962fff203eb264d957272e5b3b76b06 plus only this navigator governance instruction). Any later head change invalidates the evidence and requires fresh exact-head verification."
+    - "Re-execute the full applicable Stage-R gauntlet, including tests, import-linter/boundary enforcement, evidence constraints, uv-only checks, and Playwright smoke; do not rely only on prior implementation evidence."
+    - "Run scripts/quickstart_smoke.sh against the selected fastapi-stack workspace using the keyless EMBEDDING_PROVIDER=none path and record the owner-visible URLs/functional result."
+    - "Confirm all three schedulers have durable evidence of at least one real cycle and confirm current integration descends from current main 0954b41f3e285fe67aa573e9e336056464649be6."
+    - "Write REVIEW-046 as a stage-exit verdict on integration/roadmap-v2; only verdict: on_track at the exact recorded integration SHA authorizes the implementer to merge integration/roadmap-v2 into main. GitHub approval is not a gate."
+    - "Do not merge to main during verification and do not write application code."
+  done_when: "REVIEW-046 records exact-head Stage-R exit results and either authorizes promotion with verdict on_track or records blocking failures; STATUS and the sol navigator RUNLOG are updated directly on integration/roadmap-v2."
 ```
 
 The YAML block is the machine-readable source used by scheduled jobs. Packet state changes require a corresponding committed review artifact or PR evidence.
