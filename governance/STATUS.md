@@ -68,11 +68,12 @@ packets:
     notes: "origin/main merged at 2823ded; 84-test ratchet and full local gauntlet are recorded in IMPLEMENTATION-R.7a. Quickstart remains owned by blocked packet 0.6 and must pass before Stage-R promotion."
   - id: "0.1"
     title: "Workspace selection: fastapi-stack"
-    state: pr_open
+    state: done
     branch: "packet/0.1-fastapi-stack-corpus"
     verify: "test -f benchmarks/corpora.json"
     blocked_by: ["R.7a"]
-    notes: "Prefilled owner selection: fastapi/fastapi, encode/starlette, pydantic/pydantic. REVIEW-033 independently authorizes merge only at exact head 42e74e6d8086ef8e9888c4125023801e497a48d9; GitHub approval is not a gate."
+    integration_merge: "dfc4c6bef000994fc4fbe83cc11128da7dcada9f"
+    notes: "Prefilled owner selection: fastapi/fastapi, encode/starlette, pydantic/pydantic. PR #66 merged at dfc4c6bef000994fc4fbe83cc11128da7dcada9f after committed REVIEW-033 on_track authorization for exact head 42e74e6d8086ef8e9888c4125023801e497a48d9; GitHub approval was not a gate."
   - id: "0.2"
     title: "Gold tasks from historical issue/fix-PR pairs"
     state: todo
