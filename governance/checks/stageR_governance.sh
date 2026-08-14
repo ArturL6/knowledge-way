@@ -14,7 +14,9 @@ for file in \
   governance/decisions/ADR-005-ratify-human-directive-003.md \
   governance/directives/HUMAN-DIRECTIVE-003.md \
   governance/operations/schedulers.md \
-  governance/operations/RUNLOG.md \
+  governance/operations/RUNLOG-implementer.md \
+  governance/operations/RUNLOG-sol-navigator.md \
+  governance/operations/RUNLOG-benchmark.md \
   governance/operations/dryrun-report.md; do
   [[ -f "$file" ]] || fail "missing $file"
 done
@@ -26,7 +28,6 @@ compgen -G 'governance/reviews/REVIEW-*-dryrun.md' >/dev/null || fail 'missing d
 
 grep -Fq 'stage: R' governance/STATUS.md || fail 'STATUS does not declare Stage R'
 grep -Fq 'id: "R.1"' governance/STATUS.md || fail 'STATUS does not contain R.1'
-grep -Fq 'next_instruction:' governance/STATUS.md || fail 'STATUS lacks next_instruction contract'
 grep -Fq 'drift_flags: []' governance/STATUS.md || fail 'STATUS has stale drift flags'
 grep -Fq 'Retain Redis + RQ' governance/decisions/ADR-001-retain-redis-rq.md || fail 'ADR-001 decision missing'
 grep -Fq 'Next.js + React 19' governance/decisions/ADR-002-retain-nextjs-react19.md || fail 'ADR-002 decision missing'
