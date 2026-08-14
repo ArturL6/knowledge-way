@@ -1,7 +1,12 @@
 # Knowledge-Way packet board
 
 ```yaml
-stage: R
+stage: R (promoted to main)
+stage_promotion:
+  authorized_review: "REVIEW-046"
+  reviewed_integration_head: "c437a4e3342d5d2cc7ecb61ec20dc26029d7f094"
+  promotion_sha: "d72137f4cfbf3beaf1ae392710b7da489ed1972f"
+  promoted_at: "2026-08-14T16:01:45+00:00"
 owner_testable: true
 owner_quickstart:
   - "git clone --branch integration/roadmap-v2 https://github.com/ArturL6/knowledge-way.git"
@@ -115,17 +120,6 @@ packets:
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
 last_review: REVIEW-046
 drift_flags: []
-next_instruction:
-  issued_by: sol-navigator
-  issued_at: "2026-08-14T15:52:19+00:00"
-  packet: "stage-R-promotion"
-  objective: "Promote integration/roadmap-v2 to main under REVIEW-046's on_track Stage-R exit authorization for exact reviewed integration head c437a4e3342d5d2cc7ecb61ec20dc26029d7f094."
-  constraints:
-    - "Refresh integration, main, and PR refs immediately before promotion."
-    - "The only changes atop reviewed head c437a4e3342d5d2cc7ecb61ec20dc26029d7f094 may be the REVIEW-046 governance authorization commit (REVIEW-046, STATUS transition, and Sol RUNLOG entry); any application or packet change invalidates authorization and requires fresh exact-head review."
-    - "Merge integration/roadmap-v2 into main without rewriting the reviewed history, push main, and record the exact main promotion SHA directly on integration/roadmap-v2."
-    - "GitHub approval is not a gate; REVIEW-046 on_track at the recorded SHA is the sole authorization."
-  done_when: "origin/main contains the REVIEW-046-authorized Stage-R integration tree and STATUS records the exact promotion SHA."
 ```
 
 The YAML block is the machine-readable source used by scheduled jobs. Packet state changes require a corresponding committed review artifact or PR evidence.
