@@ -107,8 +107,8 @@ packets:
     verify: "test -f benchmarks/gitnexus-findings.md"
     blocked_by: ["0.1"]
     pr: 77
-    head_sha: "c8b962db68a953121bad1586b4c2ae4964fd306b"
-    notes: "PR #75 was closed unmerged under HD-005 §1. PR #77 exact head c8b962d passes the applicable checks but REVIEW-050 blocks it as stale: current integration cca8530 is not an ancestor. HD-006 §1 requires merging current integration into the packet branch, resolving without STATUS/RUNLOG packet writes, then adding a remediation commit and requesting exact-head re-review; rebases and all force pushes are forbidden. PR #76 was closed unmerged. Study behavior only; never copy PolyForm Noncommercial code."
+    head_sha: "bc2f840eed25dae0b94a7ccf0061b999ba38d9e7"
+    notes: "PR #75 and #76 were closed unmerged under HD-005 §1. PR #77 exact head bc2f840 satisfies HD-006 staleness remediation and passes the applicable gauntlet, but REVIEW-051 blocks evidence integrity: findings claim successful UID-targeted lower-bound impact metrics while committed observation 06 records `Error: Target 'undefined' not found`. Regenerate raw impact evidence and align all prose/classification exactly; if the branch becomes stale, merge current integration plus a subsequent commit, never rebase or force-push. Study behavior only; never copy PolyForm Noncommercial code."
   - id: "0.5"
     title: "Benchmark scheduler wiring"
     state: todo
@@ -138,7 +138,7 @@ next_instruction:
     - "Create benchmarks/gitnexus-findings.md and any reproducible runner/result fixtures needed for the packet; run the full applicable local gauntlet and packet verify. Playwright is required only if a web or UI-facing contract is touched."
     - "Open exactly one PR into integration/roadmap-v2 with evidence bound to its exact head; do not merge without a committed exact-head on_track reviewer verdict."
   done_when: "benchmarks/gitnexus-findings.md exists with reproducible GitNexus results over the fastapi-stack workspace, all 12 PLAN Appendix A.7 classes are classified (including honest not-representable/environment-limited outcomes), required epistemic/latency/version/snapshot evidence is captured, the applicable gauntlet passes, and the exact-head packet 0.4 PR is open into integration/roadmap-v2."
-last_review: REVIEW-050
+last_review: REVIEW-051
 drift_flags: []
 ```
 
