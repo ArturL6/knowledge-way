@@ -102,13 +102,13 @@ packets:
     notes: "PR #74 merged at 2eb873874cdcdae1013575c01c080d3906db6667 from exact reviewed head 67819c93fc53bf8cc8e1aac69ed2e827e7c04fb6 after REVIEW-048 on_track authorization. Independent review passed packet verify, 25-task validation, 95 tests (including 5 focused harness tests), both import contracts, snapshot/task-content binding, fatal failure semantics, packet governance hygiene, diff check, and current-integration merge simulation. The replacement baseline has complete supported-mode coverage; semantic remains honestly unconfigured under HUMAN-DIRECTIVE-005. GitHub approval was not a gate."
   - id: "0.4"
     title: "GitNexus local test drive"
-    state: review_blocked
+    state: pr_open
     branch: "packet/0.4-gitnexus-test-drive-v3"
     verify: "test -f benchmarks/gitnexus-findings.md"
     blocked_by: ["0.1"]
     pr: 77
-    head_sha: "bc2f840eed25dae0b94a7ccf0061b999ba38d9e7"
-    notes: "PR #75 and #76 were closed unmerged under HD-005 §1. PR #77 exact head bc2f840 satisfies HD-006 staleness remediation and passes the applicable gauntlet, but REVIEW-051 blocks evidence integrity: findings claim successful UID-targeted lower-bound impact metrics while committed observation 06 records `Error: Target 'undefined' not found`. Regenerate raw impact evidence and align all prose/classification exactly; if the branch becomes stale, merge current integration plus a subsequent commit, never rebase or force-push. Study behavior only; never copy PolyForm Noncommercial code."
+    head_sha: "7d2758bcd365f712ea72fe7eedbe3b7dc1291f4a"
+    notes: "PR #75 and #76 were closed unmerged under HD-005 §1. REVIEW-052 authorizes PR #77 only at exact head 7d2758b after HD-006 merge-plus-follow-up remediation, independent applicable gauntlet, and evidence-integrity verification passed. Observation 06, runner, and findings consistently preserve the unavailable impact result as not-representable with no unsupported metrics. GitHub approval is not a gate."
   - id: "0.5"
     title: "Benchmark scheduler wiring"
     state: todo
@@ -138,7 +138,7 @@ next_instruction:
     - "Create benchmarks/gitnexus-findings.md and any reproducible runner/result fixtures needed for the packet; run the full applicable local gauntlet and packet verify. Playwright is required only if a web or UI-facing contract is touched."
     - "Open exactly one PR into integration/roadmap-v2 with evidence bound to its exact head; do not merge without a committed exact-head on_track reviewer verdict."
   done_when: "benchmarks/gitnexus-findings.md exists with reproducible GitNexus results over the fastapi-stack workspace, all 12 PLAN Appendix A.7 classes are classified (including honest not-representable/environment-limited outcomes), required epistemic/latency/version/snapshot evidence is captured, the applicable gauntlet passes, and the exact-head packet 0.4 PR is open into integration/roadmap-v2."
-last_review: REVIEW-051
+last_review: REVIEW-052
 drift_flags: []
 ```
 
