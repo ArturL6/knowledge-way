@@ -98,7 +98,7 @@ packets:
     branch: "packet/0.3-scorecard-harness"
     verify: "python benchmarks/run_retrieval.py --help"
     blocked_by: ["0.1", "0.2"]
-    notes: "PR #74 remediated and reopened for exact-head re-review at 67819c93fc53bf8cc8e1aac69ed2e827e7c04fb6. REVIEW-047 required actions are addressed: the replacement 25-task baseline binds and validates served repository identities/indexed snapshots, hashes canonical task contents, treats unexpected failures/incomplete coverage as fatal, and has focused harness tests. Packet diff contains only benchmark code, result data, and tests; 95 pytest tests, focused 5 harness tests, task validation, import boundaries, packet verify, diff check, and merge simulation passed. Semantic remains honestly unconfigured."
+    notes: "PR #74 is authorized to merge only at exact reviewed head 67819c93fc53bf8cc8e1aac69ed2e827e7c04fb6 by REVIEW-048. Independent review passed packet verify, 25-task validation, 95 tests (including 5 focused harness tests), both import contracts, snapshot/task-content binding, fatal failure semantics, packet governance hygiene, diff check, and current-integration merge simulation. The replacement baseline has complete supported-mode coverage; semantic remains honestly unconfigured under HUMAN-DIRECTIVE-005. GitHub approval is not a gate."
   - id: "0.4"
     title: "GitNexus local test drive"
     state: todo
@@ -133,7 +133,7 @@ next_instruction:
     - "Run the full applicable local gauntlet, including benchmark validation/tests, API tests, pytest, import-boundary checks, packet verify, and Playwright only if a web or UI-facing contract is touched."
     - "Open exactly one PR into integration/roadmap-v2 with evidence bound to its exact head; do not merge without a committed exact-head on_track reviewer verdict."
   done_when: "python benchmarks/run_retrieval.py --help passes; a reproducible baseline scorecard from an actual harness run is committed; the full applicable gauntlet is green; and the exact-head packet 0.3 PR is open into integration/roadmap-v2."
-last_review: REVIEW-047
+last_review: REVIEW-048
 drift_flags: []
 ```
 
