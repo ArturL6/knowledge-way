@@ -76,16 +76,13 @@ packets:
     notes: "Prefilled owner selection: fastapi/fastapi, encode/starlette, pydantic/pydantic. PR #66 merged at dfc4c6bef000994fc4fbe83cc11128da7dcada9f after committed REVIEW-033 on_track authorization for exact head 42e74e6d8086ef8e9888c4125023801e497a48d9; GitHub approval was not a gate."
   - id: "0.2"
     title: "Gold tasks from historical issue/fix-PR pairs"
-    state: review_blocked
+    state: pr_open
     branch: "packet/0.2-gold-tasks"
     verify: "python benchmarks/validate_tasks.py"
     blocked_by: ["0.1"]
     pr: 72
-    reviewed_head_sha: "55b56f7d8c66e22290d6dd856c1be35c5655e289"
-    required_actions:
-      - "Rebase or merge current origin/integration/roadmap-v2 into the packet branch; preserve current governance/STATUS.md board state and both append-only governance/operations/RUNLOG.md histories while resolving conflicts."
-      - "Keep the validated benchmark task payload unchanged unless conflict resolution requires a justified correction; rerun packet verify and the applicable gauntlet, then request exact-head re-review."
-    notes: "REVIEW-042 reconfirms review_blocked after fresh exact-head execution: packet verify, benchmark checks, 95 tests, and boundaries pass, but merge-tree against integration 31dde0e finds STATUS.md plus append-only RUNLOG.md conflicts."
+    head_sha: "bdc788a625117aac8bb54ffeb666e09d32aec3d0"
+    notes: "Rebased on conflict-resistant integration governance at 4d7e66f. Packet payload is unchanged; STATUS and RUNLOG changes were intentionally removed from the packet branch, both histories are preserved on integration, and the local gauntlet passed again. Exact-head re-review is required."
   - id: "0.3"
     title: "Retrieval scorecard baseline harness"
     state: todo
