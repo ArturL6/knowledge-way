@@ -1,65 +1,74 @@
 # Packet 0.4 — GitNexus local test drive
 
-**Observation date:** 2026-08-14 UTC
+**Observed:** 2026-08-14 UTC; **GitNexus:** 1.6.9; **product-LLM spend:** USD 0.00.
 
-**Tool/version:** GitNexus 1.6.9 (`gitnexus --version`)
+This is a license-clean behavior study. It records CLI/eval-server requests and
+responses; it neither copies nor mechanically rewrites GitNexus's PolyForm
+Noncommercial source. Chat/LLM mode was not used.
 
-**License posture:** This packet records CLI-observed behavior and raw outputs only. No GitNexus (PolyForm Noncommercial) source was copied, read into this repository, or mechanically rewritten. No chat/LLM mode was invoked; product-LLM spend is **USD 0.00**.
-
-## Reproduction
+## Reproduction and corpus identity
 
 ```bash
 GITNEXUS_SKIP_OPTIONAL_GRAMMARS=1 ONNXRUNTIME_NODE_INSTALL=skip npm install -g gitnexus
-# Clone each corpus member and detach at the SHA in benchmarks/corpora.json.
-gitnexus analyze /path/to/starlette --index-only --name kw-starlette-0-4
-# Repeat for fastapi and pydantic, then from the selected indexed checkout:
-gitnexus eval-server --port 4850 --idle-timeout 300
+# clone and detach each member at the corpus SHA, then index it
+cd /path/to/starlette && gitnexus analyze . --name kw-starlette-0-4-remediation
+gitnexus eval-server --port 4849 --idle-timeout 120
 python benchmarks/scripts/run_gitnexus_evaluation.py \
-  --base-url http://127.0.0.1:4850 --repo kw-starlette-0-4 \
+  --base-url http://127.0.0.1:4849 --repo kw-starlette-0-4-remediation \
   --output benchmarks/results/2026-08-14-gitnexus-fastapi-stack.json
 ```
 
-The runner uses the documented `eval-server` HTTP surface (`POST /tool/{query,context,impact,cypher}`), not a chat mode. It preserves each tool response and wall latency. Context/impact calls resolve the `Route` UID first (`Class:starlette/routing.py:Route`); a direct UID impact call was also observed. Trace is deliberately **not** issued with an ambiguous bare symbol: its source/destination UIDs need an explicitly selected target pair, which this class does not supply.
+The pinned `fastapi-stack` revisions are FastAPI `40e33e492dbf4af6172997f4e3238a32e56cbe26`, Starlette `8d0cff820f89b5d5b19677246293513a9d1c952c`, and Pydantic `7cedbfb03df82ac55c844c97e6f975359cb51bb9`. The evaluated Starlette index reports 2,333 symbols and 4,048 edges. Its owner-recorded analysis time was 9.85 s, comparable to the ~9.5 s keyless bar (not a claim of improvement).
 
-## Pinned workspace and index evidence
+Initial FTS availability was limited because LadybugDB's extension needed egress. `gitnexus analyze --repair-fts` subsequently succeeded; keyword/BM25 observations must be called **environment-limited** if that repair cannot be replayed. The raw, single-run fixture is [`results/2026-08-14-gitnexus-fastapi-stack.json`](results/2026-08-14-gitnexus-fastapi-stack.json).
 
-| member | pinned SHA | GitNexus alias | observed index | analyze wall time |
-|---|---|---|---:|---:|
-| Starlette 0.38.6 | `8d0cff820f89b5d5b19677246293513a9d1c952c` | `kw-starlette-0-4` | 2,333 nodes, 4,048 deduplicated `CodeRelation` edges, 97 clusters, 57 flows | 9.85 s |
-| FastAPI 0.115.0 | `40e33e492dbf4af6172997f4e3238a32e56cbe26` | `kw-fastapi-0-4` | 21,344 nodes, 27,362 edges, 278 clusters, 136 flows | 19.16 s |
-| Pydantic 2.9.2 | `7cedbfb03df82ac55c844c97e6f975359cb51bb9` | `kw-pydantic-0-4` | 18,212 nodes, 30,544 edges, 595 clusters, 268 flows | 22.29 s |
+## UID and trace protocol
 
-Starlette's 9.85 s wall time is comparable to the owner-observed ~9.5 s keyless bar (not faster); this includes a 1.15 s process/measurement envelope around GitNexus's reported 8.7 s index duration. The 4,048 graph count comes from `MATCH ()-[r:CodeRelation]->() RETURN count(DISTINCT r)`—never an undeduplicated relation-row count.
+The runner first calls eval-server `cypher` to resolve both exact IDs:
 
-Initial Starlette analysis reported: `FTS extension unavailable; continuing without FTS features. load-only policy: extension not pre-installed`. This is an **environment limitation**, not a product-quality result. A subsequent `gitnexus analyze --repair-fts` completed successfully in this environment; replay users must run that repair and record its own result before treating keyword/BM25 comparisons as fair. This packet makes no retrieval-quality claim from the temporarily degraded first pass.
+* `Class:starlette/routing.py:Route`
+* `Class:starlette/routing.py:BaseRoute`
 
-Raw replay evidence: [`results/2026-08-14-gitnexus-fastapi-stack.json`](results/2026-08-14-gitnexus-fastapi-stack.json). The selected Starlette index status reported the same pinned `8d0cff8` current/indexed commit.
+It passes the resolved Route UID to context and impact. It also submits the
+resolved source/destination pair to eval-server `trace`; v1.6.9 responds HTTP
+400, `unsupported tool 'trace'` (supported endpoints exclude trace). This is a
+real attempted trace result, classified **not-representable** for this HTTP
+interface—not a substituted context result. The raw request and error are in
+observation 05.
 
-## Appendix A.7 question-class results
+Context and UID-targeted upstream impact both report `epistemic: lower-bound`.
+Impact reports 27 symbols, depth counts 3/11/13, and the boundary that
+`BaseRoute` has four implementations whose interface/dynamic-dispatch callers
+are not traced. These fields are recorded verbatim in the fixture; they are not
+claimed as complete impact.
 
-Classifications distinguish **accuracy gaps** (a representable single-repository request with incomplete/noisy output) from **representation gaps** (the requested relation has no modelled cross-repository/group or architecture input). “Not representable” is a result, not a failure hidden as an incorrect answer.
+## Appendix A.7 results
 
-| # | question class / exercised prompt | tool | result | latency ms | gap/evidence |
+| # | class | tool | classification | latency (ms) | evidence / gap |
 |---:|---|---|---|---:|---|
-| 1 | Where is route registration implemented? | query | correct | 269.802 | returns `starlette/routing.py` route-related definitions (accuracy limited by ranking noise) |
-| 2 | What does `Route` do? | context | correct | 65.376 | UID resolves `Class:starlette/routing.py:Route`, lines 207–301 |
-| 3 | Who calls `Route`? | context | partial | 56.585 | imports/call relations returned, but dynamic/interface dispatch is incomplete |
-| 4 | What does `Route` call? | context | partial | 53.740 | inheritance/override and members returned; not a complete execution-call proof |
-| 5 | Trace X to Y | context after UID resolution | not-representable | 46.436 | no target symbol pair/oracle was supplied; runner never passes bare names to trace |
-| 6 | What changes if `Route` changes? | impact | partial | 62.213 | 27 upstream impacted symbols; `epistemic: lower-bound` |
-| 7 | Which repository consumes endpoint X? | query | not-representable | 484.825 | individual indexes exist, but `gitnexus group` cross-repository evaluation is explicitly Stage 3 scope |
-| 8 | Which tests should run after changing `Route`? | context | correct | 95.520 | context returns test-file import evidence, including routing/test-client suites |
-| 9 | Where does this value originate? | context | partial | 84.471 | source-level context is present but provenance/value-flow is not complete |
-| 10 | Does equivalent functionality already exist? | query | partial | 254.707 | related definitions/flows are searchable; equivalence is not a declared semantic relation |
-| 11 | How does this user action flow across repositories? | query | not-representable | 305.391 | cross-repository group/contract evidence intentionally out of scope until Stage 3 |
-| 12 | What architecture knowledge is missing from the index? | cypher | partial | 3.981 | node inventory is queryable, but missing runtime/contracts/dynamic-dispatch knowledge requires external evidence |
+| 1 | Where is feature implemented? | query | correct | 215.963 | `starlette/routing.py` returned |
+| 2 | What does a symbol do? | context UID | correct | 65.051 | Route class/range identified |
+| 3 | Who calls it? | context UID | partial | 51.075 | import callers, lower-bound graph |
+| 4 | What does it call? | context UID | partial | 50.879 | members/inheritance, not complete calls |
+| 5 | Trace X to Y | trace UIDs | not-representable | 0.601 | eval-server endpoint unsupported |
+| 6 | What changes if X changes? | impact UID | partial | 0.525 | 27, lower-bound impact |
+| 7 | Which repo consumes endpoint X? | query | not-representable | 223.622 | repository groups deferred to Stage 3 |
+| 8 | Which tests should run? | context UID | correct | 63.241 | test-file imports listed |
+| 9 | Where does a value originate? | context UID | partial | 67.402 | no complete value provenance |
+| 10 | Does equivalent functionality exist? | query | partial | 289.693 | discovery, not equivalence proof |
+| 11 | How does action flow across repos? | query | not-representable | 318.334 | group evaluation excluded until Stage 3 |
+| 12 | What architecture knowledge is missing? | cypher | partial | 2.680 | inventory, not runtime/contract oracle |
 
-**Epistemic evidence.** `context Route` returned `epistemic: lower-bound` and the boundary: `BaseRoute is an interface with 4 implementations; callers that bind via the interface (e.g. a DI container or dynamic dispatch) are not traced to the concrete symbol — actual impact may be higher.` UID-targeted `impact Route` likewise returned `epistemic: lower-bound`, the same boundary, `impactedCount: 27`, and depth counts 3/11/13. Thus neither context nor impact output is represented as complete.
+## Oracle-backed gold-task subset
 
-## Gold-task applicability
+The runner executes two applicable committed Starlette task queries and compares
+raw query text to each task's mechanically derived changed-file oracle:
 
-The 25 Stage-0 gold tasks are historical file/symbol change tasks across all three corpus members. Their search/navigation components are applicable to classes 1–4, 6, 8–10; this run deliberately uses the shared framework anchor (`starlette.routing.Route`) so observed raw evidence is independently replayable. Classes 7 and 11 require the excluded group feature; class 5 requires a concrete pair; class 12 needs an architecture oracle. A later Stage-3 group evaluation may add cross-repository task-oracle scoring without reclassifying these scope-limited outcomes.
+| task ID | oracle changed file | result | rationale |
+|---|---|---|---|
+| `encode-starlette-issue-2950` | `starlette/testclient.py` | correct | path occurs in raw response |
+| `encode-starlette-issue-3388` | `starlette/responses.py` | incorrect | path does not occur in raw response |
 
-## Conclusion
-
-GitNexus gives fast, keyless, pinned single-repository graph observation, including explicit lower-bound completeness warnings. The main gaps in this controlled run are representation (cross-repository/group, concrete trace pair, runtime/value provenance) rather than a claim that its keyword quality is poor. No semantic/chat result is manufactured, and no LLM budget was consumed.
+This subset is deliberately small and deterministic (no BYOK needed). It makes
+no claim that a ranked answer is correct unless the committed oracle path is
+present. Cross-repository task evaluation remains out of scope until Stage 3.
