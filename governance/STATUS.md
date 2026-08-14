@@ -108,6 +108,13 @@ packets:
     blocked_by: ["0.1"]
     integration_merge: "c7f91b199029a8e8ef2655d4c25927b7cb18bdd3"
     notes: "PR #77 merged at c7f91b199029a8e8ef2655d4c25927b7cb18bdd3 from exact reviewed head 7d2758bcd365f712ea72fe7eedbe3b7dc1291f4a after REVIEW-052 on_track authorization. Independent current-integration merge simulation, packet verify, 25-task validation, runner help, 95 tests, import-boundary checks, and diff hygiene passed. Observation 06 remains honestly not-representable with no unsupported metrics. GitHub approval was not a gate."
+  - id: "0.4b"
+    title: "Full keyless GitNexus comparative scorecard and mechanism study"
+    state: todo
+    branch: "packet/0.4b-gitnexus-comparative-scorecard"
+    verify: "test -f benchmarks/gitnexus-mechanism-findings.md"
+    blocked_by: ["0.4"]
+    notes: "HUMAN-DIRECTIVE-006 gate: run all 25 tasks on both sides with identical changed-file oracles and hit_at_5/MRR; commit both scorecards, per-task wins/losses, independent capability flags, and task-level mechanism findings. Every Stage-1 packet is blocked by 0.4b; if comparable GitNexus aggregate is below 0.2, raise gold-task-quality drift and pause Stage 1 for task/oracle review."
   - id: "0.5"
     title: "Benchmark scheduler wiring"
     state: todo
@@ -121,7 +128,24 @@ packets:
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
-next_instruction: null
+stage_1_start_blocked_by: ["0.4b"]
+stage_1_exit_bar_status: "provisional pending committed 0.4b numbers and mechanism study"
+next_instruction:
+  issued_by: sol-navigator
+  addressed_to: implementer-run
+  issued_at: "2026-08-14T21:09:34+00:00"
+  packet: "0.4b"
+  objective: "Implement and execute HUMAN-DIRECTIVE-006's reproducible full keyless comparison over all 25 committed gold tasks, then open one packet PR into integration/roadmap-v2."
+  constraints:
+    - "Branch packet/0.4b-gitnexus-comparative-scorecard from refreshed integration/roadmap-v2; packet branches must not edit STATUS.md or any RUNLOG."
+    - "Commit one Knowledge-Way and one GitNexus scorecard using identical task-content hashes, pinned corpus SHAs, changed-file oracles, hit_at_5, and MRR definitions, plus a per-task win/loss table."
+    - "Run Knowledge-Way keyless with semantic explicitly unconfigured; record GitNexus local embeddings and BM25/FTS independently as available or degraded. Attempt extension.ladybugdb.com before declaring FTS degraded and retain the exact failure reason."
+    - "Use GitNexus eval-server, resolve UIDs before trace calls, preserve operation evidence, and perform behavioral analysis only; never copy, translate, or mechanically rewrite PolyForm Noncommercial source."
+    - "Keep GitNexus strictly in isolated benchmarks/ runner material and ephemeral evaluation containers; never add it to product source, dependencies, subprocess paths, bundled artifacts, or product Docker images, and tear it down after evaluation."
+    - "Write benchmarks/gitnexus-mechanism-findings.md. For every GitNexus gold-file win absent from Knowledge-Way, diagnose the responsible mechanism from recorded per-mode evidence and map it to 1.1 FTS, 1.3 ANN, 1.5 RRF, or 1.7 hierarchical; propose uncovered adjustments only through an ADR."
+    - "If GitNexus comparable aggregate is below 0.2, record gold-task-quality drift and leave Stage 1 paused for independent task/oracle review; do not weaken tasks to clear the threshold."
+    - "Run the packet verifier, task/result validation, focused benchmark tests, full applicable local gauntlet, and git diff --check; bind evidence to the exact PR head."
+  done_when: "A reproducible exact-head packet PR contains both all-25-task scorecards, shared oracle/metric bindings, per-task wins/losses, capability flags, and complete mechanism findings, with the applicable gauntlet green."
 last_review: REVIEW-052
 drift_flags: []
 ```
