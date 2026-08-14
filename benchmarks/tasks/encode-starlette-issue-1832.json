@@ -1,0 +1,65 @@
+{
+  "id": "encode-starlette-issue-1832",
+  "corpus": "fastapi-stack/starlette",
+  "category": "historical_issue_fix",
+  "description": "### Discussed in https://github.com/encode/starlette/discussions/1823\r\n\r\n<div type='discussions-op-text'>\r\n\r\n<sup>Originally posted by **gyusang** August 26, 2022</sup>\r\nWhen sending a CORS request with credentials, wildcard origin is rejected by the standard.\r\nThe CORS middleware handles this case when cookies are included, but is missing the case when `Authorization` header is present.\r\nhttps://github.com/encode/starlette/blob/31164e346b9bd1ce17d968e1301c3bb2c23bb418/starlette/middleware/cors.py#L164-L165\r\nSince Token authentication is also widely used these days, I believe explicit header should be returned when `Authorization` header is present.</div>\n\n<!-- POLAR PLEDGE BADGE START -->\n> [!IMPORTANT]\n> - We're using [Polar.sh](https://polar.sh/encode) so you can upvote and help fund this issue.\n> - We receive the funding once the issue is completed & confirmed by you.\n> - Thank you in advance for helping prioritize & fund our backlog.\n\n<a href=\"https://polar.sh/encode/starlette/issues/1832\">\n<picture>\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://polar.sh/api/github/encode/starlette/issues/1832/pledge.svg?darkmode=1\">\n  <img alt=\"Fund with Polar\" src=\"https://polar.sh/api/github/encode/starlette/issues/1832/pledge.svg\">\n</picture>\n</a>\n<!-- POLAR PLEDGE BADGE END -->\n",
+  "source_issue": {
+    "number": 1832,
+    "url": "https://github.com/Kludex/starlette/issues/1832",
+    "title": "CORSMiddleware does not provide explicit origin although Authorization header is present"
+  },
+  "fix_pr": {
+    "number": 3137,
+    "url": "https://github.com/Kludex/starlette/pull/3137",
+    "merged_at": "2026-02-14T10:33:37Z",
+    "merge_commit_sha": "02b6ed7b18c741c00795010e9d716b58006af2c3",
+    "head_sha": "0c1b8c752432a563676fc21e25d2103649dddd91"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "starlette/middleware/cors.py",
+        "status": "modified",
+        "sha": "b65fc15a02b0fe1d367b8f4190126c7ce1caae3d",
+        "changes": 10
+      },
+      {
+        "path": "tests/middleware/test_cors.py",
+        "status": "modified",
+        "sha": "7fb7d0befb6ffc9556b00b76e62fa5ac9899c3c9",
+        "changes": 72
+      }
+    ],
+    "symbols": [
+      {
+        "path": "tests/middleware/test_cors.py",
+        "symbol": "test_cors_vary_header_defaults_to_origin",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_cors.py",
+        "symbol": "test_cors_vary_header_is_not_set_for_non_credentialed_request",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_cors.py",
+        "symbol": "test_cors_vary_header_is_properly_set_for_credentialed_request",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_cors.py",
+        "symbol": "test_cors_allowed_origin_does_not_leak_between_requests",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "tests/middleware/test_cors.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/Kludex/starlette/pulls/3137/files"
+  }
+}

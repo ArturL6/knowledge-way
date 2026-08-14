@@ -1,0 +1,418 @@
+{
+  "id": "encode-starlette-issue-2155",
+  "corpus": "fastapi-stack/starlette",
+  "category": "historical_issue_fix",
+  "description": "### Discussed in https://github.com/encode/starlette/discussions/1516\r\n\r\n<div type='discussions-op-text'>\r\n\r\n<sup>Originally posted by **aviramha** April  5, 2020</sup>\r\nAs discussed in the Gitter, my opinion is that starlette should provide a default limit for request size.\r\nThe main reason is that without it, any Starlette application is vulnerable to very easy DoS.\r\nFor example, newbie me can write a program as follows:\r\n```\r\nfrom starlette.requests import Request\r\nfrom starlette.responses import Response\r\n\r\n\r\nasync def app(scope, receive, send):\r\n    assert scope['type'] == 'http'\r\n    request = Request(scope, receive)\r\n    body = b''\r\n    json = await request.json()\r\n    response = Response(body, media_type='text/plain')\r\n    await response(scope, receive, send)\r\n```\r\nAs a malicious user, I could send a 30GB sized JSON and cause the memory to go OOM.\r\nOther frameworks support this also - Django, Quart.\r\nMy proposal is to add a default limit which can be overrided in the app configuration.</div>\n\n<!-- POLAR PLEDGE BADGE START -->\n> [!IMPORTANT]\n> - We're using [Polar.sh](https://polar.sh/encode) so you can upvote and help fund this issue.\n> - We receive the funding once the issue is completed & confirmed by you.\n> - Thank you in advance for helping prioritize & fund our backlog.\n\n<a href=\"https://polar.sh/encode/starlette/issues/2155\">\n<picture>\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://polar.sh/api/github/encode/starlette/issues/2155/pledge.svg?darkmode=1\">\n  <img alt=\"Fund with Polar\" src=\"https://polar.sh/api/github/encode/starlette/issues/2155/pledge.svg\">\n</picture>\n</a>\n<!-- POLAR PLEDGE BADGE END -->\n",
+  "source_issue": {
+    "number": 2155,
+    "url": "https://github.com/Kludex/starlette/issues/2155",
+    "title": "Limit max request size"
+  },
+  "fix_pr": {
+    "number": 3431,
+    "url": "https://github.com/Kludex/starlette/pull/3431",
+    "merged_at": "2026-08-08T17:06:26Z",
+    "merge_commit_sha": "38f8999a229610b36f39d11f67d80515a15c6330",
+    "head_sha": "8a68202e9f004343cdd90b00ef0d09d71fdfda4c"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "docs/middleware.md",
+        "status": "modified",
+        "sha": "207b3e87cd777deafb5d6264b8a7e708376b31b3",
+        "changes": 30
+      },
+      {
+        "path": "docs/requests.md",
+        "status": "modified",
+        "sha": "83e6706f17294b875546ee400259ff322c9f403d",
+        "changes": 9
+      },
+      {
+        "path": "docs/routing.md",
+        "status": "modified",
+        "sha": "cecaa7a2648ee841f1bef87a7ae2a2519fd404b9",
+        "changes": 31
+      },
+      {
+        "path": "starlette/applications.py",
+        "status": "modified",
+        "sha": "f3e26bc4de76e6bcffc3459657db2ad723e66ef6",
+        "changes": 16
+      },
+      {
+        "path": "starlette/formparsers.py",
+        "status": "modified",
+        "sha": "88862f788c327d303531750ab6741e33a6303bbc",
+        "changes": 6
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "status": "added",
+        "sha": "159c70d9785e30e3adbe9e858f51a5830dab0ea7",
+        "changes": 132
+      },
+      {
+        "path": "starlette/routing.py",
+        "status": "modified",
+        "sha": "d86ddb0c423997adce71cb7a6ab1083181af1c9f",
+        "changes": 10
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "status": "added",
+        "sha": "df6bb44fb9665a1a1d2c1da1e2a66663d3d875d4",
+        "changes": 368
+      },
+      {
+        "path": "tests/test_formparsers.py",
+        "status": "modified",
+        "sha": "a960e195b54feec2c340bacd98cdea0c58f927c1",
+        "changes": 26
+      }
+    ],
+    "symbols": [
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "_Missing",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "_RequestBodyTooLarge",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "__init__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "_RequestBodyLimitResponseSent",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "RequestBodyLimitMiddleware",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "__init__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "__call__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "RequestBodyLimitResponder",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "__init__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "scope",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "receive",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "send",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "__call__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "receive_with_limit",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "send_with_limit",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/body_limit.py",
+        "symbol": "_get_content_length",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "echo",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_body_size_limit",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_content_length_is_checked_without_reading_body",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "endpoint",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_route_override_applies_when_middleware_defers_response_start",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "endpoint",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "passthrough",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_content_length_rejects_before_receiving_body",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "app",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "receive",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "send",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_received_bytes_are_counted_without_content_length",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "receive",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "app",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "send",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_received_bytes_are_counted_with_unreliable_content_length",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_limit_exceeded_after_response_started_is_raised",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "receive",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "app",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "send",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_non_http_scope_is_unchanged",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "app",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "receive",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "send",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_non_request_message_passes_through",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "receive",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "app",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "send",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_existing_scope_limit_is_restored",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "app",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "receive",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "send",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_starlette_limit_applies_before_user_middleware",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "ReadBodyMiddleware",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "__init__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "__call__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_route_can_raise_application_limit",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_route_can_lower_application_limit",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_mount_can_override_application_limit",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_router_limit",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_route_override_survives_shallow_scope_copy",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "CopyScopeMiddleware",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "__init__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "__call__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_stricter_route_rejects_body_read_by_middleware",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "read_body",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "test_multipart_file_counts_towards_limit",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_body_limit.py",
+        "symbol": "upload",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_formparsers.py",
+        "symbol": "test_multipart_closes_tempfile_on_stream_error",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_formparsers.py",
+        "symbol": "stream",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "tests/middleware/test_body_limit.py",
+      "tests/test_formparsers.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/Kludex/starlette/pulls/3431/files"
+  }
+}

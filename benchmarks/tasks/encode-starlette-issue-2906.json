@@ -1,0 +1,100 @@
+{
+  "id": "encode-starlette-issue-2906",
+  "corpus": "fastapi-stack/starlette",
+  "category": "historical_issue_fix",
+  "description": "The parsing logic for the backward-compatible (pre-0.29.0) list of positional arguments uses index 2 twice:\n\nhttps://github.com/encode/starlette/blob/c8a46925366361e40b65b117473db1342895b904/starlette/templating.py#L168-L173\n\n`headers`, `media_type` and `background` should be at indices 3, 4 and 5, respectively.",
+  "source_issue": {
+    "number": 2906,
+    "url": "https://github.com/Kludex/starlette/issues/2906",
+    "title": "Index Errors in old-style Jinja2Templates.TemplateResponse"
+  },
+  "fix_pr": {
+    "number": 2909,
+    "url": "https://github.com/Kludex/starlette/pull/2909",
+    "merged_at": "2025-03-16T12:18:01Z",
+    "merge_commit_sha": "bcdf0ad017168408060b6faab156636ced4c94f7",
+    "head_sha": "ca5a683c4965b9255bc2feae8480c6971158b0be"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "starlette/templating.py",
+        "status": "modified",
+        "sha": "f764858b88365c0485828cbf2d3efda62b9d3fb3",
+        "changes": 6
+      },
+      {
+        "path": "tests/test_templates.py",
+        "status": "modified",
+        "sha": "e182cb82b2b2ade1fb3533c25aca49617490aaef",
+        "changes": 121
+      }
+    ],
+    "symbols": [
+      {
+        "path": "tests/test_templates.py",
+        "symbol": "TestTemplatesArgsOnly",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_templates.py",
+        "symbol": "test_name_and_context",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_templates.py",
+        "symbol": "page",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_templates.py",
+        "symbol": "test_status_code",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_templates.py",
+        "symbol": "page",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_templates.py",
+        "symbol": "test_headers",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_templates.py",
+        "symbol": "page",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_templates.py",
+        "symbol": "test_media_type",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_templates.py",
+        "symbol": "page",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_templates.py",
+        "symbol": "test_all_args",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_templates.py",
+        "symbol": "page",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "tests/test_templates.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/Kludex/starlette/pulls/2909/files"
+  }
+}

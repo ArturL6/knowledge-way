@@ -1,0 +1,65 @@
+{
+  "id": "pydantic-pydantic-issue-13631",
+  "corpus": "fastapi-stack/pydantic",
+  "category": "historical_issue_fix",
+  "description": "### Initial Checks\n\n- [x] I confirm that I'm using Pydantic V2\n\n### Description\n\nWhen a discriminated union uses a `bool` discriminator (`Literal[True]` / `Literal[False]`), the generated JSON schema's `discriminator.mapping` uses the Python string representations `\"True\"` and `\"False\"` as keys:\n\n```json\n\"discriminator\": {\n    \"mapping\": {\"False\": \"#/$defs/Disabled\", \"True\": \"#/$defs/Enabled\"},\n    \"propertyName\": \"enabled\"\n}\n```\n\nPer the [OpenAPI discriminator specification](https://spec.openapis.org/oas/v3.1.0#discriminator-object), mapping keys must match the serialized payload value of the discriminator property. For a boolean property, that value serializes to JSON `true`/`false`, so the keys should be `\"true\"` and `\"false\"`. Tooling that resolves the mapping against the payload (code generators, validators such as openapi-generator or Redocly) fails to match either variant.\n\nExpected:\n\n```json\n\"mapping\": {\"false\": \"#/$defs/Disabled\", \"true\": \"#/$defs/Enabled\"}\n```\n\nNote that `Enum` discriminator keys are already normalized to their value (`k.value`) before stringification in `GenerateJsonSchema.tagged_union_schema`; `bool` keys just fall through to `str(k)`.\n\n### Example Code\n\n```python\nfrom typing import Literal\n\nfrom pydantic import BaseModel, Field\n\n\nclass Enabled(BaseModel):\n    enabled: Literal[True]\n    config: str\n\n\nclass Disabled(BaseModel):\n    enabled: Literal[False]\n\n\nclass Model(BaseModel):\n    setting: Enabled | Disabled = Field(discriminator='enabled')\n\n\nprint(Model.model_json_schema()['properties']['setting']['discriminator'])\n# {'propertyName': 'enabled', 'mapping': {'True': '#/$defs/Enabled', 'False': '#/$defs/Disabled'}}\n```\n\n### Python, Pydantic & OS Version\n\n```text\n             pydantic version: 2.14.0b1\n        pydantic-core version: 2.48.0\n          pydantic-core build: profile=debug pgo=false\n               python version: 3.11.15 (main, Apr 14 2026, 14:28:36) [Clang 22.1.3 ]\n                     platform: Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41\n             related packages: typing_extensions-4.15.0\n```\n",
+  "source_issue": {
+    "number": 13631,
+    "url": "https://github.com/pydantic/pydantic/issues/13631",
+    "title": "JSON schema discriminator mapping uses Python-style `True`/`False` keys for `bool` discriminators"
+  },
+  "fix_pr": {
+    "number": 13632,
+    "url": "https://github.com/pydantic/pydantic/pull/13632",
+    "merged_at": "2026-08-11T13:56:15Z",
+    "merge_commit_sha": "cc13d1b8c978eaf78ed5308329cd41f03ecc3144",
+    "head_sha": "ed7f32883da2b6abeda21312c2c1f364a6929389"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "pydantic/json_schema.py",
+        "status": "modified",
+        "sha": "c61378a5f0dca58437e644c39597ff516a1a5391",
+        "changes": 4
+      },
+      {
+        "path": "tests/test_json_schema.py",
+        "status": "modified",
+        "sha": "2d67f01ae146d48666dd7778eeda13249e23591f",
+        "changes": 47
+      }
+    ],
+    "symbols": [
+      {
+        "path": "tests/test_json_schema.py",
+        "symbol": "test_bool_discriminated_union",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_json_schema.py",
+        "symbol": "Enabled",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_json_schema.py",
+        "symbol": "Disabled",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_json_schema.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "tests/test_json_schema.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/pydantic/pydantic/pulls/13632/files"
+  }
+}

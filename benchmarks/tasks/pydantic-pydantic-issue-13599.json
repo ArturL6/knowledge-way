@@ -1,0 +1,76 @@
+{
+  "id": "pydantic-pydantic-issue-13599",
+  "corpus": "fastapi-stack/pydantic",
+  "category": "historical_issue_fix",
+  "description": "### Initial Checks\n\n- [x] I confirm that I'm using Pydantic V2\n\n### Description\n\nNew type aliases prefixed with the type keyword are not supported as the type annotation for a callable discriminator.\n\nM1, M2, M4 ok\nM3\n```\npydantic.errors.PydanticUserError: `Tag` not provided for choice {'type': 'definition-ref', 'schema_ref': '__main__.TaggedAnyA:2210408548368'} used with `Discriminator`\n```\n\nExample Code from #12843 also doesn\u2019t work.\n\n### Example Code\n\n```Python\nimport traceback\nfrom sys import stderr\n\nfrom pydantic import BaseModel, Discriminator, Field, Tag\nfrom typing_extensions import Annotated, Any, Literal, TypeAlias\n\n\nclass A(BaseModel):\n    type_: str\n\nclass A1(A):\n    type_: Literal['A1'] = Field(alias='type')\n\nclass A2(A):\n    type_: Literal['A2'] = Field(alias='type')\n\ndef _discriminator(data: Any) -> str:\n    if isinstance(data, dict):\n        return data['type']\n    return data.type_\n\ndiscriminator = Discriminator(_discriminator)\n\ntype AnyA = A1 | A2\nAnyA_old: TypeAlias = A1 | A2\n\ntype TaggedAnyA = Annotated[A1, Tag('A1')] | Annotated[A2, Tag('A2')]\nTaggedAnyA_old: TypeAlias = Annotated[A1, Tag('A1')] | Annotated[A2, Tag('A2')]\n\n\n_data = {\"a\" : {'type': 'A1'}}\ntry:\n    class M1(BaseModel):\n        a: AnyA = Field(discriminator='type_')\n\n    M1.model_validate(_data)\nexcept Exception as e:\n    traceback.print_exc()\nelse:\n    print(\"OK\", file=stderr)\n\ntry:\n    class M2(BaseModel):\n        a: AnyA_old = Field(discriminator='type_')\n\n    M2.model_validate(_data)\nexcept Exception as e:\n    traceback.print_exc()\nelse:\n    print(\"OK\", file=stderr)\n\ntry:\n    class M3(BaseModel):\n        a: TaggedAnyA = Field(discriminator=discriminator)\n\n    M3.model_validate(_data)\nexcept Exception as e:\n    traceback.print_exc()\nelse:\n    print(\"OK\", file=stderr)\n\ntry:\n    class M4(BaseModel):\n        a: TaggedAnyA_old = Field(discriminator=discriminator)\n\n    M4.model_validate(_data)\nexcept Exception as e:\n    traceback.print_exc()\nelse:\n    print(\"OK\", file=stderr)\n```\n\n### Python, Pydantic & OS Version\n\n```Text\npydantic version: 2.13.4\n        pydantic-core version: 2.46.4\n          pydantic-core build: profile=release pgo=false\n               python version: 3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]\n                     platform: Windows-11-10.0.26200-SP0\n             related packages: mypy-2.3.0 typing_extensions-4.16.0\n                       commit: unknown\n```",
+  "source_issue": {
+    "number": 13599,
+    "url": "https://github.com/pydantic/pydantic/issues/13599",
+    "title": "PEP 695 type aliases don't work with callable discriminators"
+  },
+  "fix_pr": {
+    "number": 13604,
+    "url": "https://github.com/pydantic/pydantic/pull/13604",
+    "merged_at": "2026-08-08T09:19:43Z",
+    "merge_commit_sha": "9b4d952c59d64b940a0a2559299aff81243e1ded",
+    "head_sha": "0575cb8e4396393420d5b4ced88da37de80e69b8"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "pydantic/_internal/_discriminated_union.py",
+        "status": "modified",
+        "sha": "64f23145931f45018a58c8f9c332e75b1cb48b03",
+        "changes": 2
+      },
+      {
+        "path": "pydantic/types.py",
+        "status": "modified",
+        "sha": "50f94cf43b1ad283339d291c3c7a4c63e9479613",
+        "changes": 37
+      },
+      {
+        "path": "tests/types/unions/test_discriminated_union.py",
+        "status": "modified",
+        "sha": "63767910239e82fb068b863b608d559fa0f895e7",
+        "changes": 21
+      }
+    ],
+    "symbols": [
+      {
+        "path": "pydantic/types.py",
+        "symbol": "_resolve_ref",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/unions/test_discriminated_union.py",
+        "symbol": "test_discriminated_union_type_alias_type_separate_callable_discriminator_field",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/unions/test_discriminated_union.py",
+        "symbol": "Foo",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/unions/test_discriminated_union.py",
+        "symbol": "Bar",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/unions/test_discriminated_union.py",
+        "symbol": "Main",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "tests/types/unions/test_discriminated_union.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/pydantic/pydantic/pulls/13604/files"
+  }
+}

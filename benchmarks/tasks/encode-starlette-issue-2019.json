@@ -1,0 +1,116 @@
+{
+  "id": "encode-starlette-issue-2019",
+  "corpus": "fastapi-stack/starlette",
+  "category": "historical_issue_fix",
+  "description": "### Discussed in https://github.com/encode/starlette/discussions/2018\r\n\r\n<div type='discussions-op-text'>\r\n\r\n<sup>Originally posted by **sm-Fifteen** January 27, 2023</sup>\r\nThe way SessionMiddleware currently works is that it encodes session data in a signed base64 object with timestamp, in a format not entirely dissimilar to (but incompatible with) JWT. Because of the way it works, being run right before the headers for an HTTP response are sent, and because it doesn't perform many checks besides whether or not there is session data to encode, it will try to update the session cookie whenever a route is called. This is somewhat wasteful, as session data is not usually updated on every request, but it leads to interesting issues as well.\r\n\r\nI have a FastAPI application where login is handeled via a session cookie with a separate login process. Several routes are unlocked based on whether or not the cookie is present and based on the user authorizations recorded in said session cookie. When the frontend fetches API data, if the user is logged in, every response contains a new `Set-Cookie` header, which *Firefox ignores, but Chrome acknowledges*. None of the API routes alter session data, so the cookie value is always the same, save for the timestamp and signature at the end. This actually runs into [an interesting Chrome issue](https://bugs.chromium.org/p/chromium/issues/detail?id=696204#c107) where responses to fetch requests that arrive after the page has been navigated away from still alter the session cookie, even if if the new page changed the session data on load. This means I have this strange, Chrome-exclusive, race-condition-y bug that matches lepture/authlib#334, where the session state data setup by the Oauth flow before redirecting to the third party login form may get clobbered if some `/api/slow_route` query was pending when the user clicked the login button.\r\n\r\nIt's unclear if it's actually a chrome bug or unintended behavior from everything working as intended. If Starlette wasn't updating cookies for every request, and the ``Set-Cookie`` was actually important here, it's difficult to argue whether or not Chrome should have ignored it.\r\n\r\nSee here the Starlette test case from the Chromium bug report, which doesn't use SessionMiddleware, but shows the Chrome behavior in action.\r\n\r\n```py\r\nfrom starlette.applications import Starlette\r\nfrom starlette.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse\r\nfrom starlette.routing import Route\r\nimport uvicorn\r\nimport datetime\r\nfrom asyncio import sleep\r\n\r\nhtml_content = \"\"\"\r\n    <!DOCTYPE html>\r\n    <html>\r\n        <head>\r\n            <meta http-equiv=\"refresh\" content=\"2;url=/set_cookie_and_redirect\" />\r\n            <script>fetch(\"/set_cookie_on_fetch\")</script>\r\n        </head>\r\n        <body>\r\n            Calling slow route via fetch() before changing page.\r\n        </body>\r\n    </html>\r\n\"\"\"\r\n\r\n\r\nasync def homepage(request):\r\n    return HTMLResponse(html_content)\r\n\r\nasync def set_cookie_on_fetch(request):\r\n    res = JSONResponse({'hello':'world'})\r\n    await sleep(5)\r\n    res.set_cookie(\"my_cookie\", \"a__\" + datetime.datetime.now().isoformat())\r\n    return res\r\n\r\nasync def set_cookie_and_redirect(request):\r\n    res = RedirectResponse(\"/final\")\r\n    res.set_cookie(\"my_cookie\", \"b__\" + datetime.datetime.now().isoformat())\r\n    return res\r\n\r\nasync def final(request):\r\n    cookie_val = request.cookies.get('my_cookie')\r\n    cookie_is_b = cookie_val.partition(\"__\")[0] == 'b'\r\n\r\n    if (cookie_is_b):\r\n        res = PlainTextResponse(\"Cookie value is \\\"\" + cookie_val + \"\\\", all is well. Try refreshing the page.\", 200)\r\n    else:\r\n        res = PlainTextResponse(\"Cookie value is \\\"\" + cookie_val + \"\\\", it shouldn't be.\", 400)\r\n    return res\r\n\r\nroutes = [\r\n    Route('/', homepage),\r\n    Route('/set_cookie_on_fetch', set_cookie_on_fetch),\r\n    Route('/set_cookie_and_redirect', set_cookie_and_redirect),\r\n    Route('/final', final),\r\n]\r\n\r\napp = Starlette(debug=True, routes=routes)\r\nuvicorn.run(app, host=\"0.0.0.0\", port=8000)\r\n```</div>\n\n<!-- POLAR PLEDGE BADGE START -->\n> [!IMPORTANT]\n> - We're using [Polar.sh](https://polar.sh/encode) so you can upvote and help fund this issue.\n> - We receive the funding once the issue is completed & confirmed by you.\n> - Thank you in advance for helping prioritize & fund our backlog.\n\n<a href=\"https://polar.sh/encode/starlette/issues/2019\">\n<picture>\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://polar.sh/api/github/encode/starlette/issues/2019/pledge.svg?darkmode=1\">\n  <img alt=\"Fund with Polar\" src=\"https://polar.sh/api/github/encode/starlette/issues/2019/pledge.svg\">\n</picture>\n</a>\n<!-- POLAR PLEDGE BADGE END -->\n",
+  "source_issue": {
+    "number": 2019,
+    "url": "https://github.com/Kludex/starlette/issues/2019",
+    "title": "SessionMiddleware sends a new set-cookie for every request, with unintended results"
+  },
+  "fix_pr": {
+    "number": 3166,
+    "url": "https://github.com/Kludex/starlette/pull/3166",
+    "merged_at": "2026-03-01T18:21:55Z",
+    "merge_commit_sha": "4647e532bbed7a5f60c9972ddba3f5fb4a79e1f9",
+    "head_sha": "ee268e2f73ffb722b78d753b072c1d8ccd559fa4"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "starlette/middleware/sessions.py",
+        "status": "modified",
+        "sha": "aa0383f98a61903e89e1b63e4ae8483d597f538f",
+        "changes": 56
+      },
+      {
+        "path": "starlette/requests.py",
+        "status": "modified",
+        "sha": "c57b4ae0592d00983172ba29969af30f13d12b20",
+        "changes": 7
+      },
+      {
+        "path": "tests/middleware/test_session.py",
+        "status": "modified",
+        "sha": "0f5db7908cafe7bd839d40e3d74aaeb7bc7afddc",
+        "changes": 89
+      }
+    ],
+    "symbols": [
+      {
+        "path": "starlette/middleware/sessions.py",
+        "symbol": "Session",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/sessions.py",
+        "symbol": "mark_accessed",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/sessions.py",
+        "symbol": "mark_modified",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/sessions.py",
+        "symbol": "__setitem__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/sessions.py",
+        "symbol": "__delitem__",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/sessions.py",
+        "symbol": "clear",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/sessions.py",
+        "symbol": "pop",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/sessions.py",
+        "symbol": "setdefault",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/middleware/sessions.py",
+        "symbol": "update",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_session.py",
+        "symbol": "no_session_access",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_session.py",
+        "symbol": "test_set_cookie_only_on_modification",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_session.py",
+        "symbol": "test_vary_cookie_on_access",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/middleware/test_session.py",
+        "symbol": "test_session_tracks_modification",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "tests/middleware/test_session.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/Kludex/starlette/pulls/3166/files"
+  }
+}
