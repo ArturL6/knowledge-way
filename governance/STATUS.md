@@ -101,11 +101,11 @@ packets:
     blocked_by: ["0.3"]
   - id: "0.6"
     title: "Local quickstart v1"
-    state: pr_open
+    state: done
     branch: "packet/0.6-local-quickstart"
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
-    notes: "PR #67 is authorized to merge only at exact head d1ae95757a5dd78353cddc33c22b7226be811d46 by committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow pass. GitHub review approval is not a gate."
+    notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
 last_review: REVIEW-032
 drift_flags: []
 next_instruction: null

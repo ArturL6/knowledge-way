@@ -17,7 +17,10 @@ class Base(DeclarativeBase):
 
 def verify_migration_ready() -> None:
     """Fail fast when the database was not upgraded to this application's head."""
-    config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+    # ``db.py`` lives at app/adapters/outbound/postgres; resolve from its
+    # location rather than the process working directory so both Uvicorn and
+    # Alembic-invoked containers find the API-level configuration.
+    config = Config(str(Path(__file__).resolve().parents[4] / "alembic.ini"))
     expected_heads = set(ScriptDirectory.from_config(config).get_heads())
     with engine.connect() as connection:
         current_heads = set(connection.execute(text("SELECT version_num FROM alembic_version")).scalars())
