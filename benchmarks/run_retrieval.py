@@ -97,22 +97,28 @@ def capture_manifest(base: str, corpus: dict[str, Any], timeout: float) -> list[
         raise HarnessError("repository manifest response is not a list")
     manifest = []
     for expected in expected_manifest(corpus):
-        matches = [repo for repo in served if repo.get("name") == expected["id"]]
-        if len(matches) != 1:
-            raise HarnessError(f"expected exactly one served repository named {expected['id']}")
-        repo = matches[0]
-        got_url = str(repo.get("clone_url", "")).removesuffix(".git")
         want_url = expected["source_url"].removesuffix(".git")
+        matches = [
+            repo
+            for repo in served
+            if str(repo.get("clone_url", "")).removesuffix(".git") == want_url
+        ]
+        if len(matches) != 1:
+            raise HarnessError(
+                f"expected exactly one served repository for {expected['id']} at {want_url}"
+            )
+        repo = matches[0]
         got_sha = repo.get("indexed_commit_sha")
-        if got_url != want_url or got_sha != expected["resolved_sha"]:
+        if got_sha != expected["resolved_sha"]:
             raise HarnessError(
                 f"snapshot mismatch for {expected['id']}: expected "
-                f"{want_url}@{expected['resolved_sha']}, got {got_url}@{got_sha}"
+                f"{want_url}@{expected['resolved_sha']}, got {want_url}@{got_sha}"
             )
         manifest.append(
             {
                 "id": expected["id"],
                 "repository_id": str(repo["id"]),
+                "served_name": str(repo.get("name", "")),
                 "source_url": expected["source_url"],
                 "indexed_commit_sha": expected["resolved_sha"],
             }
