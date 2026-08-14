@@ -145,14 +145,13 @@ last_review: REVIEW-014
 drift_flags: []
 ```
 
-### Scheduled jobs (set up as Hermes cron jobs in packet R.1)
+### Scheduled jobs (state-based Hermes cron contracts)
 
 | Job | Schedule | Prompt contract |
 |---|---|---|
-| `implementer-run` | nightly (or every N hours) | Read PLAN.md + STATUS.md. **First: merge main → integration if main moved; merge integration → current packet branch if stale.** Pick the lowest-numbered `todo` packet with no unmet `blocked_by`. Set `in_progress`. Implement on `packet/<id>-<slug>` branched from integration. Run the **full test gauntlet** (static checks, unit, API endpoint tests, Playwright if web/UI touched, packet `verify`, scorecard if retrieval touched). Open PR **into integration** containing: diff, gauntlet + verify output, STATUS.md update to `pr_open`. **Never** start a packet from a future stage. **Never** merge. |
-| `reviewer-run` | every morning | For each `pr_open` packet: fetch diff + recorded local gauntlet output + verify output. Check against PLAN.md packet definition and standing rules. Write `governance/reviews/REVIEW-NNN.md` with the verdict contract below. Verdict `on_track` → approve merge. `drift` → set `review_blocked` with required actions. |
-| `drift-audit` | weekly | Diff the integration branch against PLAN.md stage scope. Check: hexagon boundary intact, no unplanned dependencies, scorecard trend not regressing, STATUS.md matches reality, integration current with main. Output: audit review + updated `drift_flags`. |
-| `benchmark-run` | weekly (from Stage 0 on) | Run the gold-task harness against integration; commit scorecard to `benchmarks/results/`; flag any regression as a drift finding. |
+| `sol-navigator-run` | every 20 minutes | Read STATUS, PLAN, open PRs, and reviews. Review one `pr_open` packet with re-execution and a recorded verdict; otherwise nudge a stale in-progress packet; otherwise issue one PLAN-traceable `next_instruction`; otherwise no-op. Perform the drift audit at least every 24 hours. Never writes application code. |
+| `implementer-run` | every 20 minutes | Read STATUS and perform exactly one state-selected action: execute an unblocked Sol instruction from fresh integration, resolve a blocked PR's required actions, merge only after an approving verdict, or no-op. Run the full gauntlet and open packet PRs into integration. Never self-selects work. |
+| `benchmark-run` | every 20 minutes | When the Stage 0 harness exists and integration changed, commit its scorecard; when available, run the GitNexus comparison on the same tasks; flag regressions for Sol. Otherwise no-op. |
 
 ### Reviewer verdict contract (every review, no exceptions)
 
