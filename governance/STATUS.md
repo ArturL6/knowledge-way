@@ -101,12 +101,12 @@ packets:
     blocked_by: ["0.3"]
   - id: "0.6"
     title: "Local quickstart v1"
-    state: pr_open
+    state: review_blocked
     branch: "packet/0.6-local-quickstart"
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "May proceed in parallel with 0.2–0.5. Keyless default uses EMBEDDING_PROVIDER=none."
-last_review: REVIEW-015
+last_review: REVIEW-025
 drift_flags: []
 ```
 
