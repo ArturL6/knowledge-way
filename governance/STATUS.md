@@ -102,13 +102,12 @@ packets:
     notes: "PR #74 merged at 2eb873874cdcdae1013575c01c080d3906db6667 from exact reviewed head 67819c93fc53bf8cc8e1aac69ed2e827e7c04fb6 after REVIEW-048 on_track authorization. Independent review passed packet verify, 25-task validation, 95 tests (including 5 focused harness tests), both import contracts, snapshot/task-content binding, fatal failure semantics, packet governance hygiene, diff check, and current-integration merge simulation. The replacement baseline has complete supported-mode coverage; semantic remains honestly unconfigured under HUMAN-DIRECTIVE-005. GitHub approval was not a gate."
   - id: "0.4"
     title: "GitNexus local test drive"
-    state: pr_open
+    state: done
     branch: "packet/0.4-gitnexus-test-drive-v3"
     verify: "test -f benchmarks/gitnexus-findings.md"
     blocked_by: ["0.1"]
-    pr: 77
-    head_sha: "7d2758bcd365f712ea72fe7eedbe3b7dc1291f4a"
-    notes: "PR #75 and #76 were closed unmerged under HD-005 §1. REVIEW-052 authorizes PR #77 only at exact head 7d2758b after HD-006 merge-plus-follow-up remediation, independent applicable gauntlet, and evidence-integrity verification passed. Observation 06, runner, and findings consistently preserve the unavailable impact result as not-representable with no unsupported metrics. GitHub approval is not a gate."
+    integration_merge: "c7f91b199029a8e8ef2655d4c25927b7cb18bdd3"
+    notes: "PR #77 merged at c7f91b199029a8e8ef2655d4c25927b7cb18bdd3 from exact reviewed head 7d2758bcd365f712ea72fe7eedbe3b7dc1291f4a after REVIEW-052 on_track authorization. Independent current-integration merge simulation, packet verify, 25-task validation, runner help, 95 tests, import-boundary checks, and diff hygiene passed. Observation 06 remains honestly not-representable with no unsupported metrics. GitHub approval was not a gate."
   - id: "0.5"
     title: "Benchmark scheduler wiring"
     state: todo
@@ -122,22 +121,7 @@ packets:
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
-next_instruction:
-  issued_by: sol-navigator
-  issued_at: "2026-08-14T18:08:22+00:00"
-  packet: "0.4"
-  objective: "Execute the PLAN 0.4 GitNexus local test drive against the committed fastapi-stack workspace and gold-task question classes, producing a reproducible, license-clean comparative findings artifact."
-  constraints:
-    - "Branch packet/0.4-gitnexus-test-drive from refreshed integration/roadmap-v2; packet branches must not modify governance/STATUS.md or any governance/operations/RUNLOG*."
-    - "Follow HUMAN-DIRECTIVE-005 section 4 exactly: install GitNexus with GITNEXUS_SKIP_OPTIONAL_GRAMMARS=1 and ONNXRUNTIME_NODE_INSTALL=skip, use eval-server for scripted calls, and resolve symbol UIDs before trace calls."
-    - "Study behavior and record results only; never copy or mechanically rewrite PolyForm Noncommercial GitNexus source code."
-    - "Evaluate the PLAN Appendix A.7 question classes on the committed fastapi-stack corpus and applicable gold tasks; record correct/partial/incorrect/not-representable plus latency, commands, versions, corpus snapshots, and enough raw evidence for independent replay."
-    - "Capture context/impact epistemic exact-or-lower-bound fields and boundary explanations. Dedupe CodeRelation rows before graph counts. Keep cross-repository group evaluation out of scope until Stage 3."
-    - "Verify LadybugDB FTS extension availability; if egress or repair-fts fails, label keyword results environment-limited rather than treating degradation as a product result. Record analyze timing and compare it honestly with the owner-observed ~9.5s Starlette bar."
-    - "Use subset-first, BYOK, product-budget-accounted execution for any chat/LLM mode; do not require chat to complete deterministic graph/search evaluation, and never manufacture unavailable results."
-    - "Create benchmarks/gitnexus-findings.md and any reproducible runner/result fixtures needed for the packet; run the full applicable local gauntlet and packet verify. Playwright is required only if a web or UI-facing contract is touched."
-    - "Open exactly one PR into integration/roadmap-v2 with evidence bound to its exact head; do not merge without a committed exact-head on_track reviewer verdict."
-  done_when: "benchmarks/gitnexus-findings.md exists with reproducible GitNexus results over the fastapi-stack workspace, all 12 PLAN Appendix A.7 classes are classified (including honest not-representable/environment-limited outcomes), required epistemic/latency/version/snapshot evidence is captured, the applicable gauntlet passes, and the exact-head packet 0.4 PR is open into integration/roadmap-v2."
+next_instruction: null
 last_review: REVIEW-052
 drift_flags: []
 ```
