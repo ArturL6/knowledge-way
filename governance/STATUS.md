@@ -94,11 +94,12 @@ packets:
     notes: "PR #72 merged at 259d28fbe6c5b441ed72b90e9466a6fe771e89ae from exact reviewed head bdc788a625117aac8bb54ffeb666e09d32aec3d0 after committed REVIEW-043 on_track authorization; packet verify, benchmark checks, 95 tests, and boundary contracts passed. GitHub approval was not a gate."
   - id: "0.3"
     title: "Retrieval scorecard baseline harness"
-    state: pr_open
+    state: done
     branch: "packet/0.3-scorecard-harness"
     verify: "python benchmarks/run_retrieval.py --help"
     blocked_by: ["0.1", "0.2"]
-    notes: "PR #74 is authorized to merge only at exact reviewed head 67819c93fc53bf8cc8e1aac69ed2e827e7c04fb6 by REVIEW-048. Independent review passed packet verify, 25-task validation, 95 tests (including 5 focused harness tests), both import contracts, snapshot/task-content binding, fatal failure semantics, packet governance hygiene, diff check, and current-integration merge simulation. The replacement baseline has complete supported-mode coverage; semantic remains honestly unconfigured under HUMAN-DIRECTIVE-005. GitHub approval is not a gate."
+    integration_merge: "2eb873874cdcdae1013575c01c080d3906db6667"
+    notes: "PR #74 merged at 2eb873874cdcdae1013575c01c080d3906db6667 from exact reviewed head 67819c93fc53bf8cc8e1aac69ed2e827e7c04fb6 after REVIEW-048 on_track authorization. Independent review passed packet verify, 25-task validation, 95 tests (including 5 focused harness tests), both import contracts, snapshot/task-content binding, fatal failure semantics, packet governance hygiene, diff check, and current-integration merge simulation. The replacement baseline has complete supported-mode coverage; semantic remains honestly unconfigured under HUMAN-DIRECTIVE-005. GitHub approval was not a gate."
   - id: "0.4"
     title: "GitNexus local test drive"
     state: todo
