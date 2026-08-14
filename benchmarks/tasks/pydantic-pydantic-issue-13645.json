@@ -1,0 +1,67 @@
+{
+  "id": "pydantic-pydantic-issue-13645",
+  "corpus": "fastapi-stack/pydantic",
+  "category": "historical_issue_fix",
+  "description": "Reported downstream in Giskard-AI/giskard#2719 (breaks `import giskard.checks`); repro and analysis below. The report was drafted jointly with @davidberenstein1957, who invited it to be filed upstream as-is.\n\n### Description\n\n`_generate_schema.match_type` added an unguarded dict lookup in 2.14 that assumes the annotation object is hashable. It is not, for a PEP 695 type alias with a `ParamSpec` parameterized by an empty list. Schema building for any model containing such an annotation crashes.\n\nThis is a regression: the same code builds fine on 2.13.4.\n\n### Example Code\n\n```python\nfrom typing import Any\nfrom pydantic import BaseModel\n\ntype Alias[**P, R] = Any\n\nclass M(BaseModel):\n    f: Alias[[], int] | None = None\n```\n\nRaises immediately at class-definition time:\n\n```\nFile \".../pydantic/_internal/_generate_schema.py\", line 1127, in match_type\n    if origin is not None and (aliased_obj := typing_objects.DEPRECATED_ALIASES.get(obj)):\nTypeError: unhashable type: 'list'\n```\n\n### Mechanism\n\n`Alias[[], int]` is a `types.GenericAlias` whose `__args__` is `([], int)`. Hashing the alias hashes that tuple, which contains a `list` \u2014 so it is unhashable. The line at `_generate_schema.py:1127`\n\n```python\nif origin is not None and (aliased_obj := typing_objects.DEPRECATED_ALIASES.get(obj)):\n```\n\ncalls `.get(obj)` without checking that `obj` can be hashed. `dict.get` propagates the `TypeError` rather than treating an unhashable key as absent.\n\n### Suggested fix\n\nGuard the lookup, e.g.\n\n```python\nif origin is not None and isinstance(obj, Hashable) and (aliased_obj := typing_objects.DEPRECATED_ALIASES.get(obj)):\n```\n\nor wrap it in `try/except TypeError`. An unhashable object cannot be a `DEPRECATED_ALIASES` key by construction, so skipping the lookup is always correct.\n\n### Python, Pydantic & OS Version\n\n- pydantic 2.14.0b1 (fails) / 2.13.4 (works)\n- Python 3.12.13\n- Reproduced on Linux and macOS\n\n### Real-world impact\n\nHit in [giskard-oss](https://github.com/Giskard-AI/giskard-oss), where `type GeneratorType[**P, R, S] = ...` parameterized as `GeneratorType[[], InputType, None]` makes `import giskard.checks` fail outright under 2.14.0b1. Instrumenting `match_type` confirms the offending object:\n\n```\nOFFENDING obj  = GeneratorType[[], InputType, None]\nOFFENDING type = <class 'types.GenericAlias'>\nOFFENDING args = ([], InputType, None)\n```\n\nThere is no workaround on the library side short of pinning `pydantic<2.14` (done in Giskard-AI/giskard#2752), which is what downstream has had to do.\n",
+  "source_issue": {
+    "number": 13645,
+    "url": "https://github.com/pydantic/pydantic/issues/13645",
+    "title": "TypeError: unhashable type: 'list' in match_type for PEP 695 aliases with a ParamSpec (regression in 2.14.0b1)"
+  },
+  "fix_pr": {
+    "number": 13648,
+    "url": "https://github.com/pydantic/pydantic/pull/13648",
+    "merged_at": "2026-08-12T13:03:53Z",
+    "merge_commit_sha": "f7e30afbd959b3cf6401ebec3ed2a239aa1eaae8",
+    "head_sha": "2ba684f697094f92ecc3a1a62370b07cdf8f0804"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "pydantic/_internal/_generate_schema.py",
+        "status": "modified",
+        "sha": "815766b376537b9505de8aed4e94cc5b0d9cefeb",
+        "changes": 2
+      },
+      {
+        "path": "pyproject.toml",
+        "status": "modified",
+        "sha": "27f62269fed92bdace1cea7824e2718610b9bf19",
+        "changes": 2
+      },
+      {
+        "path": "tests/test_edge_cases.py",
+        "status": "modified",
+        "sha": "699a49da0b3b936fa22e1146a5c870a5f7a9bf21",
+        "changes": 11
+      },
+      {
+        "path": "uv.lock",
+        "status": "modified",
+        "sha": "ef86605389a996abc4c7af917ceafcfe4e63be57",
+        "changes": 8
+      }
+    ],
+    "symbols": [
+      {
+        "path": "tests/test_edge_cases.py",
+        "symbol": "test_unhasbable_generic_alias",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_edge_cases.py",
+        "symbol": "Meta",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "tests/test_edge_cases.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/pydantic/pydantic/pulls/13648/files"
+  }
+}

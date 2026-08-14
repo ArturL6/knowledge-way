@@ -1,0 +1,42 @@
+{
+  "id": "encode-starlette-issue-2950",
+  "corpus": "fastapi-stack/starlette",
+  "category": "historical_issue_fix",
+  "description": "In our FastAPI tests we switch between different test users that we have as fixtures a lot, and I found that sub-classing TestClient is a nice way to switch between them via `client.as_user(user_42).get(...)` if I do this:\n\n```python\nclass MyTestClient(TestClient):\n    \"\"\"Enhanced test client that can authenticate as different users via bearer tokens.\"\"\"\n\n    def as_user(self, user: User) -> Self:\n        self.headers.update(create_access_token(user).headers)\n        return self\n\n@pytest.fixture\ndef client(db, test_user) -> Generator[MyTestClient]:\n    app.dependency_overrides[get_session] = lambda: db\n    with MyTestClient(app) as test_client:\n        yield test_client.as_user(test_user)\n\n    app.dependency_overrides.clear()\n\n```\nUnfortunately pyright gives this error incorrectly claiming that `client.as_user` doesn't exist:\n```\n error: Cannot access attribute \"as_user\" for class \"TestClient\"\n    Attribute \"as_user\" is unknown (reportAttributeAccessIssue)\n```\n\nThe problem is that you have a hard-coded return type annotation on `TestClient.__enter__` that doesn't work with sub-classes:\nhttps://github.com/encode/starlette/blob/739ea4928b11d4b4cb2b366ccad11405ef3034c4/starlette/testclient.py#L670\n\nI gather you can't use `typing.Self` yet?\nIs there some other way to fix that type annotation?\n\nFor now I'll do a manual `typing.cast` as workaround.",
+  "source_issue": {
+    "number": 2950,
+    "url": "https://github.com/Kludex/starlette/issues/2950",
+    "title": "TestClient.__enter__ return type error for subclasses"
+  },
+  "fix_pr": {
+    "number": 2951,
+    "url": "https://github.com/Kludex/starlette/pull/2951",
+    "merged_at": "2025-06-21T01:54:44Z",
+    "merge_commit_sha": "e741635e5452ba8013d926bddf2be3a292910dca",
+    "head_sha": "2710cf2d64d5478fc53d5ccda0fd1578be61ee13"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "starlette/testclient.py",
+        "status": "modified",
+        "sha": "575b1a71f22bea0976f2fa22b62e041e934ec8ba",
+        "changes": 7
+      }
+    ],
+    "symbols": [
+      {
+        "path": "starlette/testclient.py",
+        "symbol": "__enter__",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/Kludex/starlette/pulls/2951/files"
+  }
+}

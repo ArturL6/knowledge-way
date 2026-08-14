@@ -1,0 +1,112 @@
+{
+  "id": "encode-starlette-issue-3048",
+  "corpus": "fastapi-stack/starlette",
+  "category": "historical_issue_fix",
+  "description": "\n### Discussed in https://github.com/Kludex/starlette/discussions/2566\n\n<div type='discussions-op-text'>\n\n<sup>Originally posted by **WSH032** April  6, 2024</sup>\n## Describe the bug\r\n\r\nIf we use `FileResponse` or `StreamingResponse` when sending the Websocket Denial Response, a `RuntimeError` will occur.\r\n\r\n## To Reproduce\r\n\r\n```py\r\nfrom fastapi import FastAPI, WebSocket\r\nfrom fastapi.responses import StreamingResponse\r\nfrom uvicorn import run\r\n\r\napp = FastAPI()\r\n\r\n\r\n@app.websocket(\"/\")\r\nasync def _(ws: WebSocket):\r\n    async def foo():\r\n        yield \"hello\"\r\n        yield \"world\"\r\n\r\n    resp = StreamingResponse(content=foo())\r\n    await ws.send_denial_response(resp)\r\n\r\n\r\nrun(app)\r\n```\r\n\r\nSteps to reproduce the behavior:\r\n1. Launch the server\r\n2. Try to establish the websocket connection\r\n3. You will see following error\r\n\r\n```console\r\n  |   File \"e:\\GitHub\\fastapi-proxy\\Untitled-8.py\", line 16, in _\r\n  |     await ws.send_denial_response(resp)\r\n  |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\websockets.py\", line 209, in send_denial_response        \r\n  |     await response(self.scope, self.receive, self.send)\r\n  |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\responses.py\", line 258, in __call__\r\n  |     async with anyio.create_task_group() as task_group:\r\n  |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\anyio\\_backends\\_asyncio.py\", line 678, in __aexit__\r\n  |     raise BaseExceptionGroup(\r\n  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)\r\n  +-+---------------- 1 ----------------\r\n    | Traceback (most recent call last):\r\n    |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\responses.py\", line 261, in wrap\r\n    |     await func()\r\n    |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\responses.py\", line 243, in stream_response\r\n    |     await send(\r\n    |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\websockets.py\", line 75, in send\r\n    |     raise RuntimeError(\r\n    | RuntimeError: Expected ASGI message \"websocket.accept\",\"websocket.close\" or \"websocket.http.response.start\",but got 'http.response.start'\r\n    +------------------------------------\r\n```\r\n\r\n## Expected behavior\r\n\r\n`FileResponse` and `StreamingResponse` override the `__call__` method, but they do not add the `\"websocket.\"` prefix like the parent class `Response` does.\r\n\r\nhttps://github.com/encode/starlette/blob/4e453ce91940cc7c995e6c728e3fdf341c039056/starlette/responses.py#L151-L154\r\n\r\nIf this is expected behavior, I didn't see any relevant information in the documentation, and at least the type checker didn't raise any errors\r\n\r\n## Configuration\r\n```\r\nstarlette == 0.37.2\r\n```\r\n</div>",
+  "source_issue": {
+    "number": 3048,
+    "url": "https://github.com/Kludex/starlette/issues/3048",
+    "title": "Can not use `send_denial_response` with `StreamingResponse`"
+  },
+  "fix_pr": {
+    "number": 3189,
+    "url": "https://github.com/Kludex/starlette/pull/3189",
+    "merged_at": "2026-03-15T11:59:16Z",
+    "merge_commit_sha": "9ee951980bae776103715b66305f807d9e8245da",
+    "head_sha": "e76c85941b4669e768a75b0a06ff8aa69ae3d9b4"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "starlette/responses.py",
+        "status": "modified",
+        "sha": "029ebe91070dc48266ed7681c8fdf8f9c8dcc59f",
+        "changes": 46
+      },
+      {
+        "path": "tests/test_responses.py",
+        "status": "modified",
+        "sha": "05097510e19a379d611306896e8a4de196dd6400",
+        "changes": 34
+      },
+      {
+        "path": "tests/test_websockets.py",
+        "status": "modified",
+        "sha": "7ffd1f231e962a684b07681b34d7bd2dab4b75db",
+        "changes": 43
+      }
+    ],
+    "symbols": [
+      {
+        "path": "starlette/responses.py",
+        "symbol": "_wrap_websocket_denial_send",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "starlette/responses.py",
+        "symbol": "wrapped",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_responses.py",
+        "symbol": "test_streaming_response_runs_background_on_websocket_scope",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_responses.py",
+        "symbol": "receive",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_responses.py",
+        "symbol": "send",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_responses.py",
+        "symbol": "run_background",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_responses.py",
+        "symbol": "stream",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_websockets.py",
+        "symbol": "test_send_denial_response_with_streaming_response",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_websockets.py",
+        "symbol": "app",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_websockets.py",
+        "symbol": "content",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_websockets.py",
+        "symbol": "test_send_denial_response_with_file_response",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_websockets.py",
+        "symbol": "app",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "tests/test_responses.py",
+      "tests/test_websockets.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/Kludex/starlette/pulls/3189/files"
+  }
+}

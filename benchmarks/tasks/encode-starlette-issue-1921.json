@@ -1,0 +1,36 @@
+{
+  "id": "encode-starlette-issue-1921",
+  "corpus": "fastapi-stack/starlette",
+  "category": "historical_issue_fix",
+  "description": "The idea is to rewrite the databases page on our documentation: https://www.starlette.io/database/ .\r\n\r\nInstead of recommending `databases`, we should recommend _pure_ `SQLAlchemy`.\r\n\r\ncc @zzzeek (just pinging to let you know about our intentions, no need to react)\n\n<!-- POLAR PLEDGE BADGE START -->\n> [!IMPORTANT]\n> - We're using [Polar.sh](https://polar.sh/encode) so you can upvote and help fund this issue.\n> - We receive the funding once the issue is completed & confirmed by you.\n> - Thank you in advance for helping prioritize & fund our backlog.\n\n<a href=\"https://polar.sh/encode/starlette/issues/1921\">\n<picture>\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://polar.sh/api/github/encode/starlette/issues/1921/pledge.svg?darkmode=1\">\n  <img alt=\"Fund with Polar\" src=\"https://polar.sh/api/github/encode/starlette/issues/1921/pledge.svg\">\n</picture>\n</a>\n<!-- POLAR PLEDGE BADGE END -->\n",
+  "source_issue": {
+    "number": 1921,
+    "url": "https://github.com/Kludex/starlette/issues/1921",
+    "title": "Rewrite databases page"
+  },
+  "fix_pr": {
+    "number": 3111,
+    "url": "https://github.com/Kludex/starlette/pull/3111",
+    "merged_at": "2026-01-18T13:59:53Z",
+    "merge_commit_sha": "501b86185461d107869917ced367d5624f82e3fb",
+    "head_sha": "eabe49a561cfa0ca9f2a14daef86c66e948135fb"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "docs/database.md",
+        "status": "modified",
+        "sha": "9008bb7356f70d58e055c586c463099e6bc4dc5d",
+        "changes": 325
+      }
+    ],
+    "symbols": [],
+    "tests": [],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/Kludex/starlette/pulls/3111/files"
+  }
+}

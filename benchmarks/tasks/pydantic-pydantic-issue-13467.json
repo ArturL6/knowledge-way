@@ -1,0 +1,150 @@
+{
+  "id": "pydantic-pydantic-issue-13467",
+  "corpus": "fastapi-stack/pydantic",
+  "category": "historical_issue_fix",
+  "description": "### Initial Checks\n\n- [x] I have searched Google & GitHub for similar requests and couldn't find anything\n- [x] I have read and followed [the docs](https://pydantic.dev/docs/validation/latest/get-started/) and still think this feature is missing\n\n### Description\n\n`Ellipsis` is a builtin type that `pydantic` does not support. Its usage is infrequent, but it can be useful to express placeholders:\n\nThis is a bit of a contrived example, but:\n```python\nclass Model(pydantic.BaseModel):\n    m: list[list[float]]\n    subset: tuple[int | Ellipsis, int | Ellipsis]\n\n    def subset_arr(self) -> np.NDArray:\n        return np.asarray(self.m)[*self.subset]\n```\n\nHere's how I implement this right now with an adapter: https://github.com/psalvaggio/scientific_pydantic/blob/main/src/scientific_pydantic/ellipsis.py\n\nHowever, since this is a standard library type, I think this would be a good thing to live in `pydantic` itself.\n\n\n### Affected Components\n\n- [ ] [Compatibility between releases](https://pydantic.dev/docs/validation/latest/get-started/changelog/)\n- [ ] [Data validation/parsing](https://pydantic.dev/docs/validation/latest/concepts/models/#basic-model-usage)\n- [ ] [Data serialization](https://pydantic.dev/docs/validation/latest/concepts/serialization/) - `.model_dump()` and `.model_dump_json()`\n- [ ] [JSON Schema](https://pydantic.dev/docs/validation/latest/concepts/json_schema/)\n- [ ] [Dataclasses](https://pydantic.dev/docs/validation/latest/concepts/dataclasses/)\n- [ ] [Model Config](https://pydantic.dev/docs/validation/latest/concepts/config/)\n- [ ] [Field Types](https://pydantic.dev/docs/validation/latest/api/pydantic/types/) - adding or changing a particular data type\n- [ ] [Function validation decorator](https://pydantic.dev/docs/validation/latest/concepts/validation_decorator/)\n- [ ] [Generic Models](https://pydantic.dev/docs/validation/latest/concepts/models/#generic-models)\n- [ ] [Other Model behaviour](https://pydantic.dev/docs/validation/latest/concepts/models/) - `model_construct()`, pickling, private attributes, ORM mode\n- [ ] [Plugins](https://pydantic.dev/docs/validation/latest/integrations/dev-tools/mypy/) and integration with other tools - mypy, FastAPI, python-devtools, Hypothesis, VS Code, PyCharm, etc.",
+  "source_issue": {
+    "number": 13467,
+    "url": "https://github.com/pydantic/pydantic/issues/13467",
+    "title": "Support Ellipsis"
+  },
+  "fix_pr": {
+    "number": 13484,
+    "url": "https://github.com/pydantic/pydantic/pull/13484",
+    "merged_at": "2026-08-03T19:07:39Z",
+    "merge_commit_sha": "c4eac98eba19e48fc4414a33f973299b08f3ac55",
+    "head_sha": "fb846c31a06d3880e0191335e414474734f0c595"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "docs/errors/validation_errors.md",
+        "status": "modified",
+        "sha": "fc0539fefe21affcb9f33365b9abc44c9e500a8a",
+        "changes": 21
+      },
+      {
+        "path": "pydantic-core/python/pydantic_core/core_schema.py",
+        "status": "modified",
+        "sha": "965cf28e1a8ee5898a970cecbcec283dc3abfc42",
+        "changes": 22
+      },
+      {
+        "path": "pydantic-core/src/errors/types.rs",
+        "status": "modified",
+        "sha": "8f8e936ce130e36b11db660ff115863eccc9d9fd",
+        "changes": 4
+      },
+      {
+        "path": "pydantic-core/src/serializers/shared.rs",
+        "status": "modified",
+        "sha": "f6342c1ec58f23361d0dc0b799a488a1f2e1174c",
+        "changes": 2
+      },
+      {
+        "path": "pydantic-core/src/serializers/type_serializers/ellipsis.rs",
+        "status": "added",
+        "sha": "634916c5d044289a0389488e1e0b44088c64d28d",
+        "changes": 74
+      },
+      {
+        "path": "pydantic-core/src/serializers/type_serializers/mod.rs",
+        "status": "modified",
+        "sha": "ad664e8f8f2072049717fd213e01e6b8cd838494",
+        "changes": 1
+      },
+      {
+        "path": "pydantic-core/src/validators/ellipsis.rs",
+        "status": "added",
+        "sha": "d3dfa9fafa9fe5b0eb0caaf0139fe9b55644d939",
+        "changes": 48
+      },
+      {
+        "path": "pydantic-core/src/validators/mod.rs",
+        "status": "modified",
+        "sha": "7a6875e3d75f65266b966a5cb755dec9a43b6956",
+        "changes": 5
+      },
+      {
+        "path": "pydantic-core/tests/test_errors.py",
+        "status": "modified",
+        "sha": "334e281bdcf1cf00b44c33da5b312d68afc17884",
+        "changes": 1
+      },
+      {
+        "path": "pydantic-core/tests/test_schema_functions.py",
+        "status": "modified",
+        "sha": "65a015a6fe889ec101ad44de37a233e03f4895cf",
+        "changes": 1
+      },
+      {
+        "path": "pydantic/_internal/_generate_schema.py",
+        "status": "modified",
+        "sha": "3436338ccb7ccbfb591ec3b335bc50aa8d9f0f1c",
+        "changes": 3
+      },
+      {
+        "path": "pydantic/json_schema.py",
+        "status": "modified",
+        "sha": "c6adb6947ec092c1ed5ce57d3ff062d9885d21fd",
+        "changes": 13
+      },
+      {
+        "path": "tests/test_json_schema.py",
+        "status": "modified",
+        "sha": "633abea7759da76b33e4cf652504930443e4aba9",
+        "changes": 9
+      },
+      {
+        "path": "tests/types/test_ellipsis.py",
+        "status": "added",
+        "sha": "11b7fdea7aee08a5a0a681f4d9872bec454db833",
+        "changes": 21
+      }
+    ],
+    "symbols": [
+      {
+        "path": "pydantic-core/python/pydantic_core/core_schema.py",
+        "symbol": "EllipsisSchema",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic-core/python/pydantic_core/core_schema.py",
+        "symbol": "ellipsis_schema",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "pydantic/json_schema.py",
+        "symbol": "ellipsis_schema",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_json_schema.py",
+        "symbol": "test_ellipsis_schema",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/test_json_schema.py",
+        "symbol": "Model",
+        "derivation": "added definition line in PR patch"
+      },
+      {
+        "path": "tests/types/test_ellipsis.py",
+        "symbol": "test_ellipsis_literal",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "pydantic-core/tests/test_errors.py",
+      "pydantic-core/tests/test_schema_functions.py",
+      "tests/test_json_schema.py",
+      "tests/types/test_ellipsis.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/pydantic/pydantic/pulls/13484/files"
+  }
+}

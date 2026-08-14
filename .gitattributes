@@ -1,0 +1,2 @@
+# Governance heartbeat files are append-only and merge by union.
+governance/operations/RUNLOG*.md merge=union

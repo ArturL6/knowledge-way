@@ -1,0 +1,50 @@
+{
+  "id": "encode-starlette-issue-1108",
+  "corpus": "fastapi-stack/starlette",
+  "category": "historical_issue_fix",
+  "description": "### Checklist\r\n\r\n<!-- Please make sure you check all these items before submitting your bug report. -->\r\n\r\n- [x] The bug is reproducible against the latest release and/or `master`.\r\n- [x] There are no similar issues or pull requests to fix it yet.\r\n\r\n### Describe the bug\r\n\r\n`timeout` parameter exposed in `testclient.request` has no effect. Looking through the code, it seems as though we use the same interface as `requests` package but only a subset of those features are supported by `testclient`\r\n\r\n### To reproduce\r\n\r\n<!-- Provide a *minimal* example with steps to reproduce the bug locally.\r\n\r\nNOTE: try to keep any external dependencies *at an absolute minimum*\r\n(middleware, servers, proxies, certificates...).\r\nIn other words, remove anything that doesn't make the bug go away.\r\n-->\r\n\r\n```python\r\nimport time\r\n\r\nfrom starlette.applications import Starlette\r\nfrom starlette.responses import JSONResponse\r\nfrom starlette.testclient import TestClient\r\n\r\nmock_service = Starlette()\r\n\r\n\r\n@mock_service.route(\"/slow_response\")\r\ndef slow_response(request):\r\n    time.sleep(0.01)\r\n    return JSONResponse({\"mock\": \"slow example\"})\r\n\r\n\r\ndef test_timeout():\r\n    \"\"\" no timeout exception raised -- this test passes when it should fail \"\"\"\r\n    client = TestClient(mock_service, raise_server_exceptions=True)\r\n    response = client.get(\"/slow_response\", timeout=0.001)\r\n    assert response.json() == {\"mock\": \"slow example\"}\r\n```\r\n\r\n\r\n### Expected behavior\r\n\r\n<!-- A clear and concise description of what you expected to happen. -->\r\n\r\nA TimeoutException should be raised if the timeout specified in request is shorter than the time the request takes.\r\n\r\n### Actual behavior\r\n\r\n<!-- A clear and concise description of what actually happens. -->\r\n\r\nNo timeout exceptions are raised when setting timeout.\r\n\r\n### Additional context\r\n\r\n<!-- Any additional information that can help understanding the problem.\r\n\r\nEg. linked issues, or a description of what you were trying to achieve. -->\r\n\r\nIn CI/CD context, testing our own endpoints which, during integration testing, may timeout, is very helpful. If this is unsupported, it might be nice to have a list of differences between the interface of requests/testclient (this might include #1102).\r\n\r\nI did look a bit how the requests package implemented their timeout exceptions, and to be completely honest I got a bit lost going down the rabbit hole of `requests` -> `urllib3` -> `http.client`.  Since we're using a different adapter for the testclient, it might be some work to reimplement all the way down the timeout exceptions in the same way.\r\n\r\nI did notice that the `async_asgi_testclient` works with a timeout. Of course, it requires an async endpoint. But [their implementation](https://github.com/vinissimus/async-asgi-testclient/blob/f42d1f8ce9fd826d80dbe35e3ba123166c6a2b44/async_asgi_testclient/utils.py#L111-L113) might still be useful? \r\n\r\nFound that `httpx` had a similar issue with timeout having no effect when mounting an app with its client.",
+  "source_issue": {
+    "number": 1108,
+    "url": "https://github.com/Kludex/starlette/issues/1108",
+    "title": "TestClient.request does not honor timeout"
+  },
+  "fix_pr": {
+    "number": 2840,
+    "url": "https://github.com/Kludex/starlette/pull/2840",
+    "merged_at": "2025-02-22T11:45:06Z",
+    "merge_commit_sha": "135e3af00a507714a4e391ab8d11b835399aa1a4",
+    "head_sha": "b72be56fede24b2e4740c2dd637ffec0d1cb828d"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "starlette/testclient.py",
+        "status": "modified",
+        "sha": "d54025e52d7ec2996d3a6fbdea9c390291067063",
+        "changes": 7
+      },
+      {
+        "path": "tests/test_testclient.py",
+        "status": "modified",
+        "sha": "c6a3edafc14e33da5203808a18ca4519da06ceb0",
+        "changes": 6
+      }
+    ],
+    "symbols": [
+      {
+        "path": "tests/test_testclient.py",
+        "symbol": "test_timeout_deprecation",
+        "derivation": "added definition line in PR patch"
+      }
+    ],
+    "tests": [
+      "tests/test_testclient.py"
+    ],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/Kludex/starlette/pulls/2840/files"
+  }
+}

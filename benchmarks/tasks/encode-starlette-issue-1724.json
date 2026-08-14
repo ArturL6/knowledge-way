@@ -1,0 +1,42 @@
+{
+  "id": "encode-starlette-issue-1724",
+  "corpus": "fastapi-stack/starlette",
+  "category": "historical_issue_fix",
+  "description": "Starlette is a web framework that supports both async and sync functions. The sync part code runs in a threadpool.\r\n\r\nThe threadpool contains a maximum number of threads: 40.\r\n\r\nhttps://github.com/agronholm/anyio/blob/4f3a8056a8b14dbe43c95039a0d731ede1083cb7/src/anyio/_backends/_asyncio.py#L2071-L2077 \r\n\r\nThe concern on this issue is that the threads are shared between the ones that handle the endpoint, and the background tasks.\r\n\r\nAssume we have a simple application:\r\n```python\r\nfrom time import sleep\r\n\r\nfrom starlette.applications import Starlette\r\nfrom starlette.background import BackgroundTasks\r\nfrom starlette.requests import Request\r\nfrom starlette.responses import JSONResponse\r\nfrom starlette.routing import Route\r\n\r\nnum = 0\r\n\r\n\r\ndef count_sleep():\r\n    global num\r\n    num += 1\r\n    print(f\"Running number {num}.\")\r\n    sleep(10)\r\n\r\n\r\ndef endpoint(request: Request) -> JSONResponse:\r\n    tasks = BackgroundTasks()\r\n    tasks.add_task(count_sleep)\r\n    return JSONResponse({\"message\": \"Hello, world!\"}, background=tasks)\r\n\r\n\r\napp = Starlette(routes=[Route(\"/\", endpoint)])\r\n```\r\nRunning it with `uvicorn`:\r\n```\r\nuvicorn main:app\r\n```\r\nAnd performing some requests (using [httpie](https://httpie.io/docs/cli)):\r\n```bash\r\nfor run in {1..100}; do\r\n  http :8000 &\r\ndone\r\n```\r\nWe can observe that:\r\n1. We can see `Running number 40.`.\r\n2. Wait 10 seconds...\r\n3. We can see `Running number 80.`.\r\n4. Wait 10 seconds...\r\n5. We can see `Running number 100.`.\r\n\r\nI'm just bringing this up, so people are aware.\r\n\r\n@agronholm proposed on Gitter that we create a separated `CapacityLimiter` dedicated only for handling the application (i.e. `request_response()`). This means that `n` (depending on the number of tokens we choose) number of threads would be dedicated for `request_response()`.\n\n<!-- POLAR PLEDGE BADGE START -->\n> [!IMPORTANT]\n> - We're using [Polar.sh](https://polar.sh/encode) so you can upvote and help fund this issue.\n> - We receive the funding once the issue is completed & confirmed by you.\n> - Thank you in advance for helping prioritize & fund our backlog.\n\n<a href=\"https://polar.sh/encode/starlette/issues/1724\">\n<picture>\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://polar.sh/api/github/encode/starlette/issues/1724/pledge.svg?darkmode=1\">\n  <img alt=\"Fund with Polar\" src=\"https://polar.sh/api/github/encode/starlette/issues/1724/pledge.svg\">\n</picture>\n</a>\n<!-- POLAR PLEDGE BADGE END -->\n",
+  "source_issue": {
+    "number": 1724,
+    "url": "https://github.com/Kludex/starlette/issues/1724",
+    "title": "Custom `CapacityLimiter`"
+  },
+  "fix_pr": {
+    "number": 2881,
+    "url": "https://github.com/Kludex/starlette/pull/2881",
+    "merged_at": "2025-02-22T15:29:46Z",
+    "merge_commit_sha": "9a8e929eb01f1e0231d635956cd852e21dee57d3",
+    "head_sha": "3d57ce56759a7feb33ca77f25589d4a7bafb2f4a"
+  },
+  "gold": {
+    "files": [
+      {
+        "path": "docs/threadpool.md",
+        "status": "added",
+        "sha": "eec3677eb9d88e0ddd76f47a0ab9028ca46c8360",
+        "changes": 24
+      },
+      {
+        "path": "mkdocs.yml",
+        "status": "modified",
+        "sha": "6cf43e1ee4eadb6bd4a8fa511608fff7f414eac3",
+        "changes": 1
+      }
+    ],
+    "symbols": [],
+    "tests": [],
+    "derivation": "files and tests are GitHub merged-PR file-list entries; symbols are added Python definition lines in that PR patch"
+  },
+  "provenance": {
+    "mined_at": "2026-08-14",
+    "issue_description_source": "GitHub issue body",
+    "pr_files_source": "https://api.github.com/repos/Kludex/starlette/pulls/2881/files"
+  }
+}
