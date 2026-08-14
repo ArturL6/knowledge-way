@@ -76,14 +76,12 @@ packets:
     notes: "Prefilled owner selection: fastapi/fastapi, encode/starlette, pydantic/pydantic. PR #66 merged at dfc4c6bef000994fc4fbe83cc11128da7dcada9f after committed REVIEW-033 on_track authorization for exact head 42e74e6d8086ef8e9888c4125023801e497a48d9; GitHub approval was not a gate."
   - id: "0.2"
     title: "Gold tasks from historical issue/fix-PR pairs"
-    state: pr_open
+    state: done
     branch: "packet/0.2-gold-tasks"
     verify: "python benchmarks/validate_tasks.py"
     blocked_by: ["0.1"]
-    pr: 72
-    head_sha: "bdc788a625117aac8bb54ffeb666e09d32aec3d0"
-    reviewed_head_sha: "bdc788a625117aac8bb54ffeb666e09d32aec3d0"
-    notes: "REVIEW-043 independently re-executed packet verify, benchmark checks, 95 tests, and boundary contracts at the rebased exact head; mergeability against integration 2602521 passes. Exact-SHA on_track merge authorization is recorded."
+    integration_merge: "259d28fbe6c5b441ed72b90e9466a6fe771e89ae"
+    notes: "PR #72 merged at 259d28fbe6c5b441ed72b90e9466a6fe771e89ae from exact reviewed head bdc788a625117aac8bb54ffeb666e09d32aec3d0 after committed REVIEW-043 on_track authorization; packet verify, benchmark checks, 95 tests, and boundary contracts passed. GitHub approval was not a gate."
   - id: "0.3"
     title: "Retrieval scorecard baseline harness"
     state: todo
@@ -112,18 +110,6 @@ packets:
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
 last_review: REVIEW-043
 drift_flags: []
-next_instruction:
-  issued_by: sol-navigator
-  issued_at: "2026-08-14T12:28:22+00:00"
-  packet: "0.2"
-  objective: "Mine 25–40 gold tasks from closed fastapi/starlette/pydantic issues resolved by merged fix PRs, as defined by PLAN packet 0.2 and HUMAN-DIRECTIVE-001 §1."
-  constraints:
-    - "Use issue text, not PR text, as each task description and retain source issue, fix PR, and source commit traceability."
-    - "Derive gold files and symbols mechanically from the merged fix PR; derive gold tests from tests changed by that PR."
-    - "Keep all task artifacts under benchmarks/tasks/ and make the existing benchmarks/validate_tasks.py validation authoritative."
-    - "Use no LLM calls; do not add retrieval behavior, application code, new infrastructure, or PostHog repositories."
-    - "Record enough provenance for Sol to independently validate a random sample of 10 tasks against source issues and PRs."
-  done_when: "25–40 provenance-backed task records are committed; python benchmarks/validate_tasks.py passes; the applicable local gauntlet passes; and one packet/0.2-gold-tasks PR is open into integration/roadmap-v2 with exact-head evidence."
 ```
 
 The YAML block is the machine-readable source used by scheduled jobs. Packet state changes require a corresponding committed review artifact or PR evidence.
