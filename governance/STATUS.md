@@ -118,6 +118,20 @@ packets:
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
+next_instruction:
+  issued_by: sol-navigator
+  issued_at: "2026-08-14T16:08:45+00:00"
+  packet: "0.3"
+  objective: "Build the PLAN 0.3 retrieval scorecard harness on packet/0.3-scorecard-harness and produce the reproducible current-search baseline over the committed fastapi-stack gold tasks."
+  constraints:
+    - "Branch from refreshed integration/roadmap-v2; packet branches must not modify governance/STATUS.md or any governance/operations/RUNLOG*."
+    - "Implement benchmarks/run_retrieval.py to query /api/search in each supported single mode and hybrid, scoring file and symbol hit@1/hit@5, MRR, and p50/p95 latency with machine-readable committed output."
+    - "Use the committed corpora and task provenance; record unsupported or unavailable modes honestly rather than manufacturing scores, and make repeated runs reproducible."
+    - "Run the harness against the current search and commit the baseline required by PLAN Stage 0; include enough exact command/config/snapshot evidence for independent replay."
+    - "Apply HUMAN-DIRECTIVE-005 section 3: run the full baseline regardless of Vertex state; if Vertex is unconfigured record semantic: unconfigured. If Vertex environment values are present, first probe at most 10 chunks with text-embedding-005, verify 768 dimensions, and record readiness/cost in governance/operations/vertex-readiness.md before semantic baseline work. Never silently use a fallback embedding provider."
+    - "Run the full applicable local gauntlet, including benchmark validation/tests, API tests, pytest, import-boundary checks, packet verify, and Playwright only if a web or UI-facing contract is touched."
+    - "Open exactly one PR into integration/roadmap-v2 with evidence bound to its exact head; do not merge without a committed exact-head on_track reviewer verdict."
+  done_when: "python benchmarks/run_retrieval.py --help passes; a reproducible baseline scorecard from an actual harness run is committed; the full applicable gauntlet is green; and the exact-head packet 0.3 PR is open into integration/roadmap-v2."
 last_review: REVIEW-046
 drift_flags: []
 ```
