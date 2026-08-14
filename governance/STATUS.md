@@ -102,11 +102,13 @@ packets:
     notes: "PR #74 merged at 2eb873874cdcdae1013575c01c080d3906db6667 from exact reviewed head 67819c93fc53bf8cc8e1aac69ed2e827e7c04fb6 after REVIEW-048 on_track authorization. Independent review passed packet verify, 25-task validation, 95 tests (including 5 focused harness tests), both import contracts, snapshot/task-content binding, fatal failure semantics, packet governance hygiene, diff check, and current-integration merge simulation. The replacement baseline has complete supported-mode coverage; semantic remains honestly unconfigured under HUMAN-DIRECTIVE-005. GitHub approval was not a gate."
   - id: "0.4"
     title: "GitNexus local test drive"
-    state: in_progress
-    branch: "packet/0.4-gitnexus-test-drive"
+    state: pr_open
+    branch: "packet/0.4-gitnexus-test-drive-v3"
     verify: "test -f benchmarks/gitnexus-findings.md"
     blocked_by: ["0.1"]
-    notes: "PR #75 is blocked by REVIEW-049 at exact remote head b7dd3e90aef9c1f9a28f7a474ee895879f4e839a. Remediation is complete locally at c8b962db68a953121bad1586b4c2ae4964fd306b; publish that rebased head with force-with-lease (never plain force), then request exact-head re-review. Study behavior only; never copy PolyForm Noncommercial code."
+    pr: 77
+    head_sha: "c8b962db68a953121bad1586b4c2ae4964fd306b"
+    notes: "PR #75 was closed unmerged under HD-005 §1. Under HD-006 §1, the verified REVIEW-049 remediation was published without rebase or force push as fresh PR #77 from c8b962d; PR #76 was an incorrect pre-remediation replacement and was also closed unmerged. Exact-head re-review is required. Study behavior only; never copy PolyForm Noncommercial code."
   - id: "0.5"
     title: "Benchmark scheduler wiring"
     state: todo
