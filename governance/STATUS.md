@@ -94,11 +94,11 @@ packets:
     notes: "PR #72 merged at 259d28fbe6c5b441ed72b90e9466a6fe771e89ae from exact reviewed head bdc788a625117aac8bb54ffeb666e09d32aec3d0 after committed REVIEW-043 on_track authorization; packet verify, benchmark checks, 95 tests, and boundary contracts passed. GitHub approval was not a gate."
   - id: "0.3"
     title: "Retrieval scorecard baseline harness"
-    state: review_blocked
+    state: in_progress
     branch: "packet/0.3-scorecard-harness"
     verify: "python benchmarks/run_retrieval.py --help"
     blocked_by: ["0.1", "0.2"]
-    notes: "PR #74 at exact head 71328846c04cb7f1e17ec43c6eb2259e99ca9b0c is blocked by REVIEW-047. Tests and current-integration merge simulation pass, but the harness does not bind results to served repository snapshot SHAs, hashes task filenames rather than task contents, treats unexpected API failures as successful unavailable rows, and lacks focused harness tests. Remediate, rerun the actual baseline, and request exact-head re-review."
+    notes: "PR #74 at exact head 71328846c04cb7f1e17ec43c6eb2259e99ca9b0c was blocked by REVIEW-047 for missing served-snapshot binding, task-content identity, failure semantics, and focused tests. Remediation began at integration head 0765986e6bf76453efc617095105039592a09e99; rerun the actual baseline and request exact-head re-review."
   - id: "0.4"
     title: "GitNexus local test drive"
     state: todo
