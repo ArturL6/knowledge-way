@@ -1,23 +1,70 @@
 {
   "schema_version": "1.0",
+  "active_workspace": "fastapi-stack",
   "corpora": [
     {
+      "id": "fastapi-stack",
+      "description": "Canonical Stage 0–2 public Python workspace: FastAPI consumes Starlette's framework APIs and Pydantic's validation/schema APIs.",
+      "role": "multi_repo_python",
+      "selection": "owner-directed permanent workspace for Stages 0–2",
+      "relationships": [
+        {
+          "from": "fastapi",
+          "to": "starlette",
+          "relation": "DEPENDS_ON",
+          "evidence": "FastAPI's package metadata declares a Starlette dependency."
+        },
+        {
+          "from": "fastapi",
+          "to": "pydantic",
+          "relation": "DEPENDS_ON",
+          "evidence": "FastAPI's package metadata declares a Pydantic dependency; request/response model schemas cross this boundary."
+        }
+      ],
+      "members": [
+        {
+          "id": "fastapi",
+          "source_url": "https://github.com/fastapi/fastapi.git",
+          "revision": "0.115.0",
+          "resolved_sha": "40e33e492dbf4af6172997f4e3238a32e56cbe26",
+          "license": "MIT",
+          "role": "consumer"
+        },
+        {
+          "id": "starlette",
+          "source_url": "https://github.com/encode/starlette.git",
+          "revision": "0.38.6",
+          "resolved_sha": "8d0cff820f89b5d5b19677246293513a9d1c952c",
+          "license": "BSD-3-Clause",
+          "role": "framework_provider"
+        },
+        {
+          "id": "pydantic",
+          "source_url": "https://github.com/pydantic/pydantic.git",
+          "revision": "v2.9.2",
+          "resolved_sha": "7cedbfb03df82ac55c844c97e6f975359cb51bb9",
+          "license": "MIT",
+          "role": "model_schema_provider"
+        }
+      ]
+    },
+    {
       "id": "click-small",
-      "description": "Small public Python CLI library for quick exact-symbol and call-relationship smoke tests.",
+      "description": "Legacy small public Python CLI fixture retained only for the neutral harness's pre-Stage-0 smoke tasks; it is not part of the active workspace.",
       "source_url": "https://github.com/pallets/click.git",
       "revision": "8.1.7",
       "license": "BSD-3-Clause",
-      "role": "small_public_python"
+      "role": "legacy_harness_fixture"
     },
     {
       "id": "flask-suite",
-      "description": "Related public Pallets projects used as separate repositories to exercise boundaries.",
+      "description": "Legacy related-project fixture retained only for the neutral harness's pre-Stage-0 smoke tasks; it is not part of the active workspace.",
       "members": [
         {"id": "flask", "source_url": "https://github.com/pallets/flask.git", "revision": "3.0.0", "license": "BSD-3-Clause"},
         {"id": "werkzeug", "source_url": "https://github.com/pallets/werkzeug.git", "revision": "3.0.1", "license": "BSD-3-Clause"},
         {"id": "jinja", "source_url": "https://github.com/pallets/jinja.git", "revision": "3.1.2", "license": "BSD-3-Clause"}
       ],
-      "role": "multi_repo_python"
+      "role": "legacy_harness_fixture"
     }
   ]
 }

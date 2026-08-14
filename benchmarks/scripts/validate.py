@@ -11,9 +11,15 @@ def validate_manifests():
     ids=set()
     for c in corpora.get("corpora",[]):
         if not c.get("id"): raise ValueError("corpus without id")
+        if c["id"] in ids: raise ValueError(f"duplicate corpus id: {c['id']}")
         ids.add(c["id"])
         for m in c.get("members",[]):
             if not all(m.get(k) for k in ("id","source_url","revision","license")): raise ValueError(f"incomplete member in {c['id']}")
+            sha = m.get("resolved_sha")
+            if sha is not None and (not isinstance(sha, str) or len(sha) != 40 or any(ch not in "0123456789abcdef" for ch in sha)):
+                raise ValueError(f"invalid resolved_sha for {c['id']}/{m['id']}")
+    active = corpora.get("active_workspace")
+    if active is not None and active not in ids: raise ValueError(f"unknown active_workspace: {active}")
     seen=set()
     for t in tasks.get("tasks",[]):
         if not t.get("id") or t["id"] in seen: raise ValueError(f"duplicate/missing task id: {t.get('id')}")
