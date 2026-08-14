@@ -102,11 +102,13 @@ packets:
     notes: "PR #74 merged at 2eb873874cdcdae1013575c01c080d3906db6667 from exact reviewed head 67819c93fc53bf8cc8e1aac69ed2e827e7c04fb6 after REVIEW-048 on_track authorization. Independent review passed packet verify, 25-task validation, 95 tests (including 5 focused harness tests), both import contracts, snapshot/task-content binding, fatal failure semantics, packet governance hygiene, diff check, and current-integration merge simulation. The replacement baseline has complete supported-mode coverage; semantic remains honestly unconfigured under HUMAN-DIRECTIVE-005. GitHub approval was not a gate."
   - id: "0.4"
     title: "GitNexus local test drive"
-    state: in_progress
-    branch: "packet/0.4-gitnexus-test-drive"
+    state: review_blocked
+    branch: "packet/0.4-gitnexus-test-drive-v3"
     verify: "test -f benchmarks/gitnexus-findings.md"
     blocked_by: ["0.1"]
-    notes: "PR #75 is blocked by REVIEW-049 at exact head b7dd3e90aef9c1f9a28f7a474ee895879f4e839a: runner must actually resolve UIDs and execute trace, bind prose to one reproducible raw run, and exercise an oracle-backed subset of applicable gold tasks. Study behavior only; never copy PolyForm Noncommercial code."
+    pr: 77
+    head_sha: "c8b962db68a953121bad1586b4c2ae4964fd306b"
+    notes: "PR #75 was closed unmerged under HD-005 §1. PR #77 exact head c8b962d passes the applicable checks but REVIEW-050 blocks it as stale: current integration cca8530 is not an ancestor. HD-006 §1 requires merging current integration into the packet branch, resolving without STATUS/RUNLOG packet writes, then adding a remediation commit and requesting exact-head re-review; rebases and all force pushes are forbidden. PR #76 was closed unmerged. Study behavior only; never copy PolyForm Noncommercial code."
   - id: "0.5"
     title: "Benchmark scheduler wiring"
     state: todo
@@ -136,7 +138,7 @@ next_instruction:
     - "Create benchmarks/gitnexus-findings.md and any reproducible runner/result fixtures needed for the packet; run the full applicable local gauntlet and packet verify. Playwright is required only if a web or UI-facing contract is touched."
     - "Open exactly one PR into integration/roadmap-v2 with evidence bound to its exact head; do not merge without a committed exact-head on_track reviewer verdict."
   done_when: "benchmarks/gitnexus-findings.md exists with reproducible GitNexus results over the fastapi-stack workspace, all 12 PLAN Appendix A.7 classes are classified (including honest not-representable/environment-limited outcomes), required epistemic/latency/version/snapshot evidence is captured, the applicable gauntlet passes, and the exact-head packet 0.4 PR is open into integration/roadmap-v2."
-last_review: REVIEW-049
+last_review: REVIEW-050
 drift_flags: []
 ```
 
