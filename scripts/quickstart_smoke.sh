@@ -97,10 +97,10 @@ printf 'PASS web UI: http://127.0.0.1:%s\n' "$web_port"
 
 # This Playwright flow is intentionally against the just-built Compose web artifact, not the
 # repository's mock-routed test server. It adds a pinned public fixture through the browser,
-# waits for the keyless worker to index it, searches it, and opens the returned source evidence.
-fastapi_revision='f336ff831c4af3d4f625c2593a27b1e0cae93eb7'
-printf '%s\n' "Running browser seed/index/search/evidence flow for fastapi/fastapi @ ${fastapi_revision}..."
-node scripts/quickstart_playwright.mjs "http://127.0.0.1:${web_port}" "http://127.0.0.1:${api_port}/api" "$fastapi_revision"
+# waits for the keyless worker to index the selected three-repository fixture, records its declared
+# FastAPI provider dependencies, searches it, and opens returned source evidence.
+printf '%s\n' 'Running browser seed/index/search/evidence flow for the selected fastapi-stack...'
+node scripts/quickstart_playwright.mjs "http://127.0.0.1:${web_port}" "http://127.0.0.1:${api_port}/api"
 
 printf '%s\n' 'PASS keyless local quickstart smoke test'
 if "$keep_running"; then

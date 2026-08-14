@@ -55,3 +55,37 @@ The complete local gauntlet after remediation returned: `uv run pytest -q` — *
 **PASS**; web unit tests — **70 passed**; `npm run build` — **PASS**; existing web Playwright —
 **1 passed**; and `bash -n`, `node --check`, and `git diff --check` — **PASS**. No provider call
 was made, so cumulative estimated monthly LLM/embedding/card/rerank spend remains USD 0.00.
+
+## REVIEW-025 selected-fixture remediation (2026-08-14)
+
+The Compose-browser smoke now seeds the owner-selected permanent `fastapi-stack` rather than a
+single FastAPI substitute. It pins and waits for all three public repositories, using their
+immutable release commits: FastAPI 0.115.0 at
+`40e33e492dbf4af6172997f4e3238a32e56cbe26`, Starlette 0.38.6 at
+`8d0cff820f89b5d5b19677246293513a9d1c952c`, and Pydantic v2.9.2 at
+`7cedbfb03df82ac55c844c97e6f975359cb51bb9`. It creates the workspace through the public API,
+adds each repository as a member, and records the two FastAPI provider dependencies before running
+the browser search/open-evidence proof.
+
+```text
+scripts/quickstart_smoke.sh                                        PASS
+PASS API docs: http://127.0.0.1:41555/docs
+PASS web UI: http://127.0.0.1:49175
+PASS browser selected-workspace add/index/search/evidence: fastapi-stack @ 40e33e492dbf4af6172997f4e3238a32e56cbe26, starlette-stack @ 8d0cff820f89b5d5b19677246293513a9d1c952c, pydantic-stack @ 7cedbfb03df82ac55c844c97e6f975359cb51bb9; dependencies=2
+PASS keyless local quickstart smoke test
+
+uv run pytest -q                                                    PASS — 95 passed
+PYTHONPATH=apps/api uv run lint-imports                             PASS — 2 kept, 0 broken
+governance/checks/stageR_import_boundary.sh                        PASS
+governance/checks/stageR_uv.sh                                     PASS — 95 tests
+governance/checks/stageR_evidence.sh                               PASS — 12 tests
+governance/checks/stageR_sync_main.sh                              PASS
+(cd apps/web && npm test -- --run)                                 PASS — 70 passed
+(cd apps/web && npm run build)                                     PASS
+(cd apps/web && npm run test:e2e)                                  PASS — 1 Playwright test
+node --check scripts/quickstart_playwright.mjs; bash -n scripts/quickstart_smoke.sh; git diff --check  PASS
+```
+
+The run uses `EMBEDDING_PROVIDER=none`, `CODE_CARDS_ENABLED=false`, and `RERANK_PROVIDER=none`;
+no LLM, embedding, card, or rerank request was made. Cumulative estimated monthly spend remains
+USD 0.00.

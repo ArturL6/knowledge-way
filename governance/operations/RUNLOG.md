@@ -11,3 +11,4 @@ Append-only. Each line is committed and pushed by the named scheduler before it 
 2026-08-14T06:41:41+00:00 | implementer-run | tick | begin packet 0.6 keyless local quickstart after R.7a completion
 2026-08-14T07:06:42+00:00 | implementer-run | packet 0.6 | keyless quickstart passed; LLM/embedding/card/rerank spend USD 0.00; cumulative estimated monthly spend USD 0.00
 2026-08-14T07:34:11+00:00 | implementer-run | packet 0.6 | REVIEW-024 functional quickstart remediation verified; LLM/embedding/card/rerank spend USD 0.00; cumulative estimated monthly spend USD 0.00
+2026-08-14T07:48:38+00:00 | implementer-run | packet 0.6 | REVIEW-025 selected-fixture remediation verified; LLM/embedding/card/rerank spend USD 0.00; cumulative estimated monthly spend USD 0.00
