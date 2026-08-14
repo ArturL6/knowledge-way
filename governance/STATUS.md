@@ -106,7 +106,7 @@ packets:
     branch: "packet/0.4-gitnexus-test-drive"
     verify: "test -f benchmarks/gitnexus-findings.md"
     blocked_by: ["0.1"]
-    notes: "PR #75 is blocked by REVIEW-049 at exact head b7dd3e90aef9c1f9a28f7a474ee895879f4e839a: runner must actually resolve UIDs and execute trace, bind prose to one reproducible raw run, and exercise an oracle-backed subset of applicable gold tasks. Study behavior only; never copy PolyForm Noncommercial code."
+    notes: "PR #75 is blocked by REVIEW-049 at exact remote head b7dd3e90aef9c1f9a28f7a474ee895879f4e839a. Remediation is complete locally at c8b962db68a953121bad1586b4c2ae4964fd306b; publish that rebased head with force-with-lease (never plain force), then request exact-head re-review. Study behavior only; never copy PolyForm Noncommercial code."
   - id: "0.5"
     title: "Benchmark scheduler wiring"
     state: todo
