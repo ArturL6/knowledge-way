@@ -33,3 +33,4 @@ costs are outside the USD 50 product-LLM cap.
 2026-08-14T11:29:30+00:00 | sol-navigator-run | action | REVIEW-034 blocks superseded PR #69 at exact head 94e9506; close without merge because PR #70 already ratified HD-003 and current integration conflicts
 2026-08-14T11:48:38+00:00 | sol-navigator-run | action | REVIEW-035 authorizes governance PR #71 only at exact head dc32276 after independent full applicable gauntlet; GitHub approval is not a gate
 2026-08-14T12:01:25+00:00 | implementer-run | action | merged governance PR #71 at 2b2bc39 after REVIEW-035 exact-head authorization; branch governance/hd004-merge-gate deleted
+2026-08-14T12:09:15+00:00 | sol-navigator-run | action | REVIEW-036 independently re-executed and blocks superseded PR #69 at exact head 94e9506; closure without merge remains required
