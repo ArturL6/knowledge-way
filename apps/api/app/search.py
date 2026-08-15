@@ -2,12 +2,22 @@ import asyncio
 import math
 import re
 from dataclasses import dataclass
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func, literal_column
 from app.config import settings
 from app.adapters.outbound.postgres.models import Repository, File, Symbol, CodeChunk
 from app.adapters.outbound.llm_providers.providers import embedding_provider, rerank_provider, semantic_capability
 
 STOP_WORDS = {"a", "an", "and", "are", "defined", "do", "for", "how", "in", "is", "of", "the", "to", "what", "where", "which", "with"}
+
+# Must exactly mirror the generated-column expression in migration 20260815_0011_chunk_fts.py
+# (camelCase boundary split, then `._/` treated as separators) so query tokens and indexed
+# tokens agree. Case doesn't need to match here: to_tsquery/to_tsvector('simple', ...) lowercase.
+_CAMEL_BOUNDARY = re.compile(r'([a-z0-9])([A-Z])')
+_IDENTIFIER_SEPARATORS = re.compile(r'[._/]+')
+
+
+def split_identifier_tokens(text_value: str) -> str:
+    return _IDENTIFIER_SEPARATORS.sub(' ', _CAMEL_BOUNDARY.sub(r'\1 \2', text_value))
 
 @dataclass
 class Query:
@@ -70,21 +80,46 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
     # by rows from repos outside scope, starving the scoped query to zero results.
     allowed_ids = {rid for rid, r in repos.items()
                    if (not repository_id or rid == repository_id) and (not q.repo or q.repo.lower() in r.name.lower())}
+    def chunk_filters():
+        filters = [CodeChunk.repository_id.in_(allowed_ids)]
+        if q.language: filters.append(CodeChunk.language == q.language)
+        if q.path: filters.append(File.path.ilike(f'%{q.path}%'))
+        return filters
     def chunk_stmt():
-        stmt = (select(CodeChunk, File).join(File, CodeChunk.file_id == File.id)
-                 .where(CodeChunk.repository_id.in_(allowed_ids))
+        return (select(CodeChunk, File).join(File, CodeChunk.file_id == File.id)
+                 .where(*chunk_filters())
                  .order_by(File.path, CodeChunk.start_line, CodeChunk.id))
-        if q.language: stmt = stmt.where(CodeChunk.language == q.language)
-        if q.path: stmt = stmt.where(File.path.ilike(f'%{q.path}%'))
-        return stmt
+    is_postgres = db.bind.dialect.name == 'postgresql'
     if mode in ('hybrid', 'text', 'exact') and q.text:
+        # Exact/quoted substring match stays a plain ILIKE on both dialects. On Postgres it is
+        # served by the pg_trgm GIN index ix_chunks_source_text_trgm (migration
+        # 20260815_0011_chunk_fts) instead of a sequential scan, so it stays cheap while still
+        # outranking the fuzzy FTS fallback below.
         for chunk, file in db.execute(chunk_stmt().where(CodeChunk.source_text.ilike(f'%{q.text}%')).limit(limit * 2)):
             lexical.append(result('chunk', 1.0, repos[chunk.repository_id], file, chunk))
         exact_lexical_match = bool(lexical)
     if not lexical and mode in ('hybrid', 'text') and terms:
-        clauses = [CodeChunk.source_text.ilike(f'%{term}%') for term in terms]
-        for chunk, file in db.execute(chunk_stmt().where(or_(*clauses)).limit(limit * 8)):
-            lexical.append(result('chunk', .45 + .35 * sum(t in chunk.source_text.lower() for t in terms) / len(terms), repos[chunk.repository_id], file, chunk))
+        if is_postgres:
+            # Code-aware full-text search: fts_tokens is a STORED generated tsvector column
+            # (migration 20260815_0011_chunk_fts) built from source_text with identifier
+            # splitting (camelCase/snake_case/dotted paths), backed by a GIN index.
+            # split_identifier_tokens must mirror that column's expression so query tokens and
+            # indexed tokens agree. websearch_to_tsquery requires every term to match (implicit
+            # AND) -- same intent as the ILIKE-OR fallback below, ranked instead of flat-scored.
+            fts_tokens = literal_column('code_chunks.fts_tokens')
+            tsquery = func.websearch_to_tsquery('simple', split_identifier_tokens(' '.join(terms)))
+            rank_expr = func.ts_rank_cd(fts_tokens, tsquery)
+            stmt = (select(CodeChunk, File, rank_expr.label('rank_score'))
+                     .join(File, CodeChunk.file_id == File.id)
+                     .where(*chunk_filters()).where(fts_tokens.op('@@')(tsquery))
+                     .order_by(rank_expr.desc()).limit(limit * 8))
+            for chunk, file, rank_score in db.execute(stmt):
+                score = .45 + .35 * (rank_score / (1.0 + rank_score))
+                lexical.append(result('chunk', score, repos[chunk.repository_id], file, chunk))
+        else:
+            clauses = [CodeChunk.source_text.ilike(f'%{term}%') for term in terms]
+            for chunk, file in db.execute(chunk_stmt().where(or_(*clauses)).limit(limit * 8)):
+                lexical.append(result('chunk', .45 + .35 * sum(t in chunk.source_text.lower() for t in terms) / len(terms), repos[chunk.repository_id], file, chunk))
     if mode in ('hybrid', 'symbols') and terms:
         clauses = [Symbol.name.ilike(f'%{term}%') for term in terms] + [Symbol.qualified_name.ilike(f'%{term}%') for term in terms]
         symbol_stmt = (select(Symbol, File).join(File, Symbol.file_id == File.id)
