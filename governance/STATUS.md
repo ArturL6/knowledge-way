@@ -130,30 +130,39 @@ packets:
     blocked_by: ["0.3"]
     integration_merge: "0a7ae11c352328856bd768cde0a295efddeffbbf"
     notes: "PR #78 merged at 0a7ae11c352328856bd768cde0a295efddeffbbf from exact reviewed head 17644ae0d5a5bd394e6da0edb473f2bfb1d806d7 after REVIEW-055 on_track authorization (HD-004). FTS + ADR-008 rare-term/DF digestion (N=50): hybrid file hit@5 0.16->0.32 (+100%), text 0.16->0.24, p95 improved vs baseline (text 1.0s, hybrid 2.2s). 102 tests, boundaries green. Stage-1 target hybrid hit@5 >= 0.44 (ADR-007) via later semantic/graph packets; hybrid p95<=1s deferred (symbol-pass/1.2). Pre-existing app/worker.py __main__ guard bug to be filed separately. GitHub review approval was not a gate."
+  - id: "1.9"
+    title: "Usable workspace + code graph UI"
+    state: todo
+    branch: "packet/1.9-workspace-graph-ui"
+    verify: "cd apps/web && npm run test && npx playwright test"
+    blocked_by: []
+    notes: "Owner-directed (HD-008 / ADR-009) bounded exception to rule 12. Parallel to retrieval; UI-only, not gated by the retrieval scorecard but must not regress it."
 next_instruction:
   issued_by: "navigator (Sol)"
-  issued_at: "2026-08-15T11:05:00+00:00"
-  packet: "1.1"
+  issued_at: "2026-08-15T13:45:00+00:00"
+  packet: "1.9"
   objective: >-
-    Replace the ILIKE lexical passes in apps/api/app/search.py with Postgres
-    full-text search: a code-aware tsvector (identifier splitting for
-    camelCase/snake_case/dotted paths at index time) + GIN index, ts_rank_cd
-    scoring, and a pg_trgm exact-substring path for quoted/config/error queries.
-    Keep the SQLite ILIKE path behind a dialect branch so the portable
-    test_search.py suite still runs. Land a hermetic scorecard delta showing
-    lexical file hit@5 >= baseline and p95 latency down.
+    Build a minimal but usable product UI in apps/web per HD-008/ADR-009:
+    (1) usable code graph — repo picker that auto-refreshes the ready-repo list,
+    select a repo and browse its graph (repo/module overview via
+    /repositories/{id}/graph, not only a single symbol subgraph), click a node to
+    expand neighbors via the existing subgraph/callers/callees endpoints;
+    (2) workspace management — a Workspaces view to create/delete workspaces,
+    add/remove repositories, and select an active workspace that scopes search and
+    graph, over the existing /api/workspaces* endpoints; (3) Dashboard add-repo UX
+    polish — live indexing progress and auto-refresh while a repo indexes.
   constraints:
-    - "Branch packet/1.1-postgres-fts from integration/roadmap-v2; NEVER rebase or force-push."
-    - "New Alembic migration 20260815_0011_chunk_fts.py, down_revision 20260813_0010; FTS objects guarded to the postgresql dialect (mirror the CREATE EXTENSION vector precedent)."
-    - "FTS SQL stays in app/search.py or app/adapters/outbound/postgres/*; NEVER in app.application or app.domain (import-linter contracts must stay green)."
-    - "Dialect-branch search_with_capability: Postgres -> FTS/ts_rank_cd + pg_trgm exact; SQLite -> existing ILIKE fallback. Preserve the /api/search result row shape (path/symbol fields the scorecard reads)."
-    - "No new billable config; keyless. No GitNexus/comparator reference in any product path (HD-007)."
-    - "Full local gauntlet: uv sync, pytest, lint-imports, packet verify, and a hermetic run_retrieval scorecard delta committed to benchmarks/results/."
+    - "Branch packet/1.9-workspace-graph-ui from integration/roadmap-v2; NEVER rebase or force-push."
+    - "apps/web changes; reuse existing /api/* endpoints. Only add read-only API endpoints if strictly necessary, keeping the hexagon boundary (no SQL/framework in domain/application; import-linter green)."
+    - "Playwright E2E is mandatory for the web changes; keep vitest/component tests green. Keyless."
+    - "GitNexus is inspiration only: no GitNexus code, dependency, or reference in any product path (HD-007)."
+    - "Do not touch STATUS.md / RUNLOG on the packet branch. Do not regress the retrieval scorecard."
   done_when:
-    - "pytest and lint-imports green; migration chain intact (test_migrations)."
-    - "EXPLAIN shows index (GIN) scans for the FTS lexical path on Postgres."
-    - "Committed scorecard shows lexical file hit@5 >= 0.16 baseline (improvement expected) with p95 latency not regressed; evidence bound to the exact PR head SHA."
-    - "PR opened into integration/roadmap-v2 with evidence; pr_open set via a direct integration commit."
+    - "Workspaces can be created and repos added/removed from the UI; an active workspace scopes search + graph."
+    - "Code graph: pick a ready repo (auto-refreshed list) and browse/expand its graph without needing to know a symbol id upfront."
+    - "Dashboard shows live indexing progress and auto-refreshes to ready without a manual reload."
+    - "npm test + Playwright E2E pass; lint-imports still green; keyless quickstart still passes."
+    - "PR opened into integration/roadmap-v2 with evidence bound to the exact head SHA."
 last_review: REVIEW-055
 drift_flags: []
 ```
