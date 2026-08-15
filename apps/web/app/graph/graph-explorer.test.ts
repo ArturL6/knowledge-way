@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildGraphUrl, mapApiGraph, matchFileSymbol, normalizeGraphDepth, parseGraphState } from './graph-explorer';
+import { buildGraphUrl, mapApiGraph, matchFileSymbol, mergeGraphData, normalizeGraphDepth, parseGraphState } from './graph-explorer';
 
 describe('mapApiGraph', () => {
   it('maps a nodes/edges payload into GraphData with computed degree', () => {
@@ -142,6 +142,29 @@ describe('matchFileSymbol', () => {
   it('matches purely by line range when the hit has no symbol name', () => {
     const hit = { repository_id: 'r', file_id: 'f', path: 'p', start_line: 30, end_line: 40, symbol: null };
     expect(matchFileSymbol(symbols, hit)).toEqual(symbols[1]);
+  });
+});
+
+describe('mergeGraphData', () => {
+  it('folds a node expansion into the base graph without duplicating the shared node', () => {
+    const base = { nodes: [{ id: 'a', label: 'A', kind: 'function' as const }, { id: 'b', label: 'B', kind: 'function' as const }], links: [{ source: 'a', target: 'b', relationship: 'calls' }] };
+    const addition = { nodes: [{ id: 'a', label: 'A', kind: 'function' as const }, { id: 'c', label: 'C', kind: 'function' as const }], links: [{ source: 'a', target: 'c', relationship: 'calls' }] };
+    const merged = mergeGraphData(base, addition);
+    expect(merged.nodes.map((node) => node.id).sort()).toEqual(['a', 'b', 'c']);
+    expect(merged.links).toHaveLength(2);
+    expect(merged.nodes.find((node) => node.id === 'a')?.degree).toBe(2);
+  });
+
+  it('does not duplicate a link already present in the base graph', () => {
+    const base = { nodes: [{ id: 'a', label: 'A', kind: 'function' as const }, { id: 'b', label: 'B', kind: 'function' as const }], links: [{ source: 'a', target: 'b', relationship: 'calls' }] };
+    const addition = { nodes: [{ id: 'a', label: 'A', kind: 'function' as const }, { id: 'b', label: 'B', kind: 'function' as const }], links: [{ source: 'a', target: 'b', relationship: 'calls' }] };
+    expect(mergeGraphData(base, addition).links).toHaveLength(1);
+  });
+
+  it('drops an added link whose endpoint never resolved to a node', () => {
+    const base = { nodes: [{ id: 'a', label: 'A', kind: 'function' as const }], links: [] };
+    const addition = { nodes: [], links: [{ source: 'a', target: 'missing', relationship: 'calls' }] };
+    expect(mergeGraphData(base, addition).links).toHaveLength(0);
   });
 });
 
