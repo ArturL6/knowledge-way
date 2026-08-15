@@ -6,6 +6,7 @@ from sqlalchemy import select, or_, func, literal_column, delete, text as sql_te
 from app.config import settings
 from app.adapters.outbound.postgres.models import Repository, File, Symbol, CodeChunk, TermDocumentFrequency
 from app.adapters.outbound.llm_providers.providers import embedding_provider, rerank_provider, semantic_capability
+from app.domain.retrieval import fuse_rankings
 
 STOP_WORDS = {"a", "an", "and", "are", "defined", "do", "for", "how", "in", "is", "of", "the", "to", "what", "where", "which", "with"}
 
@@ -98,17 +99,12 @@ def _cosine(left, right):
 
 
 def _fuse(result_sets, limit):
-    """Deterministic reciprocal-rank fusion. Dedupes/merges on row identity
-    (type, result_id) -- not location -- so distinct rows sharing a span stay
-    separate while the same row found via multiple retrieval paths merges its
-    scores. `_key` (location) remains the sort tie-breaker for determinism."""
-    combined = {}
-    for results in result_sets:
-        for rank, item in enumerate(sorted(results, key=lambda x: (-x['score'], _key(x))), 1):
-            identity = _identity(item)
-            if identity not in combined: combined[identity] = dict(item, score=0.0)
-            combined[identity]['score'] += 1.0 / (60 + rank)
-    return sorted(combined.values(), key=lambda x: (-x['score'], _key(x)))[:limit]
+    """Untagged-list compatibility wrapper around app.domain.retrieval.fuse_rankings: every
+    list defaults to weight 1.0 (unweighted RRF), which is correct both for a single-mode
+    call (order is unaffected by weight -- see fuse_rankings' docstring) and for any caller
+    that doesn't care about per-mode trust. Real hybrid search below calls fuse_rankings
+    directly with mode tags so semantic/lexical/symbol get their configured weights."""
+    return fuse_rankings(enumerate(result_sets), limit=limit)
 
 
 def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id: str | None = None, rerank: bool = False):
@@ -238,7 +234,14 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
     elif mode in ('text', 'exact'): results = _fuse([lexical], limit)
     else:
         candidate_limit = max(limit, min(settings.rerank_candidate_limit, 100)) if rerank else limit
-        results = _fuse([lexical, symbols, semantic], candidate_limit)
+        # Weighted RRF (packet 1.5): tag each list with its mode so a strong signal
+        # (semantic) isn't diluted by weak modes agreeing on a junk row. See
+        # app/domain/retrieval.py and settings.fusion_weight_* / fusion_rrf_k for the design
+        # and default rationale.
+        results = fuse_rankings(
+            [('lexical', lexical), ('symbol', symbols), ('semantic', semantic)],
+            weights=settings.fusion_weights, k=settings.fusion_rrf_k, limit=candidate_limit,
+        )
     reranker = rerank_provider() if rerank and mode == 'hybrid' else None
     capability['reranking']['requested'] = rerank
     capability['reranking']['applied'] = False
