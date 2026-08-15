@@ -157,7 +157,16 @@ packets:
     blocked_by: ["1.1", "1.3"]
     integration_merge: "c8860206396dcce7582da7916672caa3f6882778"
     notes: "Fixes hybrid<semantic (0.56<0.60): equal-weight RRF dilutes a strong single-mode signal. Move fusion to pure app/domain/retrieval.py, weight per-mode so hybrid hit@5 >= every single mode. Embedded scorecard confirmation run at review (one Vertex embed)."
-last_review: REVIEW-058
+  - id: "1.9a"
+    title: "Workspace/graph UI bug fixes (real-API E2E)"
+    state: done
+    branch: "packet/1.9a-workspace-ux-fixes"
+    pr: 82
+    verify: "cd apps/web && npm run test && npm run test:e2e:real"
+    blocked_by: ["1.9"]
+    integration_merge: "9129e7aec39cfe56384ddc0d0e3747eecf7a269d"
+    notes: "REVIEW-059 on_track. Fixes: add-repo excludes repos owned by another workspace (+note); graph falls back to all repos when active workspace empty. Real-API Playwright 3/3 re-run by reviewer against the live stack. Frontend-only."
+last_review: REVIEW-059
 drift_flags: []
 ```
 
