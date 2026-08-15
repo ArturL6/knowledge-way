@@ -62,6 +62,15 @@ class Settings(BaseSettings):
     rerank_model: str | None = None
     cohere_api_key: str | None = None
     rerank_candidate_limit: int = 40
+    # ADR-008: Postgres lexical fallback digests the exploded query term list down to this many
+    # rarest-by-corpus-document-frequency terms before OR-ing them into a tsquery. Env-overridable
+    # so the N-sweep (packet 1.1 REVIEW-054 remediation) only needs an API restart, not a rebuild.
+    # 50 was the sweep winner on the fastapi-stack gold tasks: no N in {25,50,75,100,150,200} hit
+    # both text+hybrid hit@5 >= 0.28 while keeping p95 <= the 0.16-baseline p95 (text 3.2s /
+    # hybrid 4.8s) -- N=200 recovers hit@5 to 0.28/0.28 but p95 balloons to 7.7s/8.9s, worse than
+    # baseline. Of the N's that stayed under baseline p95, N=50 had the best hybrid hit@5 (0.32)
+    # at low latency (p95 1.0s/2.2s); see the sweep table in PR #78.
+    rare_term_limit: int = 50
     repository_storage_path: str = "/data/repositories"
     max_file_size: int = 1_048_576
     # Full parser-graph rebuilds for large repositories can exceed RQ's default timeout.

@@ -12,8 +12,9 @@ STOP_WORDS = {"a", "an", "and", "are", "defined", "do", "for", "how", "in", "is"
 # ADR-008: OR-ing every exploded query term (a real query can be a whole issue body, 150-300
 # terms) matches a huge fraction of the corpus and makes ts_rank_cd sort it all -- measured p95
 # ~3x the baseline. Digesting down to the N rarest (most discriminating) terms first keeps
-# recall (common words add candidates, not signal) while bounding candidate-set size.
-RARE_TERM_LIMIT = 25
+# recall (common words add candidates, not signal) while bounding candidate-set size. N lives in
+# settings.rare_term_limit (env RARE_TERM_LIMIT), not a module constant, so it can be tuned with
+# an API restart instead of a rebuild.
 
 # Must exactly mirror the generated-column expression in migration 20260815_0011_chunk_fts.py
 # (camelCase boundary split, then `._/` treated as separators) so query tokens and indexed
@@ -26,7 +27,7 @@ def split_identifier_tokens(text_value: str) -> str:
     return _IDENTIFIER_SEPARATORS.sub(' ', _CAMEL_BOUNDARY.sub(r'\1 \2', text_value))
 
 
-def select_discriminating_terms(terms, document_frequency, limit=RARE_TERM_LIMIT):
+def select_discriminating_terms(terms, document_frequency, limit=25):
     """Pure term-selection (ADR-008): pick up to `limit` rarest-first terms by corpus document
     frequency. Deterministic tie-break: lower df, then longer term, then lexicographic.
 
@@ -151,7 +152,7 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
             # into hundreds of terms; requiring all of them in one chunk (websearch_to_tsquery's
             # implicit AND) matches ~nothing. But OR-ing ALL of them matches a huge fraction of
             # the corpus and makes ts_rank_cd sort it all (measured ~3x baseline p95). ADR-008:
-            # digest down to the RARE_TERM_LIMIT rarest (most discriminating) terms first via
+            # digest down to the settings.rare_term_limit rarest (most discriminating) terms first via
             # select_discriminating_terms, using corpus document frequency from
             # term_document_frequency (refreshed by refresh_term_document_frequency after every
             # index). ts_rank_cd still ranks candidates by how many/how densely the surviving
@@ -165,7 +166,7 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
                 select(TermDocumentFrequency.term, TermDocumentFrequency.document_frequency)
                 .where(TermDocumentFrequency.term.in_(query_tokens))
             ).all()) if query_tokens else {}
-            chosen_tokens = select_discriminating_terms(query_tokens, document_frequency)
+            chosen_tokens = select_discriminating_terms(query_tokens, document_frequency, settings.rare_term_limit)
             if chosen_tokens:
                 fts_tokens = literal_column('code_chunks.fts_tokens')
                 tsquery = func.to_tsquery('simple', ' | '.join(chosen_tokens))
