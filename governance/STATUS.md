@@ -123,12 +123,12 @@ packets:
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
   - id: "1.1"
     title: "Postgres FTS for lexical search"
-    state: review_blocked
+    state: merge_authorized
     branch: "packet/1.1-postgres-fts"
     pr: 78
     verify: "pytest -q && lint-imports"
     blocked_by: ["0.3"]
-    notes: "PR #78 review_blocked by REVIEW-054 at head 763c9d8. AND->OR fix (REVIEW-053) landed: text+hybrid file hit@5 0.28 vs 0.16 baseline (+75%), scorecard committed. Remaining blocker: OR-all-terms regresses p95 ~3x (text 11.3s, hybrid 12.7s vs 3.2/4.8) — fails Stage-1 p95<=1s. Required (ADR-008): deterministic rare-term/DF query digestion, re-score holding hit@5>=0.28 with p95 toward <=1s. Target: hybrid file hit@5 >= 0.44 (ADR-007)."
+    notes: "REVIEW-055 on_track at head 17644ae authorizes merge (HD-004). FTS + ADR-008 rare-term/DF digestion (N=50): hybrid file hit@5 0.16->0.32 (+100%), text 0.16->0.24, p95 improved vs baseline (text 1.0s, hybrid 2.2s). 102 tests, boundaries green. Merger to merge and set done. Stage-1 target hybrid hit@5 >= 0.44 (ADR-007) via later semantic/graph packets; hybrid p95<=1s deferred (symbol-pass/1.2). Pre-existing app/worker.py __main__ guard bug to be filed separately."
 next_instruction:
   issued_by: "navigator (Sol)"
   issued_at: "2026-08-15T11:05:00+00:00"
@@ -153,7 +153,7 @@ next_instruction:
     - "EXPLAIN shows index (GIN) scans for the FTS lexical path on Postgres."
     - "Committed scorecard shows lexical file hit@5 >= 0.16 baseline (improvement expected) with p95 latency not regressed; evidence bound to the exact PR head SHA."
     - "PR opened into integration/roadmap-v2 with evidence; pr_open set via a direct integration commit."
-last_review: REVIEW-054
+last_review: REVIEW-055
 drift_flags: []
 ```
 
