@@ -16,7 +16,12 @@ class _FakeEmbeddingProvider:
     async def embed_texts(self, texts):
         assert len(texts) == 1
         assert texts[0].endswith("Source code:\ndef useful(): pass")
-        return [[0.25, 0.75]]
+        return [FAKE_VECTOR]
+
+
+# The embedding column is a fixed vector(768) (migration 20260816_0013), matching the one
+# supported production model (Vertex text-embedding-005 @768, ADR-004/005).
+FAKE_VECTOR = [0.25, 0.75] + [0.0] * 766
 
 
 def _index_with_sqlite(monkeypatch, tmp_path):
@@ -30,6 +35,11 @@ def _index_with_sqlite(monkeypatch, tmp_path):
         "run",
         lambda *args, **kwargs: "test-sha" if args[1:3] == ("rev-parse", "HEAD") else "main",
     )
+    # These tests exercise parsing/graph/card behavior, not embeddings. A developer's real
+    # repo-root .env (config.py searches upward for it) can set EMBEDDING_PROVIDER=openrouter
+    # with a real API key; without this, every such test would silently make a live, billed
+    # embedding request. Tests that specifically cover embedding behavior override this below.
+    monkeypatch.setattr(ingestion, "embedding_provider", lambda: None)
     return sessions
 
 
@@ -159,7 +169,7 @@ def test_sync_preserves_or_rebuilds_embedding_coverage(monkeypatch, tmp_path):
 
         async def embed_texts(self, texts):
             self.calls += 1
-            return [[0.25, 0.75] for _ in texts]
+            return [FAKE_VECTOR for _ in texts]
 
     provider = Provider()
     monkeypatch.setattr(ingestion, "embedding_provider", lambda: provider)
@@ -202,7 +212,7 @@ def test_embedding_prunes_empty_structural_chunks(monkeypatch, tmp_path):
         db.flush()
         assert db.get(CodeChunk, blank.id) is None
         embedded = db.get(CodeChunk, useful.id)
-        assert embedded.embedding == [0.25, 0.75]
+        assert embedded.embedding == FAKE_VECTOR
         assert embedded.embedding_model == "test:embedding"
 
 
