@@ -196,13 +196,37 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
     if mode in ('hybrid', 'semantic') and q.text and provider is not None and (mode == 'semantic' or not exact_lexical_match):
         try:
             query_vector = asyncio.run(provider.embed_texts([q.text]))[0]
-            # Python cosine is portable to SQLite tests and pgvector production; only matching
-            # model/dimension rows participate, avoiding invalid pgvector comparisons. No LIMIT
-            # here (it scans all embedded chunks), but the repository scope in chunk_stmt()
-            # still applies -- this query must not read rows outside allowed_ids either.
-            for chunk, file in db.execute(chunk_stmt().where(CodeChunk.embedding_model == provider.model).where(CodeChunk.embedding.is_not(None))):
-                score = _cosine(query_vector, list(chunk.embedding))
-                if score is not None: semantic.append(result('chunk', score, repos[chunk.repository_id], file, chunk))
+            if is_postgres:
+                # Real pgvector ANN query (migration 20260816_0013 adds the HNSW index):
+                # ORDER BY the indexed cosine-distance operator + LIMIT, instead of pulling every
+                # embedded chunk into Python. Latency stays roughly independent of corpus size
+                # because Postgres never materializes more than the candidate window below.
+                # cosine_distance() compiles to `<=>`, matching the index's vector_cosine_ops so
+                # the planner can actually use it -- a different operator here would silently
+                # fall back to a sequential scan.
+                #
+                # The window is wider than `limit` (mirrors the lexical `limit * 8` pattern above)
+                # because this candidate set still feeds RRF fusion with lexical/symbol hits, not
+                # just a standalone top-k.
+                ann_limit = max(limit * 8, min(settings.rerank_candidate_limit, 100)) if rerank else limit * 8
+                distance = CodeChunk.embedding.cosine_distance(query_vector)
+                stmt = (select(CodeChunk, File, distance.label('distance'))
+                         .join(File, CodeChunk.file_id == File.id)
+                         .where(*chunk_filters()).where(CodeChunk.embedding_model == provider.model)
+                         .where(CodeChunk.embedding.is_not(None))
+                         .order_by(distance).limit(ann_limit))
+                for chunk, file, distance_value in db.execute(stmt):
+                    # pgvector cosine distance is 1 - cosine similarity; recover similarity so
+                    # scores stay comparable to the SQLite Python-cosine fallback below.
+                    semantic.append(result('chunk', 1.0 - float(distance_value), repos[chunk.repository_id], file, chunk))
+            else:
+                # SQLite has no pgvector/ANN support; this path exists only for the portable test
+                # suite. Python cosine over a full scan. No LIMIT here (it scans all embedded
+                # chunks), but the repository scope in chunk_stmt() still applies -- this query
+                # must not read rows outside allowed_ids either.
+                for chunk, file in db.execute(chunk_stmt().where(CodeChunk.embedding_model == provider.model).where(CodeChunk.embedding.is_not(None))):
+                    score = _cosine(query_vector, list(chunk.embedding))
+                    if score is not None: semantic.append(result('chunk', score, repos[chunk.repository_id], file, chunk))
             semantic.sort(key=lambda x: (-x['score'], _key(x)))
             capability['indexed_candidates'] = len(semantic)
         except Exception:
