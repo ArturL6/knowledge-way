@@ -123,11 +123,12 @@ packets:
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
   - id: "1.1"
     title: "Postgres FTS for lexical search"
-    state: todo
+    state: review_blocked
     branch: "packet/1.1-postgres-fts"
+    pr: 78
     verify: "pytest -q && lint-imports"
     blocked_by: ["0.3"]
-    notes: "Stage 1 unblocked by ADR-007 (HD-007 supersedes HD-006 in-repo 0.4b gate). Target: hybrid file hit@5 >= 0.44 (Stage-1 exit; scorecard delta required for this packet)."
+    notes: "PR #78 review_blocked by REVIEW-053 at head d2fb3b92. Plumbing (tsvector/GIN/pg_trgm/tokenizer, 96 tests, boundaries) is correct, but the Postgres path websearch_to_tsquery ANDs ~300 body terms -> 0 candidates on real gold queries (measured 0 vs 22,566 OR); no scorecard delta. Required: rare-term selection (top-N corpus-rarest) + committed fastapi-stack scorecard delta >= 0.16 baseline. Target: hybrid file hit@5 >= 0.44 (ADR-007)."
 next_instruction:
   issued_by: "navigator (Sol)"
   issued_at: "2026-08-15T11:05:00+00:00"
@@ -152,7 +153,7 @@ next_instruction:
     - "EXPLAIN shows index (GIN) scans for the FTS lexical path on Postgres."
     - "Committed scorecard shows lexical file hit@5 >= 0.16 baseline (improvement expected) with p95 latency not regressed; evidence bound to the exact PR head SHA."
     - "PR opened into integration/roadmap-v2 with evidence; pr_open set via a direct integration commit."
-last_review: REVIEW-052
+last_review: REVIEW-053
 drift_flags: []
 ```
 
