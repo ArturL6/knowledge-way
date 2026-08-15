@@ -123,12 +123,13 @@ packets:
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
   - id: "1.1"
     title: "Postgres FTS for lexical search"
-    state: merge_authorized
+    state: done
     branch: "packet/1.1-postgres-fts"
     pr: 78
     verify: "pytest -q && lint-imports"
     blocked_by: ["0.3"]
-    notes: "REVIEW-055 on_track at head 17644ae authorizes merge (HD-004). FTS + ADR-008 rare-term/DF digestion (N=50): hybrid file hit@5 0.16->0.32 (+100%), text 0.16->0.24, p95 improved vs baseline (text 1.0s, hybrid 2.2s). 102 tests, boundaries green. Merger to merge and set done. Stage-1 target hybrid hit@5 >= 0.44 (ADR-007) via later semantic/graph packets; hybrid p95<=1s deferred (symbol-pass/1.2). Pre-existing app/worker.py __main__ guard bug to be filed separately."
+    integration_merge: "0a7ae11c352328856bd768cde0a295efddeffbbf"
+    notes: "PR #78 merged at 0a7ae11c352328856bd768cde0a295efddeffbbf from exact reviewed head 17644ae0d5a5bd394e6da0edb473f2bfb1d806d7 after REVIEW-055 on_track authorization (HD-004). FTS + ADR-008 rare-term/DF digestion (N=50): hybrid file hit@5 0.16->0.32 (+100%), text 0.16->0.24, p95 improved vs baseline (text 1.0s, hybrid 2.2s). 102 tests, boundaries green. Stage-1 target hybrid hit@5 >= 0.44 (ADR-007) via later semantic/graph packets; hybrid p95<=1s deferred (symbol-pass/1.2). Pre-existing app/worker.py __main__ guard bug to be filed separately. GitHub review approval was not a gate."
 next_instruction:
   issued_by: "navigator (Sol)"
   issued_at: "2026-08-15T11:05:00+00:00"
