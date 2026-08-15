@@ -148,6 +148,34 @@ packets:
     blocked_by: ["1.1"]
     integration_merge: "ba5e7e802cd2a058626cfd8940b3bf638cb014ea"
     notes: "PR #80 merged at ba5e7e802cd2a058626cfd8940b3bf638cb014ea from exact reviewed head c14785c33a246b712429e8abd9a74143cebb65f3 under committed REVIEW-057 on_track (HD-004). Real pgvector HNSW ANN query behind VectorSearch port; Python cosine path retained only as SQLite test fallback. Full-corpus embed + semantic scorecard delta held for owner cost approval (~USD0.46-0.79). GitHub review approval was not a gate."
+  - id: "1.5"
+    title: "Rank fusion (weighted RRF)"
+    state: todo
+    branch: "packet/1.5-weighted-rrf"
+    verify: "pytest -q && lint-imports"
+    blocked_by: ["1.1", "1.3"]
+    notes: "Fixes hybrid<semantic (0.56<0.60): equal-weight RRF dilutes a strong single-mode signal. Move fusion to pure app/domain/retrieval.py, weight per-mode so hybrid hit@5 >= every single mode. Embedded scorecard confirmation run at review (one Vertex embed)."
+next_instruction:
+  issued_by: "navigator (Sol)"
+  issued_at: "2026-08-15T15:30:00+00:00"
+  packet: "1.5"
+  objective: >-
+    Fix hybrid retrieval underperforming its best single mode. Replace the
+    equal-weight RRF in app/search.py:_fuse with a WEIGHTED reciprocal-rank
+    fusion, extracted into a NEW pure module app/domain/retrieval.py (no
+    SQLAlchemy/FastAPI imports). Per-mode weights (config-tunable) so a strong
+    signal (semantic) is not diluted by weak modes; keep the exact-hit fast path.
+    Target property: hybrid hit@5 >= max(single-mode hit@5) on the gold set.
+  constraints:
+    - "Branch packet/1.5-weighted-rrf from integration/roadmap-v2; NEVER rebase/force-push."
+    - "Fusion becomes a PURE function in app/domain/retrieval.py; import-linter must stay green (domain imports no adapters/frameworks). search.py calls it."
+    - "Weights config-tunable (settings), defaulted so the gold-set property holds; document the defaults."
+    - "Deterministic; keep dedupe-on-identity and _key tie-break behavior; single-mode fusion output unchanged."
+    - "No stack/embed in this packet (save cost); the embedded scorecard delta is run at review. GitNexus inspiration only."
+  done_when:
+    - "New app/domain/retrieval.py pure fusion + unit tests on CONSTRUCTED rankings proving hybrid >= each single mode when one mode dominates (e.g. gold@1 in semantic only must outrank junk appearing in two weak modes)."
+    - "pytest + lint-imports green; existing search behavior preserved for single-mode queries."
+    - "PR opened into integration/roadmap-v2; evidence bound to exact head. (Reviewer runs the embedded hybrid>=0.60 scorecard confirmation.)"
 last_review: REVIEW-057
 drift_flags: []
 ```
