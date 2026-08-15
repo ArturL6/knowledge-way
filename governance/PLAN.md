@@ -227,7 +227,7 @@ No retrieval changes, no new features, no new endpoints.
 - **1.8 — Rerank (existing hook) evaluation.** Keep the rerank provider path; measure its scorecard delta; disable by default if it doesn't pay for its latency.
 
 ### Exit criteria (all measured on the Stage 0 harness, committed scorecards)
-- [ ] Hybrid hit@5 (files) improves ≥ 30% relative over the Stage 0 baseline, and hybrid ≥ every single mode alone.
+- [ ] Hybrid hit@5 (files) **≥ 0.44 absolute** (target, finalized in ADR-007 from the external comparator's keyless result) and improves ≥ 30% relative over the Stage 0 baseline (floor), and hybrid ≥ every single mode alone.
 - [ ] Exact identifier and quoted-string queries: hit@1 ≥ 0.9.
 - [ ] p95 hybrid latency ≤ 1s on the real workspace; semantic latency flat in corpus size.
 - [ ] Zero framework/SQL imports in `domain/retrieval.py` (import-linter).
