@@ -157,7 +157,11 @@ export default function GraphExplorer() {
   const [symbolQuery, setSymbolQuery] = useState(''); const [hits, setHits] = useState<SymbolHit[] | null>(null); const [symbolLabel, setSymbolLabel] = useState('');
   const [resolving, setResolving] = useState(''); const [searching, setSearching] = useState(false); const [stats, setStats] = useState<GraphStats>(emptyStats);
   const graphRequestVersion = useRef(0);
-  const visibleRepositories = useMemo(() => workspaceRepoIds ? repositories.filter((repository) => workspaceRepoIds.has(repository.id)) : repositories, [repositories, workspaceRepoIds]);
+  const scopedRepositories = useMemo(() => workspaceRepoIds ? repositories.filter((repository) => workspaceRepoIds.has(repository.id)) : repositories, [repositories, workspaceRepoIds]);
+  // Never strand the user with an empty picker: an active workspace with no ready repos of its own falls back
+  // to showing every ready repository, with a note (below) explaining why the scope note is missing.
+  const workspaceScopeEmpty = workspaceRepoIds !== null && scopedRepositories.length === 0 && repositories.length > 0;
+  const visibleRepositories = workspaceScopeEmpty ? repositories : scopedRepositories;
   const relationshipTypes = useMemo(() => [...new Set(graph.links.map((link) => link.relationship))].sort(), [graph]);
   const presentKinds = useMemo(() => [...new Set(graph.nodes.map((node) => node.kind))].filter((kind) => kind !== 'unknown'), [graph]);
   const filteredGraph = useMemo(() => {
@@ -265,7 +269,7 @@ export default function GraphExplorer() {
     : `${filteredGraph.nodes.length} nodes · ${filteredGraph.links.length} relationships`;
 
   return <>
-    <div className="page-heading"><div><h2>Code graph</h2><p className="muted">Explore repository structure and symbol relationships. Select a node from the accessible node list or click it in the visual graph; dragging pins a visual node.{activeWorkspaceId ? ' Scoped to the active workspace.' : ''}</p></div></div>
+    <div className="page-heading"><div><h2>Code graph</h2><p className="muted">Explore repository structure and symbol relationships. Select a node from the accessible node list or click it in the visual graph; dragging pins a visual node.{activeWorkspaceId ? (workspaceScopeEmpty ? ' Active workspace has no indexed repos — showing all repositories instead.' : ' Scoped to the active workspace.') : ''}</p></div></div>
     <form className="card graph-controls" onSubmit={findSymbols}>
       <label>Repository<select value={repositoryId} onChange={(event) => navigateGraph(event.target.value, '', depth)} required><option value="">Choose an indexed repository</option>{visibleRepositories.map((repository) => <option key={repository.id} value={repository.id}>{repository.name}</option>)}</select></label>
       <label>Symbol<input value={symbolQuery} onChange={(event) => setSymbolQuery(event.target.value)} placeholder="search by name, e.g. Agent" autoComplete="off" /></label>
