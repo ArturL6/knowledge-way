@@ -211,7 +211,8 @@ def main() -> int:
                 "/api/search?" + urlencode({"q": task["description"], "mode": mode, "limit": args.limit}),
                 args.timeout,
             )
-            if mode == "semantic" and payload.get("semantic") is not True:
+            semantic_capability = payload.get("semantic")
+            if mode == "semantic" and not (isinstance(semantic_capability, dict) and semantic_capability.get("enabled") is True):
                 rows.append({"task_id": task["id"], "task_source": task["_source"], "mode": mode, "status": "unavailable", "reason": "semantic: unconfigured", "latency_ms": latency})
                 continue
             if not isinstance(payload.get("results"), list):
