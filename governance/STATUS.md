@@ -141,34 +141,13 @@ packets:
     notes: "PR #79 merged at 81f01102f17f373acd3c72541c518d275665c46b from exact reviewed head 2c52d65425a84a54964416921eab7e4e2719f8cc under committed REVIEW-056 on_track (HD-004). GitHub review approval was not a gate."
   - id: "1.3"
     title: "pgvector ANN semantic queries"
-    state: merge_authorized
+    state: done
     branch: "packet/1.3-pgvector-ann"
+    pr: 80
     verify: "pytest -q && lint-imports"
     blocked_by: ["1.1"]
-    notes: "Vertex verified (governance/operations/vertex-readiness.md): text-embedding-005 @768, project ai-tinker-lab. Strict cost controls: small-subset-first, cost extrapolation committed and owner-approved BEFORE any full-corpus embed; USD50 cap / pause at USD40."
-next_instruction:
-  issued_by: "navigator (Sol)"
-  issued_at: "2026-08-15T14:20:00+00:00"
-  packet: "1.3"
-  objective: >-
-    Replace the Python full-scan cosine semantic search with a real pgvector ANN
-    query (ORDER BY embedding <=> :q LIMIT k) using an HNSW index, filtered by
-    embedding model + workspace/repo scope, behind the VectorSearch port. Keep
-    the Python cosine path only as the SQLite test fallback (dialect branch, like
-    packet 1.1). Add the HNSW index via a Postgres-guarded Alembic migration.
-    Verify EXPLAIN shows index usage and that semantic latency is independent of
-    corpus size.
-  constraints:
-    - "Branch packet/1.3-pgvector-ann from integration/roadmap-v2; NEVER rebase/force-push."
-    - "Embeddings: Vertex text-embedding-005 @768 ONLY (ADR-004/005). In Docker, the api/worker need ADC: override the compose volume to mount ${HOME}/.gcloud-kw:/root/.config/gcloud:ro (the default ${HOME}/.config/gcloud is root-owned and empty); set EMBEDDING_PROVIDER=vertex, VERTEX_PROJECT_ID=ai-tinker-lab."
-    - "COST CONTROL (HD-003 §4): embed at most a bounded subset first (<=500 chunks). Commit the subset samples + a full-corpus cost extrapolation (chunk count x chars x price) to benchmarks/ or governance/operations. DO NOT embed the full corpus until the owner approves the extrapolated cost. Log spend; pause at USD40, hard cap USD50."
-    - "ANN SQL stays in app/search.py or app/adapters/outbound/postgres/*; never in app.application/app.domain (import-linter green). Preserve the /api/search result row shape."
-    - "GitNexus is inspiration only; no code/dependency/reference."
-  done_when:
-    - "pytest + lint-imports green; migration chain intact; HNSW migration Postgres-guarded."
-    - "EXPLAIN shows HNSW index scan for the semantic ANN path; Python cosine retained only for SQLite tests."
-    - "Subset embedding validated end-to-end (query embed -> ANN -> results) on a <=500-chunk subset, with committed cost extrapolation. Full-corpus embed + semantic scorecard delta held for owner cost approval."
-    - "PR opened into integration/roadmap-v2 with evidence bound to the exact head SHA."
+    integration_merge: "ba5e7e802cd2a058626cfd8940b3bf638cb014ea"
+    notes: "PR #80 merged at ba5e7e802cd2a058626cfd8940b3bf638cb014ea from exact reviewed head c14785c33a246b712429e8abd9a74143cebb65f3 under committed REVIEW-057 on_track (HD-004). Real pgvector HNSW ANN query behind VectorSearch port; Python cosine path retained only as SQLite test fallback. Full-corpus embed + semantic scorecard delta held for owner cost approval (~USD0.46-0.79). GitHub review approval was not a gate."
 last_review: REVIEW-057
 drift_flags: []
 ```
