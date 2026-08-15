@@ -2,12 +2,64 @@ import asyncio
 import math
 import re
 from dataclasses import dataclass
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func, literal_column, delete, text as sql_text
 from app.config import settings
-from app.adapters.outbound.postgres.models import Repository, File, Symbol, CodeChunk
+from app.adapters.outbound.postgres.models import Repository, File, Symbol, CodeChunk, TermDocumentFrequency
 from app.adapters.outbound.llm_providers.providers import embedding_provider, rerank_provider, semantic_capability
 
 STOP_WORDS = {"a", "an", "and", "are", "defined", "do", "for", "how", "in", "is", "of", "the", "to", "what", "where", "which", "with"}
+
+# ADR-008: OR-ing every exploded query term (a real query can be a whole issue body, 150-300
+# terms) matches a huge fraction of the corpus and makes ts_rank_cd sort it all -- measured p95
+# ~3x the baseline. Digesting down to the N rarest (most discriminating) terms first keeps
+# recall (common words add candidates, not signal) while bounding candidate-set size. N lives in
+# settings.rare_term_limit (env RARE_TERM_LIMIT), not a module constant, so it can be tuned with
+# an API restart instead of a rebuild.
+
+# Must exactly mirror the generated-column expression in migration 20260815_0011_chunk_fts.py
+# (camelCase boundary split, then `._/` treated as separators) so query tokens and indexed
+# tokens agree. Case doesn't need to match here: to_tsquery/to_tsvector('simple', ...) lowercase.
+_CAMEL_BOUNDARY = re.compile(r'([a-z0-9])([A-Z])')
+_IDENTIFIER_SEPARATORS = re.compile(r'[._/]+')
+
+
+def split_identifier_tokens(text_value: str) -> str:
+    return _IDENTIFIER_SEPARATORS.sub(' ', _CAMEL_BOUNDARY.sub(r'\1 \2', text_value))
+
+
+def select_discriminating_terms(terms, document_frequency, limit=25):
+    """Pure term-selection (ADR-008): pick up to `limit` rarest-first terms by corpus document
+    frequency. Deterministic tie-break: lower df, then longer term, then lexicographic.
+
+    Terms absent from `document_frequency` are dropped whenever at least one known term
+    exists -- an unseen lexeme can't match any indexed row, so keeping it wastes a slot
+    without adding candidates. If NONE are known (e.g. an empty/stale df map), degrade to a
+    still-deterministic length/lexicographic ordering over all terms rather than returning
+    nothing."""
+    seen, unique = set(), []
+    for term in terms:
+        if term not in seen: seen.add(term); unique.append(term)
+    known = [t for t in unique if t in document_frequency]
+    pool = known if known else unique
+    return sorted(pool, key=lambda t: (document_frequency.get(t, 0), -len(t), t))[:limit]
+
+
+def refresh_term_document_frequency(db):
+    """Recompute corpus-wide lexical rarity stats (ADR-008) after an index changes fts_tokens.
+    Postgres-only (ts_stat is a Postgres function); a no-op on SQLite.
+    ponytail: full recompute across every repo on each index job, not incremental -- simple and
+    correct; O(all chunks) but paid once off the query path. Scope to the reindexed repo's rows
+    only if reindex frequency ever makes this a bottleneck."""
+    if db.bind.dialect.name != 'postgresql': return
+    db.execute(delete(TermDocumentFrequency))
+    # ts_stat can surface lexemes far longer than any real query term (e.g. long encoded blobs
+    # that tokenized as one "word"); cap at the column width rather than widen it for noise no
+    # real query would ever produce.
+    db.execute(sql_text("""
+        INSERT INTO term_document_frequency (term, document_frequency)
+        SELECT word, ndoc FROM ts_stat('SELECT fts_tokens FROM code_chunks WHERE fts_tokens IS NOT NULL')
+        WHERE length(word) <= 255
+    """))
 
 @dataclass
 class Query:
@@ -70,21 +122,66 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
     # by rows from repos outside scope, starving the scoped query to zero results.
     allowed_ids = {rid for rid, r in repos.items()
                    if (not repository_id or rid == repository_id) and (not q.repo or q.repo.lower() in r.name.lower())}
+    def chunk_filters():
+        filters = [CodeChunk.repository_id.in_(allowed_ids)]
+        if q.language: filters.append(CodeChunk.language == q.language)
+        if q.path: filters.append(File.path.ilike(f'%{q.path}%'))
+        return filters
     def chunk_stmt():
-        stmt = (select(CodeChunk, File).join(File, CodeChunk.file_id == File.id)
-                 .where(CodeChunk.repository_id.in_(allowed_ids))
+        return (select(CodeChunk, File).join(File, CodeChunk.file_id == File.id)
+                 .where(*chunk_filters())
                  .order_by(File.path, CodeChunk.start_line, CodeChunk.id))
-        if q.language: stmt = stmt.where(CodeChunk.language == q.language)
-        if q.path: stmt = stmt.where(File.path.ilike(f'%{q.path}%'))
-        return stmt
+    is_postgres = db.bind.dialect.name == 'postgresql'
     if mode in ('hybrid', 'text', 'exact') and q.text:
+        # Exact/quoted substring match stays a plain ILIKE on both dialects. On Postgres it is
+        # served by the pg_trgm GIN index ix_chunks_source_text_trgm (migration
+        # 20260815_0011_chunk_fts) instead of a sequential scan, so it stays cheap while still
+        # outranking the fuzzy FTS fallback below.
         for chunk, file in db.execute(chunk_stmt().where(CodeChunk.source_text.ilike(f'%{q.text}%')).limit(limit * 2)):
             lexical.append(result('chunk', 1.0, repos[chunk.repository_id], file, chunk))
         exact_lexical_match = bool(lexical)
     if not lexical and mode in ('hybrid', 'text') and terms:
-        clauses = [CodeChunk.source_text.ilike(f'%{term}%') for term in terms]
-        for chunk, file in db.execute(chunk_stmt().where(or_(*clauses)).limit(limit * 8)):
-            lexical.append(result('chunk', .45 + .35 * sum(t in chunk.source_text.lower() for t in terms) / len(terms), repos[chunk.repository_id], file, chunk))
+        if is_postgres:
+            # Code-aware full-text search: fts_tokens is a STORED generated tsvector column
+            # (migration 20260815_0011_chunk_fts) built from source_text with identifier
+            # splitting (camelCase/snake_case/dotted paths), backed by a GIN index.
+            # split_identifier_tokens must mirror that column's expression so query tokens and
+            # indexed tokens agree.
+            #
+            # OR, not AND: a real query (e.g. an issue body run through query_terms) can explode
+            # into hundreds of terms; requiring all of them in one chunk (websearch_to_tsquery's
+            # implicit AND) matches ~nothing. But OR-ing ALL of them matches a huge fraction of
+            # the corpus and makes ts_rank_cd sort it all (measured ~3x baseline p95). ADR-008:
+            # digest down to the settings.rare_term_limit rarest (most discriminating) terms first via
+            # select_discriminating_terms, using corpus document frequency from
+            # term_document_frequency (refreshed by refresh_term_document_frequency after every
+            # index). ts_rank_cd still ranks candidates by how many/how densely the surviving
+            # terms matched -- the same "fraction of terms matched" intent as the ILIKE-OR
+            # fallback, ranked instead of flat-scored.
+            query_tokens, seen = [], set()
+            for term in terms:
+                for token in split_identifier_tokens(term).split():
+                    if token not in seen: seen.add(token); query_tokens.append(token)
+            document_frequency = dict(db.execute(
+                select(TermDocumentFrequency.term, TermDocumentFrequency.document_frequency)
+                .where(TermDocumentFrequency.term.in_(query_tokens))
+            ).all()) if query_tokens else {}
+            chosen_tokens = select_discriminating_terms(query_tokens, document_frequency, settings.rare_term_limit)
+            if chosen_tokens:
+                fts_tokens = literal_column('code_chunks.fts_tokens')
+                tsquery = func.to_tsquery('simple', ' | '.join(chosen_tokens))
+                rank_expr = func.ts_rank_cd(fts_tokens, tsquery)
+                stmt = (select(CodeChunk, File, rank_expr.label('rank_score'))
+                         .join(File, CodeChunk.file_id == File.id)
+                         .where(*chunk_filters()).where(fts_tokens.op('@@')(tsquery))
+                         .order_by(rank_expr.desc()).limit(limit * 8))
+                for chunk, file, rank_score in db.execute(stmt):
+                    score = .45 + .35 * (rank_score / (1.0 + rank_score))
+                    lexical.append(result('chunk', score, repos[chunk.repository_id], file, chunk))
+        else:
+            clauses = [CodeChunk.source_text.ilike(f'%{term}%') for term in terms]
+            for chunk, file in db.execute(chunk_stmt().where(or_(*clauses)).limit(limit * 8)):
+                lexical.append(result('chunk', .45 + .35 * sum(t in chunk.source_text.lower() for t in terms) / len(terms), repos[chunk.repository_id], file, chunk))
     if mode in ('hybrid', 'symbols') and terms:
         clauses = [Symbol.name.ilike(f'%{term}%') for term in terms] + [Symbol.qualified_name.ilike(f'%{term}%') for term in terms]
         symbol_stmt = (select(Symbol, File).join(File, Symbol.file_id == File.id)

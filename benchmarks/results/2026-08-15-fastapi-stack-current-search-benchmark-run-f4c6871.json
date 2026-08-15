@@ -1,0 +1,2464 @@
+{
+  "api_base_url": "http://127.0.0.1:47129",
+  "command": "python benchmarks/run_retrieval.py --api-base-url http://127.0.0.1:47129 --limit 5 --output benchmarks/results/2026-08-15-fastapi-stack-current-search-benchmark-run-f4c6871.json",
+  "configuration": {
+    "active_workspace": "fastapi-stack",
+    "limit": 5,
+    "modes": [
+      "text",
+      "exact",
+      "symbols",
+      "semantic",
+      "hybrid"
+    ],
+    "task_content_sha256": "418d1c363fb013478401de6a44af13bec7d6a8263ce92e7eb7591366c2ac49e8",
+    "task_set": [
+      {
+        "id": "encode-starlette-issue-1108",
+        "sha256": "754c346717513c6d2ff5fe860c743cd041abe9b1672edc3fdcd610cbba4144e0",
+        "source": "benchmarks/tasks/encode-starlette-issue-1108.json"
+      },
+      {
+        "id": "encode-starlette-issue-1724",
+        "sha256": "12fd5c77210bb7717b9ef14ec2320b89706a1fbbf3f5f70f7c90b9898ea188a2",
+        "source": "benchmarks/tasks/encode-starlette-issue-1724.json"
+      },
+      {
+        "id": "encode-starlette-issue-1832",
+        "sha256": "0cc85a8d87befd75d91353da51c5d4b479a1dd808147ab071af2d005381d1861",
+        "source": "benchmarks/tasks/encode-starlette-issue-1832.json"
+      },
+      {
+        "id": "encode-starlette-issue-1921",
+        "sha256": "575eca9d6935d834ff6acf8e8d163e089f030029b5be41b50f0e0c00ffa58055",
+        "source": "benchmarks/tasks/encode-starlette-issue-1921.json"
+      },
+      {
+        "id": "encode-starlette-issue-2019",
+        "sha256": "960ad8a551411f84633815468ae69e71f06cc933821319907c3630afcf333c57",
+        "source": "benchmarks/tasks/encode-starlette-issue-2019.json"
+      },
+      {
+        "id": "encode-starlette-issue-2155",
+        "sha256": "09b77578a747017eac94da7a4a8a458bb0eb0b61f0353cdf01602c2e7b794eba",
+        "source": "benchmarks/tasks/encode-starlette-issue-2155.json"
+      },
+      {
+        "id": "encode-starlette-issue-2452",
+        "sha256": "b5083b1de17643568bb55ba4209ccad7d097aaeb17453626bf72f676da8ce0b2",
+        "source": "benchmarks/tasks/encode-starlette-issue-2452.json"
+      },
+      {
+        "id": "encode-starlette-issue-2625",
+        "sha256": "a345ec347c52edb1dc0183208634d11b92f8b162f42cb815dc40a97b730e2481",
+        "source": "benchmarks/tasks/encode-starlette-issue-2625.json"
+      },
+      {
+        "id": "encode-starlette-issue-2906",
+        "sha256": "207b89e71357ba05e134b34fbae25110d8e37ca686a97765a205d3d04ac85d8e",
+        "source": "benchmarks/tasks/encode-starlette-issue-2906.json"
+      },
+      {
+        "id": "encode-starlette-issue-2950",
+        "sha256": "8d2127055e85432ae4a1204ad7612bb08aaf0d5442bfad679c09c82106e5e814",
+        "source": "benchmarks/tasks/encode-starlette-issue-2950.json"
+      },
+      {
+        "id": "encode-starlette-issue-3048",
+        "sha256": "1ff2329154ecf6358159d587113dffc9b684219d5c224ce42574f9ef3f7f6f83",
+        "source": "benchmarks/tasks/encode-starlette-issue-3048.json"
+      },
+      {
+        "id": "encode-starlette-issue-3388",
+        "sha256": "7df995303eefdd7a51f3346e7bb78041f2a800a1beaf33290abedb58dc205d7e",
+        "source": "benchmarks/tasks/encode-starlette-issue-3388.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-11862",
+        "sha256": "4aa757020e6083f74015bc3ae87747eba441029bba8e93a9f9e85bcfefd6a15b",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-11862.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-11925",
+        "sha256": "54af5ac79f855e3d8c66b796bc755f8cbdf4c3cc952375c180470bc7d8083469",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-11925.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-12435",
+        "sha256": "c91ece21a6bc2a3bbb3586efd19e84b2bda113778f6dde3120c85a9939533d5b",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-12435.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-12529",
+        "sha256": "60792ce68121a9cd92075cab277677bd381623d4cd211ce053fa8594758b9345",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-12529.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-13448",
+        "sha256": "354e78543cb067fa0fdc314b9e5c13a62d9798828628ad8a47ae685a94116ce1",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-13448.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-13460",
+        "sha256": "7122f44c7bc726e63759691ec5969e2cb3146e3ed2980bee6ab67ef7018f568f",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-13460.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-13467",
+        "sha256": "7d1ac2bb166442e32f5a5c9ef095706b7dfd59b48a089d4457cefa7fdefb2b04",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-13467.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-13507",
+        "sha256": "153916ad7b078d855356c54e202440ab4fd449f82c70a7ff448dec6d4b582f7c",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-13507.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-13599",
+        "sha256": "0561ca627d341d6ef06f699563c3a8183f46e89f3fc913648681c1c6b1c3ab17",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-13599.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-13621",
+        "sha256": "0d696845cf673533c5ec9a2ade8092d70ce96f98e806e05dff3380a186b4d51a",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-13621.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-13631",
+        "sha256": "b4532ed6073bdc85036602075cf51941e01351d1203bfd9916d4de496ed3b391",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-13631.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-13645",
+        "sha256": "e66c87219f77b118026033863bf039d3dc85ae366b39164589c893344df0fe53",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-13645.json"
+      },
+      {
+        "id": "pydantic-pydantic-issue-8155",
+        "sha256": "0587b1c04988055bcaac0ef9ade9f5f634dd99f1b521113a7f863d76d3541a47",
+        "source": "benchmarks/tasks/pydantic-pydantic-issue-8155.json"
+      }
+    ],
+    "timeout_seconds": 60.0
+  },
+  "environment": {
+    "embedding_provider": "unset",
+    "platform": "Linux-7.0.0-28-generic-x86_64-with-glibc2.39",
+    "python": "3.12.3"
+  },
+  "generated_at_utc": "2026-08-15T11:54:14.474989+00:00",
+  "harness_git_sha": "d2fb3b923aeb6812c4ab6a2fe5f66e38ac5b36c6",
+  "kind": "knowledge-way-retrieval-scorecard",
+  "provenance_note": "Measured against the uncommitted AND->OR tsquery fix in apps/api/app/search.py (REVIEW-053 remediation) while HEAD was d2fb3b923aeb6812c4ab6a2fe5f66e38ac5b36c6 (dirty working tree). That working tree was committed byte-identical as f4c687198aac540d123f2b699ad2c517b8bffd5c immediately after this run, with no further code changes; the harness was not re-run against the committed SHA. harness_git_sha below therefore reflects the pre-commit working HEAD, not the commit this file is named for.",
+  "results": [
+    {
+      "latency_ms": 8431.143,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1108",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1108.json"
+    },
+    {
+      "latency_ms": 438.227,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1108",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1108.json"
+    },
+    {
+      "latency_ms": 1015.275,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1108",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1108.json"
+    },
+    {
+      "latency_ms": 3.131,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-1108",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1108.json"
+    },
+    {
+      "latency_ms": 9403.341,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1108",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1108.json"
+    },
+    {
+      "latency_ms": 5653.889,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1724",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1724.json"
+    },
+    {
+      "latency_ms": 406.503,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1724",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1724.json"
+    },
+    {
+      "latency_ms": 1384.025,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1724",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1724.json"
+    },
+    {
+      "latency_ms": 2.77,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-1724",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1724.json"
+    },
+    {
+      "latency_ms": 6655.318,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1724",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1724.json"
+    },
+    {
+      "latency_ms": 2090.375,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1832",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1832.json"
+    },
+    {
+      "latency_ms": 269.161,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1832",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1832.json"
+    },
+    {
+      "latency_ms": 814.813,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1832",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1832.json"
+    },
+    {
+      "latency_ms": 2.557,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-1832",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1832.json"
+    },
+    {
+      "latency_ms": 2889.357,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1832",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1832.json"
+    },
+    {
+      "latency_ms": 1099.14,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1921",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1921.json"
+    },
+    {
+      "latency_ms": 239.984,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1921",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1921.json"
+    },
+    {
+      "latency_ms": 652.744,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1921",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1921.json"
+    },
+    {
+      "latency_ms": 2.619,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-1921",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1921.json"
+    },
+    {
+      "latency_ms": 1744.775,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-1921",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-1921.json"
+    },
+    {
+      "latency_ms": 12050.096,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2019",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2019.json"
+    },
+    {
+      "latency_ms": 587.082,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2019",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2019.json"
+    },
+    {
+      "latency_ms": 1153.162,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2019",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2019.json"
+    },
+    {
+      "latency_ms": 2.998,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-2019",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2019.json"
+    },
+    {
+      "latency_ms": 12788.666,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2019",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2019.json"
+    },
+    {
+      "latency_ms": 4105.146,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2155",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2155.json"
+    },
+    {
+      "latency_ms": 315.479,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2155",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2155.json"
+    },
+    {
+      "latency_ms": 938.299,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2155",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2155.json"
+    },
+    {
+      "latency_ms": 2.532,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-2155",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2155.json"
+    },
+    {
+      "latency_ms": 5318.596,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2155",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2155.json"
+    },
+    {
+      "latency_ms": 167.508,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2452",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2452.json"
+    },
+    {
+      "latency_ms": 5.656,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2452",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2452.json"
+    },
+    {
+      "latency_ms": 187.567,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2452",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2452.json"
+    },
+    {
+      "latency_ms": 2.262,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-2452",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2452.json"
+    },
+    {
+      "latency_ms": 309.424,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2452",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2452.json"
+    },
+    {
+      "latency_ms": 5145.953,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2625",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2625.json"
+    },
+    {
+      "latency_ms": 328.477,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2625",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2625.json"
+    },
+    {
+      "latency_ms": 906.103,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2625",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2625.json"
+    },
+    {
+      "latency_ms": 2.756,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-2625",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2625.json"
+    },
+    {
+      "latency_ms": 6001.697,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2625",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2625.json"
+    },
+    {
+      "latency_ms": 484.915,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2906",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2906.json"
+    },
+    {
+      "latency_ms": 6.953,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2906",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2906.json"
+    },
+    {
+      "latency_ms": 206.04,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2906",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2906.json"
+    },
+    {
+      "latency_ms": 2.542,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-2906",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2906.json"
+    },
+    {
+      "latency_ms": 707.528,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2906",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2906.json"
+    },
+    {
+      "latency_ms": 4157.691,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2950",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2950.json"
+    },
+    {
+      "latency_ms": 285.35,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2950",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2950.json"
+    },
+    {
+      "latency_ms": 447.177,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2950",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2950.json"
+    },
+    {
+      "latency_ms": 2.45,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-2950",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2950.json"
+    },
+    {
+      "latency_ms": 4525.782,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-2950",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-2950.json"
+    },
+    {
+      "latency_ms": 5476.375,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-3048",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-3048.json"
+    },
+    {
+      "latency_ms": 400.85,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-3048",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-3048.json"
+    },
+    {
+      "latency_ms": 1174.386,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-3048",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-3048.json"
+    },
+    {
+      "latency_ms": 2.627,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-3048",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-3048.json"
+    },
+    {
+      "latency_ms": 6640.981,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-3048",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-3048.json"
+    },
+    {
+      "latency_ms": 1498.515,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-3388",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-3388.json"
+    },
+    {
+      "latency_ms": 252.566,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-3388",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-3388.json"
+    },
+    {
+      "latency_ms": 575.544,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-3388",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-3388.json"
+    },
+    {
+      "latency_ms": 2.429,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "encode-starlette-issue-3388",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-3388.json"
+    },
+    {
+      "latency_ms": 1991.215,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "encode-starlette-issue-3388",
+      "task_source": "benchmarks/tasks/encode-starlette-issue-3388.json"
+    },
+    {
+      "latency_ms": 4653.815,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-11862",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-11862.json"
+    },
+    {
+      "latency_ms": 341.781,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-11862",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-11862.json"
+    },
+    {
+      "latency_ms": 626.76,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-11862",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-11862.json"
+    },
+    {
+      "latency_ms": 2.911,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-11862",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-11862.json"
+    },
+    {
+      "latency_ms": 5297.458,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-11862",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-11862.json"
+    },
+    {
+      "latency_ms": 6366.816,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-11925",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-11925.json"
+    },
+    {
+      "latency_ms": 527.356,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-11925",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-11925.json"
+    },
+    {
+      "latency_ms": 941.149,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-11925",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-11925.json"
+    },
+    {
+      "latency_ms": 2.904,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-11925",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-11925.json"
+    },
+    {
+      "latency_ms": 7160.639,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-11925",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-11925.json"
+    },
+    {
+      "latency_ms": 52.989,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-12435",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-12435.json"
+    },
+    {
+      "latency_ms": 4.427,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-12435",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-12435.json"
+    },
+    {
+      "latency_ms": 152.767,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-12435",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-12435.json"
+    },
+    {
+      "latency_ms": 2.323,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-12435",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-12435.json"
+    },
+    {
+      "latency_ms": 200.866,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-12435",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-12435.json"
+    },
+    {
+      "latency_ms": 10748.03,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-12529",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-12529.json"
+    },
+    {
+      "latency_ms": 517.618,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-12529",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-12529.json"
+    },
+    {
+      "latency_ms": 1266.842,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-12529",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-12529.json"
+    },
+    {
+      "latency_ms": 2.641,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-12529",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-12529.json"
+    },
+    {
+      "latency_ms": 12306.287,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-12529",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-12529.json"
+    },
+    {
+      "latency_ms": 5611.827,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13448",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13448.json"
+    },
+    {
+      "latency_ms": 413.644,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13448",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13448.json"
+    },
+    {
+      "latency_ms": 908.871,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13448",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13448.json"
+    },
+    {
+      "latency_ms": 3.087,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-13448",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13448.json"
+    },
+    {
+      "latency_ms": 6727.459,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13448",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13448.json"
+    },
+    {
+      "latency_ms": 2333.637,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13460",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13460.json"
+    },
+    {
+      "latency_ms": 220.234,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13460",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13460.json"
+    },
+    {
+      "latency_ms": 399.5,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13460",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13460.json"
+    },
+    {
+      "latency_ms": 2.269,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-13460",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13460.json"
+    },
+    {
+      "latency_ms": 2933.937,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13460",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13460.json"
+    },
+    {
+      "latency_ms": 5814.196,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13467",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13467.json"
+    },
+    {
+      "latency_ms": 374.827,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13467",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13467.json"
+    },
+    {
+      "latency_ms": 904.053,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13467",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13467.json"
+    },
+    {
+      "latency_ms": 2.746,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-13467",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13467.json"
+    },
+    {
+      "latency_ms": 6793.482,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13467",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13467.json"
+    },
+    {
+      "latency_ms": 11383.821,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13507",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13507.json"
+    },
+    {
+      "latency_ms": 645.696,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13507",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13507.json"
+    },
+    {
+      "latency_ms": 1453.345,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13507",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13507.json"
+    },
+    {
+      "latency_ms": 3.092,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-13507",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13507.json"
+    },
+    {
+      "latency_ms": 12932.709,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13507",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13507.json"
+    },
+    {
+      "latency_ms": 4275.455,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13599",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13599.json"
+    },
+    {
+      "latency_ms": 421.872,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13599",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13599.json"
+    },
+    {
+      "latency_ms": 1046.711,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13599",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13599.json"
+    },
+    {
+      "latency_ms": 2.784,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-13599",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13599.json"
+    },
+    {
+      "latency_ms": 5204.76,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13599",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13599.json"
+    },
+    {
+      "latency_ms": 10865.919,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13621",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13621.json"
+    },
+    {
+      "latency_ms": 553.113,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13621",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13621.json"
+    },
+    {
+      "latency_ms": 1657.905,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13621",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13621.json"
+    },
+    {
+      "latency_ms": 3.057,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-13621",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13621.json"
+    },
+    {
+      "latency_ms": 12086.762,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13621",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13621.json"
+    },
+    {
+      "latency_ms": 4398.889,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13631",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13631.json"
+    },
+    {
+      "latency_ms": 350.335,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13631",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13631.json"
+    },
+    {
+      "latency_ms": 876.335,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13631",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13631.json"
+    },
+    {
+      "latency_ms": 2.404,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-13631",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13631.json"
+    },
+    {
+      "latency_ms": 5182.917,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13631",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13631.json"
+    },
+    {
+      "latency_ms": 6749.594,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13645",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13645.json"
+    },
+    {
+      "latency_ms": 478.636,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13645",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13645.json"
+    },
+    {
+      "latency_ms": 1009.004,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13645",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13645.json"
+    },
+    {
+      "latency_ms": 3.358,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-13645",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13645.json"
+    },
+    {
+      "latency_ms": 8094.818,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-13645",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-13645.json"
+    },
+    {
+      "latency_ms": 7498.052,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "text",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-8155",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-8155.json"
+    },
+    {
+      "latency_ms": 449.893,
+      "metrics": {
+        "files": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "exact",
+      "result_count": 0,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-8155",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-8155.json"
+    },
+    {
+      "latency_ms": 998.955,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "symbols",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-8155",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-8155.json"
+    },
+    {
+      "latency_ms": 2.836,
+      "mode": "semantic",
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_id": "pydantic-pydantic-issue-8155",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-8155.json"
+    },
+    {
+      "latency_ms": 8400.015,
+      "metrics": {
+        "files": {
+          "hit_at_1": 1.0,
+          "hit_at_5": 1.0,
+          "mrr": 1.0
+        },
+        "symbols": {
+          "hit_at_1": 0.0,
+          "hit_at_5": 0.0,
+          "mrr": 0.0
+        }
+      },
+      "mode": "hybrid",
+      "result_count": 5,
+      "status": "ok",
+      "task_id": "pydantic-pydantic-issue-8155",
+      "task_source": "benchmarks/tasks/pydantic-pydantic-issue-8155.json"
+    }
+  ],
+  "schema_version": "1.1",
+  "semantic": "unconfigured",
+  "served_snapshot_manifest": [
+    {
+      "id": "fastapi",
+      "indexed_commit_sha": "40e33e492dbf4af6172997f4e3238a32e56cbe26",
+      "repository_id": "4cb8c0c4-342f-4749-b165-987bfad28af2",
+      "served_name": "fastapi-stack",
+      "source_url": "https://github.com/fastapi/fastapi.git"
+    },
+    {
+      "id": "starlette",
+      "indexed_commit_sha": "8d0cff820f89b5d5b19677246293513a9d1c952c",
+      "repository_id": "6346b0c6-e4d9-44fa-a255-f0cb91eb98a6",
+      "served_name": "starlette-stack",
+      "source_url": "https://github.com/encode/starlette.git"
+    },
+    {
+      "id": "pydantic",
+      "indexed_commit_sha": "7cedbfb03df82ac55c844c97e6f975359cb51bb9",
+      "repository_id": "c4c93cdd-d3f1-4127-ac94-2ac3ee93c683",
+      "served_name": "pydantic-stack",
+      "source_url": "https://github.com/pydantic/pydantic.git"
+    }
+  ],
+  "summary": {
+    "exact": {
+      "files": {
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "latency_ms": {
+        "p50": 374.827,
+        "p95": 580.288
+      },
+      "scored_task_count": 25,
+      "status": "ok",
+      "symbols": {
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "task_count": 25
+    },
+    "hybrid": {
+      "files": {
+        "hit_at_1": 0.28,
+        "hit_at_5": 0.28,
+        "mrr": 0.28
+      },
+      "latency_ms": {
+        "p50": 6001.697,
+        "p95": 12692.19
+      },
+      "scored_task_count": 25,
+      "status": "ok",
+      "symbols": {
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "task_count": 25
+    },
+    "semantic": {
+      "reason": "semantic: unconfigured",
+      "status": "unavailable",
+      "task_count": 25
+    },
+    "symbols": {
+      "files": {
+        "hit_at_1": 0.16,
+        "hit_at_5": 0.16,
+        "mrr": 0.16
+      },
+      "latency_ms": {
+        "p50": 908.871,
+        "p95": 1439.481
+      },
+      "scored_task_count": 25,
+      "status": "ok",
+      "symbols": {
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "task_count": 25
+    },
+    "text": {
+      "files": {
+        "hit_at_1": 0.28,
+        "hit_at_5": 0.28,
+        "mrr": 0.28
+      },
+      "latency_ms": {
+        "p50": 5145.953,
+        "p95": 11280.241
+      },
+      "scored_task_count": 25,
+      "status": "ok",
+      "symbols": {
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "mrr": 0.0
+      },
+      "task_count": 25
+    }
+  },
+  "task_count": 25
+}

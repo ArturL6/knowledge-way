@@ -7,7 +7,7 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base
 from app.models import Repository, File, CodeChunk
 from app import search as search_module
-from app.search import parse_query, query_terms, result, search_with_capability, _fuse
+from app.search import parse_query, query_terms, result, search_with_capability, _fuse, select_discriminating_terms
 
 
 def test_sourcegraph_filter_parser():
@@ -19,6 +19,41 @@ def test_sourcegraph_filter_parser():
 
 def test_query_terms_keep_code_identifiers_and_drop_question_words():
     assert query_terms("Where is get_dependant defined?") == ["get_dependant"]
+
+
+# --- ADR-008: rare-term query digestion -----------------------------------
+
+def test_select_discriminating_terms_prefers_rarest_first():
+    """'checklist'/'the'/'bug' are corpus-common boilerplate; 'websocket_route' is rare and
+    should survive a tight limit even though it wasn't listed first."""
+    terms = ["the", "bug", "checklist", "websocket_route", "reproduce"]
+    document_frequency = {"the": 9000, "bug": 4000, "checklist": 3000, "reproduce": 2500, "websocket_route": 3}
+    assert select_discriminating_terms(terms, document_frequency, limit=2) == ["websocket_route", "reproduce"]
+
+
+def test_select_discriminating_terms_breaks_df_ties_by_length_then_lexicographic():
+    terms = ["ab", "abc", "zz"]
+    document_frequency = {"ab": 5, "abc": 5, "zz": 5}  # tied df -> longer term wins, then lexicographic
+    assert select_discriminating_terms(terms, document_frequency, limit=3) == ["abc", "ab", "zz"]
+
+
+def test_select_discriminating_terms_drops_unknown_terms_when_some_are_known():
+    """A term absent from the corpus df map can't match any indexed row; keeping it would waste
+    a slot in a tight limit without adding candidates."""
+    terms = ["known_rare", "never_indexed"]
+    document_frequency = {"known_rare": 1}
+    assert select_discriminating_terms(terms, document_frequency, limit=5) == ["known_rare"]
+
+
+def test_select_discriminating_terms_degrades_deterministically_with_no_df_data():
+    """An empty/stale df map (e.g. before the first index run) must not return nothing --
+    fall back to a deterministic ordering over all terms instead."""
+    terms = ["bb", "aaa"]
+    assert select_discriminating_terms(terms, {}, limit=5) == ["aaa", "bb"]
+
+
+def test_select_discriminating_terms_dedupes_and_respects_limit():
+    assert select_discriminating_terms(["dup", "dup", "unique"], {}, limit=1) == ["unique"]
 
 
 def test_result_exposes_symbol_and_indexed_commit_metadata():

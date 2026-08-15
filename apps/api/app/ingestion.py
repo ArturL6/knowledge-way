@@ -9,6 +9,7 @@ from app.adapters.outbound.git_cli.git_auth import git_environment, redact_git_e
 from app.adapters.outbound.postgres.db import SessionLocal
 from app.adapters.outbound.postgres.models import CodeCard, CodeChunk, Evidence, File, IndexingJob, Repository, Symbol, SymbolEdge
 from app.structural_cards import refresh_structural_cards
+from app.search import refresh_term_document_frequency
 from app.adapters.outbound.treesitter.parser_facts import PARSER_VERSION, analyze_source
 from app.adapters.outbound.llm_providers.providers import embedding_provider
 
@@ -257,6 +258,7 @@ def index_repository(repo_id, full=False):
   db.flush()
   refresh_structural_cards(db, repo_id, sha)
   _embed_full_index_chunks(db, repo_id, reusable_embeddings)
+  refresh_term_document_frequency(db)
   repo.indexed_commit_sha=sha;repo.indexed_branch=run('git','branch','--show-current',cwd=root) or None;repo.indexing_status='ready';repo.error_message=None;repo.indexing_progress={'phase':'finalizing','files':len(paths)};repo.last_indexed_at=datetime.utcnow();repo.last_sync_at=datetime.utcnow();job.status='ready';job.progress=repo.indexing_progress;job.finished_at=datetime.utcnow();db.commit()
  except Exception as e:
   # The try block is part-way through a destructive rewrite: the old symbols, chunks and edges
