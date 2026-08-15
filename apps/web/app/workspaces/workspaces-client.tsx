@@ -23,8 +23,22 @@ export default function WorkspacesClient({initialWorkspaces}: Props) {
   const [membersError, setMembersError] = useState<string | null>(null);
   const [allRepos, setAllRepos] = useState<Repository[]>([]);
   const [addRepoId, setAddRepoId] = useState('');
+  const [ownedByOther, setOwnedByOther] = useState<Map<string, string>>(new Map());
 
   useEffect(() => { api<Repository[]>('/repositories').then(setAllRepos).catch(() => {}); }, []);
+
+  /** The backend enforces one workspace per repo (409 on PUT), so a repo already claimed by another
+   *  workspace is not worth offering here; this maps repo id -> owning workspace name for every
+   *  workspace but the one currently expanded. */
+  async function loadOwnership(currentWorkspaceId: string) {
+    const others = workspaces.filter((workspace) => workspace.id !== currentWorkspaceId);
+    const entries = await Promise.all(others.map((workspace) =>
+      api<Repository[]>(`/workspaces/${encodeURIComponent(workspace.id)}/repositories`)
+        .then((repos) => repos.map((repo): [string, string] => [repo.id, workspace.name]))
+        .catch(() => [] as [string, string][])
+    ));
+    setOwnedByOther(new Map(entries.flat()));
+  }
 
   async function refreshWorkspaces() { setWorkspaces(await api<Workspace[]>('/workspaces')); }
 
@@ -63,6 +77,7 @@ export default function WorkspacesClient({initialWorkspaces}: Props) {
     if (expandedId === workspace.id) { setExpandedId(null); setMembers(null); return; }
     setExpandedId(workspace.id);
     void loadMembers(workspace.id);
+    void loadOwnership(workspace.id);
   }
 
   async function addMember(workspaceId: string, repoId: string) {
@@ -86,7 +101,9 @@ export default function WorkspacesClient({initialWorkspaces}: Props) {
   }
 
   const memberIds = new Set((members ?? []).map((repo) => repo.id));
-  const candidates = allRepos.filter((repo) => !memberIds.has(repo.id));
+  const unassigned = allRepos.filter((repo) => !memberIds.has(repo.id));
+  const candidates = unassigned.filter((repo) => !ownedByOther.has(repo.id));
+  const takenCount = unassigned.length - candidates.length;
 
   return <>
     <section className="card repository-form-card" aria-labelledby="create-workspace-heading">
@@ -131,6 +148,7 @@ export default function WorkspacesClient({initialWorkspaces}: Props) {
                 </select>
                 <button type="button" className="secondary-button" disabled={!addRepoId || busy !== null} onClick={() => addMember(workspace.id, addRepoId)}>{busy === `add:${addRepoId}` ? 'Adding…' : 'Add'}</button>
               </div>
+              {takenCount > 0 && <p className="muted">{takenCount} repositor{takenCount === 1 ? 'y' : 'ies'} already belong{takenCount === 1 ? 's' : ''} to another workspace and {takenCount === 1 ? 'is' : 'are'} not offered here.</p>}
             </>}
           </div>}
         </article>;
