@@ -12,6 +12,10 @@ def git(root,*args):
 def test_git_commit_changes_incrementally_refresh_graph_derived_cards(monkeypatch,tmp_path):
  engine=create_engine('sqlite://'); Base.metadata.create_all(engine); sessions=sessionmaker(bind=engine,expire_on_commit=False)
  monkeypatch.setattr(ingestion,'SessionLocal',sessions); monkeypatch.setattr(ingestion.settings,'repository_storage_path',str(tmp_path))
+ # This test covers structural cards, not embeddings. Without this, a developer's real
+ # repo-root .env (config.py searches upward for it) can set EMBEDDING_PROVIDER=openrouter
+ # with a real API key, making index_repository() issue a live, billed embedding request.
+ monkeypatch.setattr(ingestion,'embedding_provider',lambda:None)
  repo=Repository(name='labeled-multi-language-fixture',clone_url='unused')
  with sessions() as db: db.add(repo); db.commit()
  root=tmp_path/repo.id; root.mkdir(); git(root,'init'); git(root,'config','user.email','fixture@example.test'); git(root,'config','user.name','Fixture')
