@@ -141,7 +141,7 @@ packets:
     notes: "PR #79 merged at 81f01102f17f373acd3c72541c518d275665c46b from exact reviewed head 2c52d65425a84a54964416921eab7e4e2719f8cc under committed REVIEW-056 on_track (HD-004). GitHub review approval was not a gate."
   - id: "1.3"
     title: "pgvector ANN semantic queries"
-    state: todo
+    state: merge_authorized
     branch: "packet/1.3-pgvector-ann"
     verify: "pytest -q && lint-imports"
     blocked_by: ["1.1"]
@@ -169,7 +169,7 @@ next_instruction:
     - "EXPLAIN shows HNSW index scan for the semantic ANN path; Python cosine retained only for SQLite tests."
     - "Subset embedding validated end-to-end (query embed -> ANN -> results) on a <=500-chunk subset, with committed cost extrapolation. Full-corpus embed + semantic scorecard delta held for owner cost approval."
     - "PR opened into integration/roadmap-v2 with evidence bound to the exact head SHA."
-last_review: REVIEW-056
+last_review: REVIEW-057
 drift_flags: []
 ```
 
