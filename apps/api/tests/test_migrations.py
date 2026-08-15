@@ -9,7 +9,7 @@ API_DIR = Path(__file__).resolve().parents[1]
 
 def test_migrations_have_expected_head():
     script = ScriptDirectory.from_config(Config(str(API_DIR / "alembic.ini")))
-    assert script.get_heads() == ["20260815_0011"]
+    assert script.get_heads() == ["20260815_0012"]
 
 
 def test_initial_migration_creates_pgvector_extension_and_all_model_tables():
@@ -42,6 +42,15 @@ def test_chunk_fts_migration_is_postgres_only_and_matches_search_tokenizer():
     assert "GENERATED ALWAYS AS" in source
     assert "USING GIN (fts_tokens)" in source
     assert "gin_trgm_ops" in source
+
+
+def test_term_document_frequency_migration_is_created_everywhere_backfilled_on_postgres():
+    revision = API_DIR / "db_migrations" / "versions" / "20260815_0012_term_document_frequency.py"
+    source = revision.read_text()
+    assert 'down_revision = "20260815_0011"' in source
+    assert 'op.create_table(\n        "term_document_frequency"' in source
+    assert 'dialect.name == "postgresql"' in source
+    assert "ts_stat(" in source
 
 
 def test_normal_startup_has_no_create_all_ddl():
