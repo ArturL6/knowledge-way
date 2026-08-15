@@ -26,9 +26,13 @@ def upgrade() -> None:
         sa.Column("document_frequency", sa.Integer(), nullable=False),
     )
     if op.get_bind().dialect.name == "postgresql":
+        # ts_stat can surface lexemes far longer than any real query term (e.g. long encoded
+        # blobs that tokenized as one "word"); cap at the column width rather than widen it for
+        # noise no real query would ever produce.
         op.execute("""
             INSERT INTO term_document_frequency (term, document_frequency)
             SELECT word, ndoc FROM ts_stat('SELECT fts_tokens FROM code_chunks WHERE fts_tokens IS NOT NULL')
+            WHERE length(word) <= 255
         """)
 
 

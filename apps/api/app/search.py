@@ -51,9 +51,13 @@ def refresh_term_document_frequency(db):
     only if reindex frequency ever makes this a bottleneck."""
     if db.bind.dialect.name != 'postgresql': return
     db.execute(delete(TermDocumentFrequency))
+    # ts_stat can surface lexemes far longer than any real query term (e.g. long encoded blobs
+    # that tokenized as one "word"); cap at the column width rather than widen it for noise no
+    # real query would ever produce.
     db.execute(sql_text("""
         INSERT INTO term_document_frequency (term, document_frequency)
         SELECT word, ndoc FROM ts_stat('SELECT fts_tokens FROM code_chunks WHERE fts_tokens IS NOT NULL')
+        WHERE length(word) <= 255
     """))
 
 @dataclass
