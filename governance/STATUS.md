@@ -128,7 +128,7 @@ packets:
     pr: 78
     verify: "pytest -q && lint-imports"
     blocked_by: ["0.3"]
-    notes: "PR #78 review_blocked by REVIEW-053 at head d2fb3b92. Plumbing (tsvector/GIN/pg_trgm/tokenizer, 96 tests, boundaries) is correct, but the Postgres path websearch_to_tsquery ANDs ~300 body terms -> 0 candidates on real gold queries (measured 0 vs 22,566 OR); no scorecard delta. Required: rare-term selection (top-N corpus-rarest) + committed fastapi-stack scorecard delta >= 0.16 baseline. Target: hybrid file hit@5 >= 0.44 (ADR-007)."
+    notes: "PR #78 review_blocked by REVIEW-054 at head 763c9d8. AND->OR fix (REVIEW-053) landed: text+hybrid file hit@5 0.28 vs 0.16 baseline (+75%), scorecard committed. Remaining blocker: OR-all-terms regresses p95 ~3x (text 11.3s, hybrid 12.7s vs 3.2/4.8) — fails Stage-1 p95<=1s. Required (ADR-008): deterministic rare-term/DF query digestion, re-score holding hit@5>=0.28 with p95 toward <=1s. Target: hybrid file hit@5 >= 0.44 (ADR-007)."
 next_instruction:
   issued_by: "navigator (Sol)"
   issued_at: "2026-08-15T11:05:00+00:00"
@@ -153,7 +153,7 @@ next_instruction:
     - "EXPLAIN shows index (GIN) scans for the FTS lexical path on Postgres."
     - "Committed scorecard shows lexical file hit@5 >= 0.16 baseline (improvement expected) with p95 latency not regressed; evidence bound to the exact PR head SHA."
     - "PR opened into integration/roadmap-v2 with evidence; pr_open set via a direct integration commit."
-last_review: REVIEW-053
+last_review: REVIEW-054
 drift_flags: []
 ```
 
