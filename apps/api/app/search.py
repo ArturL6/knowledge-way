@@ -104,10 +104,20 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
             # (migration 20260815_0011_chunk_fts) built from source_text with identifier
             # splitting (camelCase/snake_case/dotted paths), backed by a GIN index.
             # split_identifier_tokens must mirror that column's expression so query tokens and
-            # indexed tokens agree. websearch_to_tsquery requires every term to match (implicit
-            # AND) -- same intent as the ILIKE-OR fallback below, ranked instead of flat-scored.
+            # indexed tokens agree.
+            #
+            # OR, not AND: a real query (e.g. an issue body run through query_terms) can explode
+            # into hundreds of terms; requiring all of them in one chunk (websearch_to_tsquery's
+            # implicit AND) matches ~nothing. OR-of-terms matches any discriminating term, and
+            # ts_rank_cd (below) ranks candidates by how many/how densely they matched -- the
+            # same "fraction of terms matched" intent as the ILIKE-OR fallback, ranked instead
+            # of flat-scored.
+            query_tokens, seen = [], set()
+            for term in terms:
+                for token in split_identifier_tokens(term).split():
+                    if token not in seen: seen.add(token); query_tokens.append(token)
             fts_tokens = literal_column('code_chunks.fts_tokens')
-            tsquery = func.websearch_to_tsquery('simple', split_identifier_tokens(' '.join(terms)))
+            tsquery = func.to_tsquery('simple', ' | '.join(query_tokens))
             rank_expr = func.ts_rank_cd(fts_tokens, tsquery)
             stmt = (select(CodeChunk, File, rank_expr.label('rank_score'))
                      .join(File, CodeChunk.file_id == File.id)
