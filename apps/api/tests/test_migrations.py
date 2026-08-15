@@ -9,7 +9,7 @@ API_DIR = Path(__file__).resolve().parents[1]
 
 def test_migrations_have_expected_head():
     script = ScriptDirectory.from_config(Config(str(API_DIR / "alembic.ini")))
-    assert script.get_heads() == ["20260815_0012"]
+    assert script.get_heads() == ["20260816_0013"]
 
 
 def test_initial_migration_creates_pgvector_extension_and_all_model_tables():
@@ -51,6 +51,15 @@ def test_term_document_frequency_migration_is_created_everywhere_backfilled_on_p
     assert 'op.create_table(\n        "term_document_frequency"' in source
     assert 'dialect.name == "postgresql"' in source
     assert "ts_stat(" in source
+
+
+def test_vector_hnsw_migration_is_postgres_only_and_matches_ann_query_operator():
+    revision = API_DIR / "db_migrations" / "versions" / "20260816_0013_vector_hnsw_index.py"
+    source = revision.read_text()
+    assert 'down_revision = "20260815_0012"' in source
+    assert 'dialect.name != "postgresql"' in source
+    assert "vector(768)" in source
+    assert "USING hnsw (embedding vector_cosine_ops)" in source
 
 
 def test_normal_startup_has_no_create_all_ddl():
