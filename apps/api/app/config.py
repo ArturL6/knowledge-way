@@ -71,6 +71,18 @@ class Settings(BaseSettings):
     # baseline. Of the N's that stayed under baseline p95, N=50 had the best hybrid hit@5 (0.32)
     # at low latency (p95 1.0s/2.2s); see the sweep table in PR #78.
     rare_term_limit: int = 50
+    # Packet 1.5: per-mode trust weights for weighted RRF hybrid fusion
+    # (app/domain/retrieval.py). Equal-weight RRF let two weak modes (lexical, symbol) combine
+    # to outscore semantic even when semantic alone ranked the gold row #1 (measured: hybrid
+    # hit@5 0.56 < semantic-alone hit@5 0.60 on the fastapi-stack gold set). Defaults keep
+    # semantic strictly heavier than lexical+symbol combined (0.5+0.4=0.9 < 1.0) so a junk row
+    # landing rank-1 in both weaker modes at once still can't outscore a semantic rank-1 hit,
+    # while lexical/symbol keep enough weight to carry a query semantic embeddings miss
+    # entirely (e.g. an exact identifier hit).
+    fusion_weight_semantic: float = 1.0
+    fusion_weight_lexical: float = 0.5
+    fusion_weight_symbol: float = 0.4
+    fusion_rrf_k: int = 60
     repository_storage_path: str = "/data/repositories"
     max_file_size: int = 1_048_576
     # Full parser-graph rebuilds for large repositories can exceed RQ's default timeout.
@@ -83,6 +95,14 @@ class Settings(BaseSettings):
     git_https_token_file: str | None = None
     git_https_username: str = "x-access-token"
     git_https_askpass_path: str = "/app/app/adapters/outbound/git_cli/git_askpass.py"
+
+    @property
+    def fusion_weights(self) -> dict[str, float]:
+        return {
+            "semantic": self.fusion_weight_semantic,
+            "lexical": self.fusion_weight_lexical,
+            "symbol": self.fusion_weight_symbol,
+        }
 
 
 settings = Settings()
