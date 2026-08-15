@@ -5,8 +5,33 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../lib/api';
 import { apiErrorMessage } from '../../lib/repositories';
+import { useActiveWorkspaceId } from '../../lib/workspace';
+import type { Repository } from '../../lib/repositories';
 import { graphNodeKind, nodeStyles } from './graph-model';
 import type { GraphData, GraphLink, GraphNode } from './graph-model';
+
+const REPOSITORY_POLL_MS = 4000;
+/** Only symbol-shaped nodes (not the repository/directory/file scaffolding a repo overview also renders) carry a
+ *  real symbol id that the subgraph/callers/callees endpoints accept. */
+const EXPANDABLE_KINDS = new Set(['function', 'class', 'declaration', 'symbol']);
+
+/** Merges a node/link expansion (e.g. from clicking "Expand neighbors") into the current graph, de-duplicating
+ *  nodes by id and links by (source, target, relationship); degree is recomputed over the merged link set. */
+export function mergeGraphData(base: GraphData, addition: GraphData): GraphData {
+  const nodes = new Map(base.nodes.map((node) => [node.id, node]));
+  for (const node of addition.nodes) if (!nodes.has(node.id)) nodes.set(node.id, node);
+  const nodeIds = new Set(nodes.keys());
+  const linkKey = (link: GraphLink) => `${linkEndpointId(link.source)}->${linkEndpointId(link.target)}:${link.relationship}`;
+  const links = new Map(base.links.map((link) => [linkKey(link), link]));
+  for (const link of addition.links) {
+    if (!nodeIds.has(linkEndpointId(link.source)) || !nodeIds.has(linkEndpointId(link.target))) continue;
+    const key = linkKey(link);
+    if (!links.has(key)) links.set(key, link);
+  }
+  const degree = new Map<string, number>();
+  for (const link of links.values()) { degree.set(link.source, (degree.get(link.source) ?? 0) + 1); degree.set(link.target, (degree.get(link.target) ?? 0) + 1); }
+  return { nodes: [...nodes.values()].map((node) => ({ ...node, degree: degree.get(node.id) ?? 0 })), links: [...links.values()] };
+}
 
 const GraphCanvas = dynamic(() => import('./graph-canvas'), { ssr: false, loading: () => <div className="graph-state" role="status">Loading interactive graph…</div> });
 
@@ -123,12 +148,16 @@ export default function GraphExplorer() {
   const initialState = parseGraphState(searchParams);
   const [repositoryId, setRepositoryId] = useState(initialState.repositoryId); const [symbolId, setSymbolId] = useState(initialState.symbolId); const [depth, setDepth] = useState(initialState.depth);
   const [repositories, setRepositories] = useState<RepositoryOption[]>([]);
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const [workspaceRepoIds, setWorkspaceRepoIds] = useState<Set<string> | null>(null);
   const [graph, setGraph] = useState<GraphData>({ nodes: [], links: [] }); const [source, setSource] = useState<'fixture' | 'api' | 'empty'>('empty');
   const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const [selected, setSelected] = useState<GraphNode | null>(null);
+  const [expanding, setExpanding] = useState('');
   const [relationship, setRelationship] = useState('all');
   const [symbolQuery, setSymbolQuery] = useState(''); const [hits, setHits] = useState<SymbolHit[] | null>(null); const [symbolLabel, setSymbolLabel] = useState('');
   const [resolving, setResolving] = useState(''); const [searching, setSearching] = useState(false); const [stats, setStats] = useState<GraphStats>(emptyStats);
   const graphRequestVersion = useRef(0);
+  const visibleRepositories = useMemo(() => workspaceRepoIds ? repositories.filter((repository) => workspaceRepoIds.has(repository.id)) : repositories, [repositories, workspaceRepoIds]);
   const relationshipTypes = useMemo(() => [...new Set(graph.links.map((link) => link.relationship))].sort(), [graph]);
   const presentKinds = useMemo(() => [...new Set(graph.nodes.map((node) => node.kind))].filter((kind) => kind !== 'unknown'), [graph]);
   const filteredGraph = useMemo(() => {
@@ -177,7 +206,22 @@ export default function GraphExplorer() {
     } catch (cause) { setError(apiErrorMessage(cause)); }
     finally { setResolving(''); }
   }
-  useEffect(() => { api<RepositoryOption[]>('/repositories').then((items) => { setRepositories(items.filter((item) => item.indexing_status === 'ready')); }).catch(() => {}); }, []);
+  // Poll rather than load once, so a repo that finishes indexing while this page is open appears without a reload.
+  useEffect(() => {
+    let cancelled = false;
+    const poll = () => api<RepositoryOption[]>('/repositories').then((items) => { if (!cancelled) setRepositories(items.filter((item) => item.indexing_status === 'ready')); }).catch(() => {});
+    void poll();
+    const interval = window.setInterval(poll, REPOSITORY_POLL_MS);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, []);
+  useEffect(() => {
+    if (!activeWorkspaceId) { setWorkspaceRepoIds(null); return; }
+    let cancelled = false;
+    api<Repository[]>(`/workspaces/${encodeURIComponent(activeWorkspaceId)}/repositories`)
+      .then((items) => { if (!cancelled) setWorkspaceRepoIds(new Set(items.map((item) => item.id))); })
+      .catch(() => { if (!cancelled) setWorkspaceRepoIds(null); });
+    return () => { cancelled = true; };
+  }, [activeWorkspaceId]);
   // The URL is authoritative. This applies shared links and browser Back/Forward as well as in-app navigation.
   useEffect(() => {
     const state = parseGraphState(searchParams);
@@ -202,6 +246,17 @@ export default function GraphExplorer() {
     catch (cause) { if (version === graphRequestVersion.current) setError(cause instanceof Error ? cause.message : 'Unable to load repository graph data.'); }
     finally { if (version === graphRequestVersion.current) setLoading(false); }
   }
+  /** Drill-down from the repo overview: pulls a clicked node's own 1-hop subgraph and folds it into the graph
+   *  already on screen, so browsing a repo never requires knowing a symbol id upfront. */
+  async function expandNode(node: GraphNode) {
+    if (!repositoryId.trim() || !EXPANDABLE_KINDS.has(node.kind)) return;
+    setExpanding(node.id); setError('');
+    try {
+      const response = await api<unknown>(`/repositories/${encodeURIComponent(repositoryId.trim())}/symbols/${encodeURIComponent(node.id)}/subgraph?depth=1`);
+      setGraph((current) => mergeGraphData(current, mapApiGraph(response)));
+    } catch (cause) { setError(apiErrorMessage(cause)); }
+    finally { setExpanding(''); }
+  }
   function loadFixture() { setGraph(fixture); setSource('fixture'); setError(''); setSelected(null); setRelationship('all'); setStats(emptyStats); }
 
   const reasonLabel = stats.reason === 'node_cap' ? 'node cap' : stats.reason === 'edge_budget' ? 'edge budget' : null;
@@ -210,9 +265,9 @@ export default function GraphExplorer() {
     : `${filteredGraph.nodes.length} nodes · ${filteredGraph.links.length} relationships`;
 
   return <>
-    <div className="page-heading"><div><h2>Code graph</h2><p className="muted">Explore repository structure and symbol relationships. Select a node from the accessible node list or click it in the visual graph; dragging pins a visual node.</p></div></div>
+    <div className="page-heading"><div><h2>Code graph</h2><p className="muted">Explore repository structure and symbol relationships. Select a node from the accessible node list or click it in the visual graph; dragging pins a visual node.{activeWorkspaceId ? ' Scoped to the active workspace.' : ''}</p></div></div>
     <form className="card graph-controls" onSubmit={findSymbols}>
-      <label>Repository<select value={repositoryId} onChange={(event) => navigateGraph(event.target.value, '', depth)} required><option value="">Choose an indexed repository</option>{repositories.map((repository) => <option key={repository.id} value={repository.id}>{repository.name}</option>)}</select></label>
+      <label>Repository<select value={repositoryId} onChange={(event) => navigateGraph(event.target.value, '', depth)} required><option value="">Choose an indexed repository</option>{visibleRepositories.map((repository) => <option key={repository.id} value={repository.id}>{repository.name}</option>)}</select></label>
       <label>Symbol<input value={symbolQuery} onChange={(event) => setSymbolQuery(event.target.value)} placeholder="search by name, e.g. Agent" autoComplete="off" /></label>
       <label>Depth<input type="number" min="1" max="2" value={depth} onChange={(event) => navigateGraph(repositoryId, symbolId, event.target.value)} /></label>
       <div className="graph-actions"><button type="button" onClick={() => navigateGraph(repositoryId, '', depth)} disabled={loading}>{loading ? 'Loading…' : 'Repository map'}</button><button type="submit" className="secondary-button" disabled={searching || !symbolQuery.trim()}>{searching ? 'Searching…' : 'Find symbol'}</button><button type="button" className="secondary-button" onClick={() => navigateGraph(repositoryId, symbolId, depth)} disabled={loading || !symbolId}>Focus symbol</button><button type="button" className="secondary-button" onClick={loadFixture} disabled={loading}>Fixture</button></div>
@@ -225,6 +280,9 @@ export default function GraphExplorer() {
       <div className="graph-filters"><span className="graph-edge-key"><i className="edge-sample contains" />Contains</span><span className="graph-edge-key"><i className="edge-sample defines" />Defines</span><span className="graph-edge-key"><i className="edge-sample calls" />Calls / references</span><label>Relationship<select value={relationship} onChange={(event) => setRelationship(event.target.value)}><option value="all">All types</option>{relationshipTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label></div>
       {loading ? <div className="graph-state" role="status">Requesting graph data…</div> : filteredGraph.nodes.length > 0 ? <><div className="graph-hint">Tip: use the accessible node list below to select a node with the keyboard. Dragging a visual node pins it so dense graphs stay readable.</div><GraphCanvas data={filteredGraph} onNodeClick={setSelected} selectedNodeId={selected?.id} /></> : <div className="graph-state"><strong>No graph data to display.</strong><p className="muted">{source === 'empty' ? 'Choose a repository and symbol to load a graph, or load the fixture demo.' : graph.links.length > 0 ? 'The selected filters returned no connected nodes. Adjust filters or load the fixture demo.' : 'This selection returned no graph relationships.'}</p></div>}
     </section>
-    <aside className="graph-detail" aria-labelledby="node-details-heading"><h3 id="node-details-heading">Node details</h3><p className="visually-hidden" aria-live="polite">{selected ? `Selected ${selected.label}` : 'No node selected'}</p>{selected ? <dl><dt>Label</dt><dd>{selected.label}</dd><dt>ID</dt><dd className="citation">{selected.id}</dd><dt>Kind</dt><dd>{selected.kind}</dd>{Object.entries(selected).filter(([key]) => !['id', 'label', 'kind', 'x', 'y', 'vx', 'vy', 'index', '__indexColor'].includes(key)).map(([key, value]) => <span key={key}><dt>{key}</dt><dd>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd></span>)}</dl> : <p className="muted">Select a node from the accessible node list or click it in the visual graph to inspect its identifier and metadata.</p>}</aside>
+    <aside className="graph-detail" aria-labelledby="node-details-heading"><h3 id="node-details-heading">Node details</h3><p className="visually-hidden" aria-live="polite">{selected ? `Selected ${selected.label}` : 'No node selected'}</p>{selected ? <>
+      <dl><dt>Label</dt><dd>{selected.label}</dd><dt>ID</dt><dd className="citation">{selected.id}</dd><dt>Kind</dt><dd>{selected.kind}</dd>{Object.entries(selected).filter(([key]) => !['id', 'label', 'kind', 'x', 'y', 'vx', 'vy', 'index', '__indexColor'].includes(key)).map(([key, value]) => <span key={key}><dt>{key}</dt><dd>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd></span>)}</dl>
+      {EXPANDABLE_KINDS.has(selected.kind) && <button type="button" className="secondary-button" disabled={expanding !== ''} onClick={() => void expandNode(selected)}>{expanding === selected.id ? 'Expanding…' : 'Expand neighbors'}</button>}
+    </> : <p className="muted">Select a node from the accessible node list or click it in the visual graph to inspect its identifier and metadata.</p>}</aside>
   </>;
 }

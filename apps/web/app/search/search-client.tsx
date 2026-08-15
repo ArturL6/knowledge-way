@@ -1,9 +1,10 @@
 'use client';
 
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../lib/api';
+import { useActiveWorkspaceId } from '../../lib/workspace';
 
 type Result = {
   repository: string;
@@ -61,6 +62,20 @@ export default function SearchClient() {
   const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
   const searchRequestVersion = useRef(0);
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const [workspaceRepoIds, setWorkspaceRepoIds] = useState<Set<string> | null>(null);
+
+  // `/api/search` only scopes to a single repository_id; a workspace can hold several, so the scope is
+  // applied here by filtering the already-fetched result set rather than adding server-side support.
+  useEffect(() => {
+    if (!activeWorkspaceId) { setWorkspaceRepoIds(null); return; }
+    let cancelled = false;
+    api<{ id: string }[]>(`/workspaces/${encodeURIComponent(activeWorkspaceId)}/repositories`)
+      .then((items) => { if (!cancelled) setWorkspaceRepoIds(new Set(items.map((item) => item.id))); })
+      .catch(() => { if (!cancelled) setWorkspaceRepoIds(null); });
+    return () => { cancelled = true; };
+  }, [activeWorkspaceId]);
+  const scopedResults = useMemo(() => workspaceRepoIds ? results.filter((result) => result.repository_id && workspaceRepoIds.has(result.repository_id)) : results, [results, workspaceRepoIds]);
 
   async function runSearch(query: string, searchMode: string, useRerank: boolean) {
     const version = ++searchRequestVersion.current;
@@ -100,7 +115,7 @@ export default function SearchClient() {
     router.push(buildSearchUrl(q, mode, rerank));
   }
 
-  const view = searchView(searched, results.length, Boolean(error));
+  const view = searchView(searched, scopedResults.length, Boolean(error));
 
   return <>
     <h2>Global code search</h2>
@@ -110,10 +125,10 @@ export default function SearchClient() {
       <label className="muted"><input type="checkbox" checked={rerank} disabled={mode !== 'hybrid'} onChange={(event) => setRerank(event.target.checked)} /> Reranker verwenden</label>
       <button disabled={loading}>{loading ? 'Searching…' : 'Search'}</button>
     </form>
-    <p className="muted">Filters: <code>repo:</code> <code>lang:</code> <code>path:</code></p>
+    <p className="muted">Filters: <code>repo:</code> <code>lang:</code> <code>path:</code>{activeWorkspaceId ? ' · Scoped to the active workspace.' : ''}</p>
     {view === 'error' && <div className="graph-message graph-error" role="alert">{error}</div>}
-    {view === 'empty' && <div className="graph-message" role="status">No results for “{q}”.</div>}
-    {view === 'results' && results.map((result, index) => {
+    {view === 'empty' && <div className="graph-message" role="status">No results for “{q}”{activeWorkspaceId ? ' in the active workspace' : ''}.</div>}
+    {view === 'results' && scopedResults.map((result, index) => {
       const hasSymbol = Boolean(result.symbol_id && result.repository_id);
       const symbolUrl = hasSymbol ? `/repositories/${encodeURIComponent(result.repository_id!)}/symbols/${encodeURIComponent(result.symbol_id!)}` : '';
       const graphUrl = hasSymbol ? `/graph?repository=${encodeURIComponent(result.repository_id!)}&symbol=${encodeURIComponent(result.symbol_id!)}` : '';

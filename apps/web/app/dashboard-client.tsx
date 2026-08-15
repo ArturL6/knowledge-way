@@ -5,7 +5,6 @@ import {api} from '../lib/api';
 import {apiErrorMessage, cloneUrlError, progressLabel, Repository} from '../lib/repositories';
 
 type Props = {initialRepos: Repository[]};
-type Status = {status: Repository['indexing_status']; progress: Repository['indexing_progress']; error: Repository['error_message']; indexed_commit_sha: Repository['indexed_commit_sha']};
 type Capability = {semantic?: {state?: string; provider?: string; model?: string | null; reranking?: {state?: string; applied?: boolean}}};
 
 export default function DashboardClient({initialRepos}: Props) {
@@ -55,19 +54,18 @@ export default function DashboardClient({initialRepos}: Props) {
   useEffect(() => {
     let cancelled = false;
     api<Capability>('/capabilities').then((value) => { if (!cancelled) setCapability(value); }).catch(() => {});
-    const poll = async () => {
-      const active = repos.filter((repo) => ['pending', 'indexing'].includes(repo.indexing_status));
-      if (!active.length) return;
-      const updates = await Promise.all(active.map(async (repo) => [repo.id, await api<Status>(`/repositories/${encodeURIComponent(repo.id)}/status`)] as const));
-      if (!cancelled) setRepos((current) => current.map((repo) => {
-        const status = updates.find(([id]) => id === repo.id)?.[1];
-        return status ? {...repo, indexing_status: status.status, indexing_progress: status.progress, indexed_commit_sha: status.indexed_commit_sha, error_message: status.error} : repo;
-      }));
-    };
-    void poll();
+    return () => { cancelled = true; };
+  }, []);
+
+  const hasActiveIndexing = repos.some((repo) => ['pending', 'indexing'].includes(repo.indexing_status));
+  useEffect(() => {
+    if (!hasActiveIndexing) return;
+    let cancelled = false;
+    const poll = () => api<Repository[]>('/repositories').then((items) => { if (!cancelled) setRepos(items); }).catch(() => {});
     const interval = window.setInterval(() => { void poll(); }, 3000);
+    void poll();
     return () => { cancelled = true; window.clearInterval(interval); };
-  }, [repos]);
+  }, [hasActiveIndexing]);
 
   async function addRepository(event: FormEvent) {
     event.preventDefault();

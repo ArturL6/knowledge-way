@@ -7,6 +7,7 @@ const items = [
   {href: '/', label: 'Dashboard'},
   {href: '/search', label: 'Search'},
   {href: '/graph', label: 'Code graph'},
+  {href: '/workspaces', label: 'Workspaces'},
   {href: '/chat', label: 'AI Chat'},
 ] as const;
 
