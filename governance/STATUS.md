@@ -132,11 +132,12 @@ packets:
     notes: "PR #78 merged at 0a7ae11c352328856bd768cde0a295efddeffbbf from exact reviewed head 17644ae0d5a5bd394e6da0edb473f2bfb1d806d7 after REVIEW-055 on_track authorization (HD-004). FTS + ADR-008 rare-term/DF digestion (N=50): hybrid file hit@5 0.16->0.32 (+100%), text 0.16->0.24, p95 improved vs baseline (text 1.0s, hybrid 2.2s). 102 tests, boundaries green. Stage-1 target hybrid hit@5 >= 0.44 (ADR-007) via later semantic/graph packets; hybrid p95<=1s deferred (symbol-pass/1.2). Pre-existing app/worker.py __main__ guard bug to be filed separately. GitHub review approval was not a gate."
   - id: "1.9"
     title: "Usable workspace + code graph UI"
-    state: todo
+    state: merge_authorized
     branch: "packet/1.9-workspace-graph-ui"
+    pr: 79
     verify: "cd apps/web && npm run test && npx playwright test"
     blocked_by: []
-    notes: "Owner-directed (HD-008 / ADR-009) bounded exception to rule 12. Parallel to retrieval; UI-only, not gated by the retrieval scorecard but must not regress it."
+    notes: "REVIEW-056 on_track at head 2c52d65 authorizes merge (HD-004). All 3 HD-008 features (usable code graph w/ polling repo picker + whole-repo browse + node expand; workspace mgmt page; dashboard live progress). Re-executed: vitest 73/73, tsc clean, next build ok, Playwright 3/3; frontend-only, boundary untouched. Merger to merge and set done. Owner-directed (HD-008/ADR-009) exception to rule 12."
 next_instruction:
   issued_by: "navigator (Sol)"
   issued_at: "2026-08-15T13:45:00+00:00"
@@ -163,7 +164,7 @@ next_instruction:
     - "Dashboard shows live indexing progress and auto-refreshes to ready without a manual reload."
     - "npm test + Playwright E2E pass; lint-imports still green; keyless quickstart still passes."
     - "PR opened into integration/roadmap-v2 with evidence bound to the exact head SHA."
-last_review: REVIEW-055
+last_review: REVIEW-056
 drift_flags: []
 ```
 
