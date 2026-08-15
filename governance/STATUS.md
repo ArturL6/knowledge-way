@@ -121,6 +121,37 @@ packets:
     verify: "scripts/quickstart_smoke.sh"
     blocked_by: ["R.7a"]
     notes: "PR #67 merged from exact reviewed head d1ae95757a5dd78353cddc33c22b7226be811d46 under committed REVIEW-032; independent packet verify, full applicable gauntlet, and selected-workspace browser flow passed. GitHub review approval was not a gate."
+  - id: "1.1"
+    title: "Postgres FTS for lexical search"
+    state: todo
+    branch: "packet/1.1-postgres-fts"
+    verify: "pytest -q && lint-imports"
+    blocked_by: ["0.3"]
+    notes: "Stage 1 unblocked by ADR-007 (HD-007 supersedes HD-006 in-repo 0.4b gate). Target: hybrid file hit@5 >= 0.44 (Stage-1 exit; scorecard delta required for this packet)."
+next_instruction:
+  issued_by: "navigator (Sol)"
+  issued_at: "2026-08-15T11:05:00+00:00"
+  packet: "1.1"
+  objective: >-
+    Replace the ILIKE lexical passes in apps/api/app/search.py with Postgres
+    full-text search: a code-aware tsvector (identifier splitting for
+    camelCase/snake_case/dotted paths at index time) + GIN index, ts_rank_cd
+    scoring, and a pg_trgm exact-substring path for quoted/config/error queries.
+    Keep the SQLite ILIKE path behind a dialect branch so the portable
+    test_search.py suite still runs. Land a hermetic scorecard delta showing
+    lexical file hit@5 >= baseline and p95 latency down.
+  constraints:
+    - "Branch packet/1.1-postgres-fts from integration/roadmap-v2; NEVER rebase or force-push."
+    - "New Alembic migration 20260815_0011_chunk_fts.py, down_revision 20260813_0010; FTS objects guarded to the postgresql dialect (mirror the CREATE EXTENSION vector precedent)."
+    - "FTS SQL stays in app/search.py or app/adapters/outbound/postgres/*; NEVER in app.application or app.domain (import-linter contracts must stay green)."
+    - "Dialect-branch search_with_capability: Postgres -> FTS/ts_rank_cd + pg_trgm exact; SQLite -> existing ILIKE fallback. Preserve the /api/search result row shape (path/symbol fields the scorecard reads)."
+    - "No new billable config; keyless. No GitNexus/comparator reference in any product path (HD-007)."
+    - "Full local gauntlet: uv sync, pytest, lint-imports, packet verify, and a hermetic run_retrieval scorecard delta committed to benchmarks/results/."
+  done_when:
+    - "pytest and lint-imports green; migration chain intact (test_migrations)."
+    - "EXPLAIN shows index (GIN) scans for the FTS lexical path on Postgres."
+    - "Committed scorecard shows lexical file hit@5 >= 0.16 baseline (improvement expected) with p95 latency not regressed; evidence bound to the exact PR head SHA."
+    - "PR opened into integration/roadmap-v2 with evidence; pr_open set via a direct integration commit."
 last_review: REVIEW-052
 drift_flags: []
 ```
