@@ -177,7 +177,7 @@ packets:
     notes: "PR #55 closed unmerged as obsolete under HUMAN-DIRECTIVE-009/ADR-010. PR #83 merged at 3448d4d8e351365bf13f0950a735ff36e954185e from exact reviewed head 80b49d6dfc044548b3f752dd6fc036f8c19e1099 under committed REVIEW-060 on_track. The Compose worker now starts with python -m app.adapters.outbound.rq_jobs.worker without command overrides; direct worker startup and scripts/quickstart_smoke.sh including real-browser seed/index/search/evidence flow passed."
   - id: "1.2"
     title: "Hybrid retrieval latency"
-    state: todo
+    state: in_progress
     branch: "packet/1.2-hybrid-latency"
     verify: "semantic-enabled hermetic scorecard: hybrid p95 <= 1s and file hit@5 >= 0.68"
     blocked_by: ["1.0x"]
@@ -211,7 +211,19 @@ packets:
     branch: "packet/1.8-rerank-evaluation"
     verify: "retain only if scorecard value justifies latency"
     blocked_by: ["1.7"]
-next_instruction: null
+next_instruction:
+  issued_by: "navigator"
+  issued_at: "2026-08-20T10:21:15+00:00"
+  packet: "1.2"
+  objective: "Reduce binding semantic-enabled hybrid retrieval p95 latency from approximately 3.5s to <=1s without regressing file hit@5 below 0.68. Replace the dominating ILIKE symbol pass with indexed exact/prefix qualified_name matching plus trigram fallback, and tune the RRF candidate window."
+  constraints:
+    - "Work only on packet 1.2 from the current integration head; do not begin packet 1.2b or later queue items."
+    - "Use packet/1.2-hybrid-latency; packet branches must not modify governance/STATUS.md or RUNLOG files, and must not rewrite history or force-push."
+    - "Preserve the hexagonal boundary, evidence/snapshot guarantees, and test-count ratchet; do not add hosted CI or new unjustified infrastructure."
+    - "This is retrieval-touching work: run a hermetic semantic-enabled scorecard at the exact head against pinned corpora, verify the served manifest, and include a scorecard delta. Missing Vertex credentials must pause and be flagged, never trigger silent fallback or a keyless gating result."
+    - "Keep GitNexus absent from all product paths."
+    - "Run packet verify, full pytest suite, static/type checks, API tests, import-linter, and git diff hygiene; provide exact-head evidence in the PR."
+  done_when: "A PR to integration/roadmap-v2 is marked pr_open with exact-head gauntlet evidence; the binding semantic-enabled hermetic scorecard reports hybrid p95 <=1s and file hit@5 >=0.68; indexed exact/prefix qualified_name matching with trigram fallback and the tuned RRF window are covered by tests."
 last_review: REVIEW-060
 drift_flags:
   - detected_at: "2026-08-20T09:49:42+00:00"
