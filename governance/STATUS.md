@@ -230,7 +230,7 @@ drift_flags:
     detected_by: "benchmark-run"
     scope: "semantic-enabled benchmark runner"
     status: "open"
-    detail: "origin/integration/roadmap-v2 advanced through b7a4fc7, but the binding semantic-enabled scorecard could not run: ${HOME}/.gcloud-kw/application_default_credentials.json is absent in this scheduler environment. A disposable exact-head worktree at b7a4fc7 was used; no pre-existing service was scored. The attempted semantic-env quickstart reached browser smoke but failed because apps/web/node_modules/playwright was absent in the disposable worktree, so no pinned-corpora manifest verification or 25-task scoring occurred; the disposable stack was torn down."
+    detail: "origin/integration/roadmap-v2 advanced through ebbef26, but the binding semantic-enabled scorecard could not run: ${HOME}/.gcloud-kw/application_default_credentials.json is absent in this scheduler environment. A disposable exact-head worktree at ebbef26 was used; no pre-existing service was scored. The attempted semantic-env quickstart reached browser smoke but failed because apps/web/node_modules/playwright was absent in the disposable worktree, so no pinned-corpora manifest verification or 25-task scoring occurred; the disposable stack was torn down."
 ```
 
 The YAML block is the machine-readable source used by scheduled jobs. Packet state changes require a corresponding committed review artifact or PR evidence.
