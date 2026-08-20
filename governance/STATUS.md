@@ -230,7 +230,7 @@ drift_flags:
     detected_by: "benchmark-run"
     scope: "semantic-enabled benchmark runner"
     status: "open"
-    detail: "origin/integration/roadmap-v2 advanced through d17c54a, but the binding semantic-enabled scorecard could not run: ${HOME}/.gcloud-kw/application_default_credentials.json is absent in this scheduler environment. A disposable exact-head worktree at d17c54a was used; no pre-existing service was scored. The attempted semantic-env quickstart still used keyless .env defaults and failed before stack readiness with Docker no-space-left while writing compose build metadata, so no pinned-corpora manifest verification or 25-task scoring occurred; disposable quickstart images/worktree were removed and unused Docker build cache was pruned."
+    detail: "origin/integration/roadmap-v2 advanced through beb2c1d, but the binding semantic-enabled scorecard could not run: ${HOME}/.gcloud-kw/application_default_credentials.json is absent in this scheduler environment. A disposable exact-head worktree at beb2c1d was used; no pre-existing service was scored. The attempted semantic-env quickstart still wrote/used keyless .env defaults and printed 'Starting keyless Knowledge-Way stack (EMBEDDING_PROVIDER=none)...'. It provisioned its own disposable stack and passed API/docs and web health probes, but failed in the browser seed/index/search/evidence smoke because apps/web/node_modules/playwright was absent in the disposable worktree, before pinned-corpora manifest verification or the 25-task scorecard. The disposable stack and worktree were torn down; no scorecard was committed."
 ```
 
 The YAML block is the machine-readable source used by scheduled jobs. Packet state changes require a corresponding committed review artifact or PR evidence.
