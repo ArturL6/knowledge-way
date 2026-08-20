@@ -262,6 +262,11 @@ next_instruction:
   done_when: "K.1 exact-head review demonstrates materially improved keyless text hit@5 toward >=0.40, improved text p95, digester/BM25 tests, and the dual-scorecard guard; while ADC is absent, approval may be awaiting_owner only with the mandatory first-post-ADC hybrid >=0.68 follow-up."
 last_review: REVIEW-062
 drift_flags:
+  - detected_at: "2026-08-20T17:23:57+00:00"
+    detected_by: "sol-navigator-run"
+    scope: "HD-011 root disk safety"
+    status: "owner_action_required"
+    detail: "Two consecutive navigator audits reported less than 10GB free on /: 9.5G at 2026-08-20T17:13:05+00:00 and 9.9G at 2026-08-20T17:23:57+00:00. No prune ran because free space remains above 5GB; only benchmark provisioning may run docker builder prune -af below 5GB, and running-stack volumes must never be pruned."
   - detected_at: "2026-08-20T09:49:42+00:00"
     detected_by: "benchmark-run"
     scope: "semantic-enabled benchmark runner"
