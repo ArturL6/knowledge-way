@@ -260,7 +260,7 @@ next_instruction:
     - "The first post-ADC semantic scorecard must confirm hybrid >=0.68; regression reopens drift."
     - "Do not add comparator code, contact, or references. Preserve boundaries, evidence guarantees, test-count ratchet, and HD-011 disk safety."
   done_when: "K.1 exact-head review demonstrates materially improved keyless text hit@5 toward >=0.40, improved text p95, digester/BM25 tests, and the dual-scorecard guard; while ADC is absent, approval may be awaiting_owner only with the mandatory first-post-ADC hybrid >=0.68 follow-up."
-last_review: REVIEW-061
+last_review: REVIEW-062
 drift_flags:
   - detected_at: "2026-08-20T09:49:42+00:00"
     detected_by: "benchmark-run"
