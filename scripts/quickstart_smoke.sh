@@ -52,7 +52,10 @@ compose=(docker compose --project-name "$project_name" -f docker-compose.yml -f 
 cleanup() {
   status=$?
   if ! "$keep_running"; then
-    "${compose[@]}" down --remove-orphans >/dev/null 2>&1 || true
+    # The project owns its named fixture volume, so remove it with the isolated
+    # stack.  Do not use broad Docker pruning: other developer stacks are not
+    # quickstart resources.
+    "${compose[@]}" down --remove-orphans --volumes >/dev/null 2>&1 || true
   fi
   rm -f "$override_file"
   if "$created_env"; then
@@ -68,18 +71,22 @@ if [[ ! -f .env ]]; then
 fi
 
 # A separate compose project and preselected loopback ports keep this smoke test independent of
-# another stack while letting the web build point its browser requests at this API. Redis and
-# Postgres remain internal.
-printf '%s\n' 'services:' > "$override_file"
-printf '%s\n' '  postgres:' '    ports: !reset []' '  redis:' '    ports: !reset []' >> "$override_file"
+# another stack while letting the web build point its browser requests at this API. Redis,
+# Postgres, and the fixture checkout remain internal to this disposable project.
+printf '%s\n' 'volumes:' '  quickstart-data:' > "$override_file"
+printf '%s\n' 'services:' '  postgres:' '    ports: !reset []' '  redis:' '    ports: !reset []' >> "$override_file"
 printf '%s\n' '  api:' '    environment:' "      CORS_ORIGINS: http://127.0.0.1:${web_port}" "      EMBEDDING_PROVIDER: \"${embedding_provider}\"" "      VERTEX_PROJECT_ID: \"${vertex_project_id}\"" "      CODE_CARDS_ENABLED: \"${code_cards_enabled}\"" "      RERANK_PROVIDER: \"${rerank_provider}\"" '    ports: !override' "      - \"127.0.0.1:${api_port}:8000\"" >> "$override_file"
 if [[ "$embedding_provider" == "vertex" ]]; then
   # Override Compose's normal developer ADC mount with the owner-designated, read-only ADC home.
-  printf '%s\n' '    volumes: !override' '      - "./data:/data"' '      - "/home/hermes/.gcloud-kw:/root/.config/gcloud:ro"' >> "$override_file"
+  printf '%s\n' '    volumes: !override' '      - "quickstart-data:/data"' '      - "/home/hermes/.gcloud-kw:/root/.config/gcloud:ro"' >> "$override_file"
+else
+  printf '%s\n' '    volumes: !override' '      - "quickstart-data:/data"' >> "$override_file"
 fi
 printf '%s\n' '  worker:' '    command: python -m app.adapters.outbound.rq_jobs.worker' '    environment:' "      EMBEDDING_PROVIDER: \"${embedding_provider}\"" "      VERTEX_PROJECT_ID: \"${vertex_project_id}\"" "      CODE_CARDS_ENABLED: \"${code_cards_enabled}\"" "      RERANK_PROVIDER: \"${rerank_provider}\"" >> "$override_file"
 if [[ "$embedding_provider" == "vertex" ]]; then
-  printf '%s\n' '    volumes: !override' '      - "./data:/data"' '      - "/home/hermes/.gcloud-kw:/root/.config/gcloud:ro"' >> "$override_file"
+  printf '%s\n' '    volumes: !override' '      - "quickstart-data:/data"' '      - "/home/hermes/.gcloud-kw:/root/.config/gcloud:ro"' >> "$override_file"
+else
+  printf '%s\n' '    volumes: !override' '      - "quickstart-data:/data"' >> "$override_file"
 fi
 printf '%s\n' '  web:' '    build:' '      args:' "        NEXT_PUBLIC_API_URL: http://127.0.0.1:${api_port}/api" '    environment:' "      NEXT_PUBLIC_API_URL: http://127.0.0.1:${api_port}/api" '    ports: !override' "      - \"127.0.0.1:${web_port}:3000\"" >> "$override_file"
 
