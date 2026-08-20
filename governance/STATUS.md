@@ -168,10 +168,12 @@ packets:
     notes: "REVIEW-059 on_track. Fixes: add-repo excludes repos owned by another workspace (+note); graph falls back to all repos when active workspace empty. Real-API Playwright 3/3 re-run by reviewer against the live stack. Frontend-only."
   - id: "1.0x"
     title: "Compose worker entrypoint repair and obsolete PR housekeeping"
-    state: in_progress
+    state: pr_open
     branch: "packet/1.0x-worker-entrypoint-housekeeping"
+    pr: 83
     verify: "docker compose up starts the worker without command overrides; scripts/quickstart_smoke.sh passes"
     blocked_by: []
+    notes: "PR #55 closed unmerged as obsolete under HUMAN-DIRECTIVE-009/ADR-010. PR #83 is open at exact head 80b49d6dfc044548b3f752dd6fc036f8c19e1099; it replaces the Compose worker command with python -m app.adapters.outbound.rq_jobs.worker. Implementer verification: 113 pytest passed; import-linter contracts passed; direct Compose worker startup passed without a worker command override; scripts/quickstart_smoke.sh passed including real-browser seed/index/search/evidence flow."
   - id: "1.2"
     title: "Hybrid retrieval latency"
     state: todo
