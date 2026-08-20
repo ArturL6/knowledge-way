@@ -44,7 +44,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    command: python -m app.worker
+    command: python -m app.adapters.outbound.rq_jobs.worker
     env_file: .env
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /root/.config/gcloud/application_default_credentials.json
