@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start the documented keyless local stack, prove its HTTP entry points work, then stop it.
+# Start the documented local stack, prove its HTTP entry points work, then stop it.
 # Use --keep-running to leave the stack available after the checks succeed.
 set -Eeuo pipefail
 
@@ -17,6 +17,31 @@ fi
 created_env=false
 override_file="$(mktemp)"
 project_name="knowledge-way-quickstart-${RANDOM}${RANDOM}"
+# The no-variable path is deliberately keyless.  Explicit caller values are injected into the
+# disposable Compose project rather than editing a developer's .env in-place.
+embedding_provider="${EMBEDDING_PROVIDER:-none}"
+vertex_project_id="${VERTEX_PROJECT_ID:-}"
+code_cards_enabled="${CODE_CARDS_ENABLED:-false}"
+rerank_provider="${RERANK_PROVIDER:-none}"
+
+for setting in "$embedding_provider" "$vertex_project_id" "$code_cards_enabled" "$rerank_provider"; do
+  if [[ "$setting" == *$'\n'* || "$setting" == *$'\r'* || "$setting" == *'"'* || "$setting" == *'\\'* ]]; then
+    printf '%s\n' 'quickstart settings may not contain quotes, backslashes, or line breaks' >&2
+    exit 64
+  fi
+done
+
+if [[ "$embedding_provider" == "vertex" ]]; then
+  adc_path="/home/hermes/.gcloud-kw/application_default_credentials.json"
+  if [[ ! -f "$adc_path" ]]; then
+    printf 'Vertex quickstart requires ADC at %s; refusing to start a stack without it.\n' "$adc_path" >&2
+    exit 2
+  fi
+  if [[ -z "$vertex_project_id" ]]; then
+    printf '%s\n' 'Vertex quickstart requires VERTEX_PROJECT_ID; refusing to start a stack without it.' >&2
+    exit 2
+  fi
+fi
 # Pick loopback ports before Compose builds the browser bundle.  The API endpoint is baked into
 # Next.js client code, so an ephemeral Docker mapping discovered after build cannot work.
 pick_port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()'; }
@@ -42,28 +67,23 @@ if [[ ! -f .env ]]; then
   created_env=true
 fi
 
-# This is intentionally strict: quickstart must never accidentally spend money or require cloud
-# credentials because a developer happened to have a production-shaped .env in the checkout.
-require_setting() {
-  local name=$1 expected=$2
-  if ! grep -qx "${name}=${expected}" .env; then
-    printf 'quickstart requires %s=%s in .env (refusing a billable configuration)\n' "$name" "$expected" >&2
-    exit 2
-  fi
-}
-require_setting EMBEDDING_PROVIDER none
-require_setting CODE_CARDS_ENABLED false
-require_setting RERANK_PROVIDER none
-
 # A separate compose project and preselected loopback ports keep this smoke test independent of
 # another stack while letting the web build point its browser requests at this API. Redis and
 # Postgres remain internal.
 printf '%s\n' 'services:' > "$override_file"
-printf '%s\n' '  postgres:' '    ports: !reset []' '  redis:' '    ports: !reset []' '  worker:' '    command: python -m app.adapters.outbound.rq_jobs.worker' >> "$override_file"
-printf '%s\n' '  api:' '    environment:' "      CORS_ORIGINS: http://127.0.0.1:${web_port}" '    ports: !override' "      - \"127.0.0.1:${api_port}:8000\"" >> "$override_file"
+printf '%s\n' '  postgres:' '    ports: !reset []' '  redis:' '    ports: !reset []' >> "$override_file"
+printf '%s\n' '  api:' '    environment:' "      CORS_ORIGINS: http://127.0.0.1:${web_port}" "      EMBEDDING_PROVIDER: \"${embedding_provider}\"" "      VERTEX_PROJECT_ID: \"${vertex_project_id}\"" "      CODE_CARDS_ENABLED: \"${code_cards_enabled}\"" "      RERANK_PROVIDER: \"${rerank_provider}\"" '    ports: !override' "      - \"127.0.0.1:${api_port}:8000\"" >> "$override_file"
+if [[ "$embedding_provider" == "vertex" ]]; then
+  # Override Compose's normal developer ADC mount with the owner-designated, read-only ADC home.
+  printf '%s\n' '    volumes: !override' '      - "./data:/data"' '      - "/home/hermes/.gcloud-kw:/root/.config/gcloud:ro"' >> "$override_file"
+fi
+printf '%s\n' '  worker:' '    command: python -m app.adapters.outbound.rq_jobs.worker' '    environment:' "      EMBEDDING_PROVIDER: \"${embedding_provider}\"" "      VERTEX_PROJECT_ID: \"${vertex_project_id}\"" "      CODE_CARDS_ENABLED: \"${code_cards_enabled}\"" "      RERANK_PROVIDER: \"${rerank_provider}\"" >> "$override_file"
+if [[ "$embedding_provider" == "vertex" ]]; then
+  printf '%s\n' '    volumes: !override' '      - "./data:/data"' '      - "/home/hermes/.gcloud-kw:/root/.config/gcloud:ro"' >> "$override_file"
+fi
 printf '%s\n' '  web:' '    build:' '      args:' "        NEXT_PUBLIC_API_URL: http://127.0.0.1:${api_port}/api" '    environment:' "      NEXT_PUBLIC_API_URL: http://127.0.0.1:${api_port}/api" '    ports: !override' "      - \"127.0.0.1:${web_port}:3000\"" >> "$override_file"
 
-printf '%s\n' 'Starting keyless Knowledge-Way stack (EMBEDDING_PROVIDER=none)...'
+printf 'Starting Knowledge-Way stack (EMBEDDING_PROVIDER=%s)...\n' "$embedding_provider"
 "${compose[@]}" up --build --wait
 
 # Probe inside each container: this remains reliable on hosts where a firewall or a competing
@@ -100,9 +120,19 @@ printf 'PASS web UI: http://127.0.0.1:%s\n' "$web_port"
 # waits for the keyless worker to index the selected three-repository fixture, records its declared
 # FastAPI provider dependencies, searches it, and opens returned source evidence.
 printf '%s\n' 'Running browser seed/index/search/evidence flow for the selected fastapi-stack...'
+# A disposable worktree intentionally does not carry node_modules or browser binaries.  Provision
+# the lockfile-pinned Playwright package and Chromium before the real-browser smoke.
+(cd apps/web && npm ci && {
+  if sudo -n true >/dev/null 2>&1; then
+    npx playwright install --with-deps chromium
+  else
+    # The runner's OS dependencies are pre-provisioned; a non-interactive job must not prompt.
+    npx playwright install chromium
+  fi
+})
 node scripts/quickstart_playwright.mjs "http://127.0.0.1:${web_port}" "http://127.0.0.1:${api_port}/api"
 
-printf '%s\n' 'PASS keyless local quickstart smoke test'
+printf 'PASS local quickstart smoke test (EMBEDDING_PROVIDER=%s)\n' "$embedding_provider"
 if "$keep_running"; then
   printf '%s\n' "Stack remains running (--keep-running). Stop it with: ${compose[*]} down"
 fi
