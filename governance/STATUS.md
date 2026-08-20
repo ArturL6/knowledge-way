@@ -222,7 +222,12 @@ next_instruction:
     - "Open a PR to integration/roadmap-v2 with exact-head evidence."
   done_when: "PR #55 is closed unmerged; compose worker starts via docker compose up without command override; quickstart smoke passes; packet PR is pr_open."
 last_review: REVIEW-059
-drift_flags: []
+drift_flags:
+  - detected_at: "2026-08-20T09:49:42+00:00"
+    detected_by: "benchmark-run"
+    scope: "semantic-enabled benchmark runner"
+    status: "open"
+    detail: "origin/integration/roadmap-v2 advanced to 262938b, but the binding semantic-enabled scorecard could not run: ${HOME}/.gcloud-kw/application_default_credentials.json is absent in this scheduler environment, and scripts/quickstart_smoke.sh at the exact head refuses EMBEDDING_PROVIDER=vertex by requiring EMBEDDING_PROVIDER=none in .env. No pre-existing service was scored."
 ```
 
 The YAML block is the machine-readable source used by scheduled jobs. Packet state changes require a corresponding committed review artifact or PR evidence.
