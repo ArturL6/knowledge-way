@@ -110,10 +110,11 @@ packets:
     notes: "PR #77 merged at c7f91b199029a8e8ef2655d4c25927b7cb18bdd3 from exact reviewed head 7d2758bcd365f712ea72fe7eedbe3b7dc1291f4a after REVIEW-052 on_track authorization. Independent current-integration merge simulation, packet verify, 25-task validation, runner help, 95 tests, import-boundary checks, and diff hygiene passed. Observation 06 remains honestly not-representable with no unsupported metrics. GitHub approval was not a gate."
   - id: "0.5"
     title: "Benchmark scheduler wiring"
-    state: todo
+    state: deferred
     branch: "packet/0.5-benchmark-scheduler"
-    verify: "true"
-    blocked_by: ["0.3"]
+    verify: "formalize HD-010 dual-scorecard benchmark contract"
+    blocked_by: ["K.3"]
+    notes: "Deferred post-sprint resume position 4; scheduler runs but its formal contract follows sprint evidence."
   - id: "0.6"
     title: "Local quickstart v1"
     state: done
@@ -175,55 +176,81 @@ packets:
     blocked_by: []
     integration_merge: "3448d4d8e351365bf13f0950a735ff36e954185e"
     notes: "PR #55 closed unmerged as obsolete under HUMAN-DIRECTIVE-009/ADR-010. PR #83 merged at 3448d4d8e351365bf13f0950a735ff36e954185e from exact reviewed head 80b49d6dfc044548b3f752dd6fc036f8c19e1099 under committed REVIEW-060 on_track. The Compose worker now starts with python -m app.adapters.outbound.rq_jobs.worker without command overrides; direct worker startup and scripts/quickstart_smoke.sh including real-browser seed/index/search/evidence flow passed."
+  - id: "K.1"
+    title: "Query digestion, BM25 re-scoring, and lexical latency"
+    state: todo
+    branch: "packet/K.1-query-digestion-bm25"
+    verify: "dual hermetic scorecards: keyless text hit@5 materially improves toward >=0.40; semantic-enabled hybrid >=0.68; text p95 improves; digester and BM25 unit tests pass"
+    blocked_by: ["1.0x"]
+    citations_required: ["Spärck Jones 1972", "Robertson & Zaragoza 2009"]
+  - id: "K.2"
+    title: "Name-first compact retrieval units"
+    state: todo
+    branch: "packet/K.2-name-first-entities"
+    verify: "dual hermetic scorecards: hybrid p95 <=1s, identifier exact hit@1 >=0.9, keyless hit@5 >=0.40, semantic-enabled hybrid >=0.68"
+    blocked_by: ["K.1"]
+    citations_required: ["public IR sources cited in PR/ADR"]
+  - id: "K.3"
+    title: "Graph expansion into fusion"
+    state: todo
+    branch: "packet/K.3-graph-expansion-fusion"
+    verify: "flagged with/without dual scorecards: keyless hit@5 >=0.44 and semantic-enabled hybrid >=0.68; revert if neutral"
+    blocked_by: ["K.2"]
+    citations_required: ["Cormack, Clarke & Buettcher 2009"]
   - id: "1.2"
     title: "Hybrid retrieval latency"
-    state: in_progress
+    state: deferred
     branch: "packet/1.2-hybrid-latency"
-    verify: "semantic-enabled hermetic scorecard: hybrid p95 <= 1s and file hit@5 >= 0.68"
-    blocked_by: ["1.0x"]
+    verify: "absorbed by K.1/K.2"
+    blocked_by: ["K.3"]
+    notes: "Deferred: K.2 owns the p95 <=1s exit and replaces the ILIKE symbol pass."
   - id: "1.2b"
     title: "Exact and quoted query mode"
-    state: todo
+    state: deferred
     branch: "packet/1.2b-exact-mode"
-    verify: "identifier task subset exact-mode hit@1 >= 0.9"
-    blocked_by: ["1.2"]
+    verify: "absorbed by K.2"
+    blocked_by: ["K.3"]
+    notes: "Deferred: K.2 owns indexed exact/prefix/pg_trgm routing and identifier hit@1 target."
   - id: "1.4"
     title: "Card embeddings and local-model evaluation"
-    state: todo
+    state: deferred
     branch: "packet/1.4-local-embedding-evaluation"
     verify: "subset-first Vertex comparison; local adoption only with owner sign-off and hybrid hit@5 within 0.05 absolute"
-    blocked_by: ["1.2b"]
+    blocked_by: ["K.3"]
+    notes: "Deferred post-sprint resume position 1; K.2 entity/card lexical indexing supplies preparation only."
   - id: "1.6"
     title: "Deterministic query planner"
-    state: todo
+    state: deferred
     branch: "packet/1.6-query-planner"
     verify: "packet verification and semantic-enabled scorecard delta"
-    blocked_by: ["1.4"]
+    blocked_by: ["K.3"]
+    notes: "Deferred post-sprint resume position 2; K.1 digestion and K.2 routing cover partial preparation."
   - id: "1.7"
     title: "Hierarchical retrieval"
-    state: todo
+    state: deferred
     branch: "packet/1.7-hierarchical-retrieval"
-    verify: "packet verification and semantic-enabled scorecard delta"
-    blocked_by: ["1.6"]
+    verify: "remaining hierarchy scope re-scoped after K.3"
+    blocked_by: ["K.3"]
+    notes: "Deferred: K.3 absorbs the keyless graph-expansion portion; remaining hierarchy is tracked for post-sprint re-scoping."
   - id: "1.8"
     title: "Rerank evaluation"
-    state: todo
+    state: deferred
     branch: "packet/1.8-rerank-evaluation"
     verify: "retain only if scorecard value justifies latency"
-    blocked_by: ["1.7"]
+    blocked_by: ["K.3"]
+    notes: "Deferred post-sprint resume position 3."
 next_instruction:
   issued_by: "navigator"
-  issued_at: "2026-08-20T10:21:15+00:00"
-  packet: "1.2"
-  objective: "Reduce binding semantic-enabled hybrid retrieval p95 latency from approximately 3.5s to <=1s without regressing file hit@5 below 0.68. Replace the dominating ILIKE symbol pass with indexed exact/prefix qualified_name matching plus trigram fallback, and tune the RRF candidate window."
+  issued_at: "2026-08-20T16:45:00+02:00"
+  packet: "K.1"
+  objective: "Implement query digestion, corpus-aware rare-term selection, and BM25 re-scoring from public IR literature to raise keyless lexical retrieval while reducing latency."
   constraints:
-    - "Work only on packet 1.2 from the current integration head; do not begin packet 1.2b or later queue items."
-    - "Use packet/1.2-hybrid-latency; packet branches must not modify governance/STATUS.md or RUNLOG files, and must not rewrite history or force-push."
-    - "Preserve the hexagonal boundary, evidence/snapshot guarantees, and test-count ratchet; do not add hosted CI or new unjustified infrastructure."
-    - "This is retrieval-touching work: run a hermetic semantic-enabled scorecard at the exact head against pinned corpora, verify the served manifest, and include a scorecard delta. Missing Vertex credentials must pause and be flagged, never trigger silent fallback or a keyless gating result."
-    - "Keep GitNexus absent from all product paths."
-    - "Run packet verify, full pytest suite, static/type checks, API tests, import-linter, and git diff hygiene; provide exact-head evidence in the PR."
-  done_when: "A PR to integration/roadmap-v2 is marked pr_open with exact-head gauntlet evidence; the binding semantic-enabled hermetic scorecard reports hybrid p95 <=1s and file hit@5 >=0.68; indexed exact/prefix qualified_name matching with trigram fallback and the tuned RRF window are covered by tests."
+    - "Implement strictly from public IR sources; cite Spärck Jones 1972 and Robertson & Zaragoza 2009 in the PR/ADR. Do not read, fetch, cite, or reference comparator code."
+    - "Use packet/K.1-query-digestion-bm25 from current integration; no STATUS/RUNLOG edits on the packet branch and no history rewrite."
+    - "Keep the GIN tsvector index for candidate generation; implement BM25 as a pure domain/retrieval function."
+    - "Run both hermetic exact-head scorecards: keyless for K.1 exit and semantic-enabled Vertex for hybrid >=0.68 regression guard; verify pinned served manifests."
+    - "Run full gauntlet, import-linter, packet verify, tests for digester/BM25 math, and diff hygiene."
+  done_when: "PR is pr_open with public-source citations, exact-head evidence, keyless text hit@5 materially improved toward >=0.40, reduced text p95, and semantic-enabled hybrid >=0.68."
 last_review: REVIEW-060
 drift_flags:
   - detected_at: "2026-08-20T09:49:42+00:00"
