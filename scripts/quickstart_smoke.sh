@@ -55,7 +55,7 @@ cleanup() {
     # The project owns its named fixture volume, so remove it with the isolated
     # stack.  Do not use broad Docker pruning: other developer stacks are not
     # quickstart resources.
-    "${compose[@]}" down --remove-orphans --volumes >/dev/null 2>&1 || true
+    "${compose[@]}" down --remove-orphans --volumes --rmi local >/dev/null 2>&1 || true
   fi
   rm -f "$override_file"
   if "$created_env"; then
