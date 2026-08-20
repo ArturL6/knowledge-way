@@ -176,12 +176,19 @@ packets:
     blocked_by: []
     integration_merge: "3448d4d8e351365bf13f0950a735ff36e954185e"
     notes: "PR #55 closed unmerged as obsolete under HUMAN-DIRECTIVE-009/ADR-010. PR #83 merged at 3448d4d8e351365bf13f0950a735ff36e954185e from exact reviewed head 80b49d6dfc044548b3f752dd6fc036f8c19e1099 under committed REVIEW-060 on_track. The Compose worker now starts with python -m app.adapters.outbound.rq_jobs.worker without command overrides; direct worker startup and scripts/quickstart_smoke.sh including real-browser seed/index/search/evidence flow passed."
+  - id: "K.0"
+    title: "Semantic-capable quickstart provisioning and benchmark hygiene"
+    state: todo
+    branch: "packet/K.0-semantic-quickstart-provisioning"
+    verify: "same exact integration head produces hermetic keyless and semantic-enabled scorecards with pinned served-manifest verification and teardown; default keyless quickstart remains green"
+    blocked_by: ["1.0x"]
+    notes: "HD-011 micro-packet: preserve EMBEDDING_PROVIDER=none default; honor caller semantic environment and safe ADC mount; fail fast if requested Vertex ADC is absent; prepare disposable-worktree browser dependencies. No retrieval-code changes. Benchmark must enforce disk hygiene before provisioning."
   - id: "K.1"
     title: "Query digestion, BM25 re-scoring, and lexical latency"
     state: todo
     branch: "packet/K.1-query-digestion-bm25"
     verify: "dual hermetic scorecards: keyless text hit@5 materially improves toward >=0.40; semantic-enabled hybrid >=0.68; text p95 improves; digester and BM25 unit tests pass"
-    blocked_by: ["1.0x"]
+    blocked_by: ["K.0"]
     citations_required: ["Spärck Jones 1972", "Robertson & Zaragoza 2009"]
   - id: "K.2"
     title: "Name-first compact retrieval units"
@@ -241,16 +248,16 @@ packets:
     notes: "Deferred post-sprint resume position 3."
 next_instruction:
   issued_by: "navigator"
-  issued_at: "2026-08-20T16:45:00+02:00"
-  packet: "K.1"
-  objective: "Implement query digestion, corpus-aware rare-term selection, and BM25 re-scoring from public IR literature to raise keyless lexical retrieval while reducing latency."
+  issued_at: "2026-08-20T17:20:00+02:00"
+  packet: "K.0"
+  objective: "Provision a semantic-capable, hermetic benchmark quickstart while preserving the default keyless owner experience and enforcing safe disk hygiene."
   constraints:
-    - "Implement strictly from public IR sources; cite Spärck Jones 1972 and Robertson & Zaragoza 2009 in the PR/ADR. Do not read, fetch, cite, or reference comparator code."
-    - "Use packet/K.1-query-digestion-bm25 from current integration; no STATUS/RUNLOG edits on the packet branch and no history rewrite."
-    - "Keep the GIN tsvector index for candidate generation; implement BM25 as a pure domain/retrieval function."
-    - "Run both hermetic exact-head scorecards: keyless for K.1 exit and semantic-enabled Vertex for hybrid >=0.68 regression guard; verify pinned served manifests."
-    - "Run full gauntlet, import-linter, packet verify, tests for digester/BM25 math, and diff hygiene."
-  done_when: "PR is pr_open with public-source citations, exact-head evidence, keyless text hit@5 materially improved toward >=0.40, reduced text p95, and semantic-enabled hybrid >=0.68."
+    - "Use packet/K.0-semantic-quickstart-provisioning from current integration; no STATUS/RUNLOG edits on the packet branch and no history rewrite."
+    - "No product retrieval code changes. Preserve EMBEDDING_PROVIDER=none as the default; only honor caller-provided semantic environment and ADC volume configuration."
+    - "For EMBEDDING_PROVIDER=vertex, fail fast before startup unless /home/hermes/.gcloud-kw/application_default_credentials.json exists; never substitute a fallback provider."
+    - "Install or reuse disposable-worktree web/Playwright dependencies before browser smoke; run keyless and semantic-enabled scorecards on the same exact head with pinned served-manifest verification and teardown."
+    - "Before provisioning, enforce HD-011 disk rule: below 5 GB run docker builder prune -af and log reclamation; if still below 5 GB, block as disk. Never docker system prune --volumes."
+  done_when: "K.0 PR is pr_open with unchanged default keyless quickstart evidence plus same-head hermetic keyless and semantic-enabled scorecards, or explicit awaiting_owner ADC evidence when owner provisioning is not yet complete."
 last_review: REVIEW-060
 drift_flags:
   - detected_at: "2026-08-20T09:49:42+00:00"
