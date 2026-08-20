@@ -57,9 +57,14 @@ cleanup() {
     # quickstart resources.
     "${compose[@]}" down --remove-orphans --volumes --rmi local >/dev/null 2>&1 || true
   fi
-  rm -f "$override_file"
-  if "$created_env"; then
-    rm -f .env
+  # --keep-running prints a follow-up Compose command that still needs this
+  # generated override (and its generated .env, when applicable) to exist.
+  # The disposable worktree owner removes both after the project-scoped down.
+  if ! "$keep_running"; then
+    rm -f "$override_file"
+    if "$created_env"; then
+      rm -f .env
+    fi
   fi
   exit "$status"
 }
