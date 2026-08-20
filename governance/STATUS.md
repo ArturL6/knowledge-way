@@ -178,12 +178,13 @@ packets:
     notes: "PR #55 closed unmerged as obsolete under HUMAN-DIRECTIVE-009/ADR-010. PR #83 merged at 3448d4d8e351365bf13f0950a735ff36e954185e from exact reviewed head 80b49d6dfc044548b3f752dd6fc036f8c19e1099 under committed REVIEW-060 on_track. The Compose worker now starts with python -m app.adapters.outbound.rq_jobs.worker without command overrides; direct worker startup and scripts/quickstart_smoke.sh including real-browser seed/index/search/evidence flow passed."
   - id: "K.0"
     title: "Semantic-capable quickstart provisioning and benchmark hygiene"
-    state: pr_open
+    state: done
     branch: "packet/K.0-semantic-quickstart-provisioning"
     pr: 85
+    integration_merge: "ce1352e22ea53fb3745e61e5393caf06385d900d"
     verify: "same exact integration head produces hermetic keyless and semantic-enabled scorecards with pinned served-manifest verification and teardown; default keyless quickstart remains green"
     blocked_by: ["1.0x"]
-    notes: "REVIEW-061 on_track authorizes only exact head 6747379bc383a51882d1887621431d4fd4607a39. Independent keyless quickstart, 113 tests, boundaries, ADC fail-fast, scope hygiene, and mergeability passed. Semantic guard is awaiting_owner because the sole authorized ADC path is absent; mandatory first post-ADC scorecard must confirm hybrid >=0.68 or reopen drift."
+    notes: "PR #85 merged at ce1352e22ea53fb3745e61e5393caf06385d900d from exact REVIEW-061-authorized head 6747379bc383a51882d1887621431d4fd4607a39. Independent keyless quickstart, 113 tests, boundaries, ADC fail-fast, scope hygiene, and mergeability passed. Semantic guard remains awaiting_owner because the sole authorized ADC path is absent; mandatory first post-ADC scorecard must confirm hybrid >=0.68 or reopen drift."
   - id: "K.1"
     title: "Query digestion, BM25 re-scoring, and lexical latency"
     state: todo
@@ -249,16 +250,16 @@ packets:
     notes: "Deferred post-sprint resume position 3."
 next_instruction:
   issued_by: "navigator"
-  issued_at: "2026-08-20T17:20:00+02:00"
-  packet: "K.0"
-  objective: "Provision a semantic-capable, hermetic benchmark quickstart while preserving the default keyless owner experience and enforcing safe disk hygiene."
+  issued_at: "2026-08-20T16:27:30+00:00"
+  packet: "K.1"
+  objective: "Complete query digestion, pure BM25 re-scoring, and lexical latency work against the landed K.0 provisioning path and preserve the dual-scorecard gates."
   constraints:
-    - "Use packet/K.0-semantic-quickstart-provisioning from current integration; no STATUS/RUNLOG edits on the packet branch and no history rewrite."
-    - "No product retrieval code changes. Preserve EMBEDDING_PROVIDER=none as the default; only honor caller-provided semantic environment and ADC volume configuration."
-    - "For EMBEDDING_PROVIDER=vertex, fail fast before startup unless /home/hermes/.gcloud-kw/application_default_credentials.json exists; never substitute a fallback provider."
-    - "Install or reuse disposable-worktree web/Playwright dependencies before browser smoke; run keyless and semantic-enabled scorecards on the same exact head with pinned served-manifest verification and teardown."
-    - "Before provisioning, enforce HD-011 disk rule: below 5 GB run docker builder prune -af and log reclamation; if still below 5 GB, block as disk. Never docker system prune --volumes."
-  done_when: "K.0 PR is pr_open with unchanged default keyless quickstart evidence plus same-head hermetic keyless and semantic-enabled scorecards, or explicit awaiting_owner ADC evidence when owner provisioning is not yet complete."
+    - "Strict queue: work only K.1; do not begin K.2 or K.3. Packet branches must not edit STATUS/RUNLOG, rebase, or force-push."
+    - "Preserve K.0's keyless default, caller semantic configuration, ADC fail-fast/read-only mount, and disposable browser preparation. Never use a fallback semantic provider."
+    - "Carry dual hermetic scorecards on the same exact head with pinned served-manifest verification and teardown. While ADC is absent, semantic is awaiting_owner and keyless evidence continues."
+    - "The first post-ADC semantic scorecard must confirm hybrid >=0.68; regression reopens drift."
+    - "Do not add comparator code, contact, or references. Preserve boundaries, evidence guarantees, test-count ratchet, and HD-011 disk safety."
+  done_when: "K.1 exact-head review demonstrates materially improved keyless text hit@5 toward >=0.40, improved text p95, digester/BM25 tests, and the dual-scorecard guard; while ADC is absent, approval may be awaiting_owner only with the mandatory first-post-ADC hybrid >=0.68 follow-up."
 last_review: REVIEW-061
 drift_flags:
   - detected_at: "2026-08-20T09:49:42+00:00"
