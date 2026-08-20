@@ -5,9 +5,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db import Base
-from app.models import Repository, File, CodeChunk
+from app.models import Repository, File, CodeChunk, Symbol
 from app import search as search_module
-from app.search import parse_query, query_terms, result, search_with_capability, _fuse, select_discriminating_terms
+from app.search import parse_query, query_terms, result, search_with_capability, _fuse, select_discriminating_terms, symbol_query_terms
 
 
 def test_sourcegraph_filter_parser():
@@ -19,6 +19,10 @@ def test_sourcegraph_filter_parser():
 
 def test_query_terms_keep_code_identifiers_and_drop_question_words():
     assert query_terms("Where is get_dependant defined?") == ["get_dependant"]
+
+
+def test_symbol_query_terms_bounds_untrusted_issue_body_deterministically():
+    assert symbol_query_terms(["tiny", "important_identifier", "important_identifier", "medium"], limit=2) == ["important_identifier", "medium"]
 
 
 # --- ADR-008: rare-term query digestion -----------------------------------
@@ -94,6 +98,28 @@ def _chunk(db, id, repo_id, file_id, start_line, text="needle in a haystack of c
                        content_hash=f"chash-{id}", indexed_commit_sha="a" * 40)
     db.add(chunk); db.commit()
     return chunk
+
+
+def _symbol(db, id, repo_id, file_id, name, qualified_name, start_line):
+    symbol = Symbol(id=id, repository_id=repo_id, file_id=file_id, name=name,
+                    qualified_name=qualified_name, symbol_type="function", language="python",
+                    start_line=start_line, end_line=start_line, start_byte=0, end_byte=1,
+                    source_text=f"def {name}(): pass")
+    db.add(symbol); db.commit()
+    return symbol
+
+
+def test_symbol_search_prefers_exact_then_prefix_then_trigram_fallback():
+    db = _session()
+    _repo(db, "repo", "demo")
+    file = _file(db, "file", "repo", "symbols.py")
+    _symbol(db, "fallback", "repo", "file", "handler", "app.not_handler", 1)
+    _symbol(db, "prefix", "repo", "file", "handler", "handler_factory", 2)
+    _symbol(db, "exact", "repo", "file", "handler", "handler", 3)
+
+    results, _ = search_with_capability(db, "handler", mode="symbols", limit=10)
+    assert [item["result_id"] for item in results] == ["exact", "prefix", "fallback"]
+    assert results[0]["score"] > results[1]["score"] > results[2]["score"]
 
 
 def test_repository_scope_is_applied_before_the_sql_limit():

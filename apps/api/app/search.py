@@ -2,7 +2,7 @@ import asyncio
 import math
 import re
 from dataclasses import dataclass
-from sqlalchemy import select, or_, func, literal_column, delete, text as sql_text
+from sqlalchemy import select, or_, func, literal_column, delete, text as sql_text, case
 from app.config import settings
 from app.adapters.outbound.postgres.models import Repository, File, Symbol, CodeChunk, TermDocumentFrequency
 from app.adapters.outbound.llm_providers.providers import embedding_provider, rerank_provider, semantic_capability
@@ -78,6 +78,17 @@ def parse_query(raw: str) -> Query:
 
 def query_terms(text: str) -> list[str]:
     return [term.lower() for term in re.findall(r"[A-Za-z_][A-Za-z0-9_]{2,}", text) if term.lower() not in STOP_WORDS]
+
+
+def symbol_query_terms(terms: list[str], limit: int = 16) -> list[str]:
+    """Bound the symbol predicate fan-out without throwing away identifier-shaped terms.
+
+    Symbol lookup used to OR an unbounded set of ``ILIKE '%term%'`` predicates. Issue
+    descriptions commonly contain hundreds of terms, turning that otherwise useful lookup
+    into a sequential scan. The longest terms are generally the most discriminating code
+    identifiers; the lexicographic tie-break keeps the generated SQL deterministic.
+    """
+    return sorted(set(terms), key=lambda term: (-len(term), term))[:limit]
 
 
 def result(kind, score, repo, file, item):
@@ -179,12 +190,30 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
             for chunk, file in db.execute(chunk_stmt().where(or_(*clauses)).limit(limit * 8)):
                 lexical.append(result('chunk', .45 + .35 * sum(t in chunk.source_text.lower() for t in terms) / len(terms), repos[chunk.repository_id], file, chunk))
     if mode in ('hybrid', 'symbols') and terms:
-        clauses = [Symbol.name.ilike(f'%{term}%') for term in terms] + [Symbol.qualified_name.ilike(f'%{term}%') for term in terms]
+        # Packet 1.2: the former unbounded ``ILIKE '%term%'`` pass dominated semantic-hybrid
+        # p95. On Postgres, exact and prefix qualified-name matches use the lower-case
+        # varchar-pattern B-tree index added by migration 0014; substring lookup remains a
+        # deliberately bounded pg_trgm fallback. SQLite retains equivalent semantics for the
+        # portable suite, without pretending it has Postgres indexes.
+        symbol_terms = symbol_query_terms(terms)
+        normalized_name = func.lower(Symbol.qualified_name)
+        exact_clauses = [normalized_name == term for term in symbol_terms]
+        prefix_clauses = [normalized_name.like(f'{term}%') for term in symbol_terms]
+        fallback_clauses = [Symbol.qualified_name.ilike(f'%{term}%') for term in symbol_terms]
+        clauses = exact_clauses + prefix_clauses + fallback_clauses
+        match_score = case(
+            (or_(*exact_clauses), 1.0),
+            (or_(*prefix_clauses), .95),
+            else_=.85,
+        )
         symbol_stmt = (select(Symbol, File).join(File, Symbol.file_id == File.id)
                         .where(Symbol.repository_id.in_(allowed_ids)).where(or_(*clauses))
-                        .order_by(File.path, Symbol.start_line, Symbol.id).limit(limit * 3))
+                        .order_by(match_score.desc(), File.path, Symbol.start_line, Symbol.id)
+                        .limit(limit * 2))
         for symbol, file in db.execute(symbol_stmt):
-            symbols.append(result('symbol', 1.0 if symbol.name.lower() in terms or symbol.qualified_name.lower() in terms else .85, repos[symbol.repository_id], file, symbol))
+            normalized = symbol.qualified_name.lower()
+            score = 1.0 if normalized in symbol_terms else .95 if any(normalized.startswith(term) for term in symbol_terms) else .85
+            symbols.append(result('symbol', score, repos[symbol.repository_id], file, symbol))
     capability = semantic_capability()
     provider = embedding_provider()
     # Exact lexical source hits are already precise evidence. In hybrid mode, avoid a billable
@@ -201,10 +230,10 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
                 # the planner can actually use it -- a different operator here would silently
                 # fall back to a sequential scan.
                 #
-                # The window is wider than `limit` (mirrors the lexical `limit * 8` pattern above)
-                # because this candidate set still feeds RRF fusion with lexical/symbol hits, not
+                # The window is wider than `limit` (mirrors the bounded lexical candidate
+                # window above) because this set still feeds RRF fusion with lexical/symbol hits, not
                 # just a standalone top-k.
-                ann_limit = max(limit * 8, min(settings.rerank_candidate_limit, 100)) if rerank else limit * 8
+                ann_limit = max(limit * 4, min(settings.rerank_candidate_limit, 100)) if rerank else limit * 4
                 distance = CodeChunk.embedding.cosine_distance(query_vector)
                 stmt = (select(CodeChunk, File, distance.label('distance'))
                          .join(File, CodeChunk.file_id == File.id)
