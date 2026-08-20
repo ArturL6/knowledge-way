@@ -1,7 +1,7 @@
 # Knowledge-Way packet board
 
 ```yaml
-stage: R (promoted to main)
+stage: 1 (retrieval quality and latency)
 stage_promotion:
   authorized_review: "REVIEW-046"
   reviewed_integration_head: "c437a4e3342d5d2cc7ecb61ec20dc26029d7f094"
@@ -166,6 +166,59 @@ packets:
     blocked_by: ["1.9"]
     integration_merge: "9129e7aec39cfe56384ddc0d0e3747eecf7a269d"
     notes: "REVIEW-059 on_track. Fixes: add-repo excludes repos owned by another workspace (+note); graph falls back to all repos when active workspace empty. Real-API Playwright 3/3 re-run by reviewer against the live stack. Frontend-only."
+  - id: "1.0x"
+    title: "Compose worker entrypoint repair and obsolete PR housekeeping"
+    state: in_progress
+    branch: "packet/1.0x-worker-entrypoint-housekeeping"
+    verify: "docker compose up starts the worker without command overrides; scripts/quickstart_smoke.sh passes"
+    blocked_by: []
+  - id: "1.2"
+    title: "Hybrid retrieval latency"
+    state: todo
+    branch: "packet/1.2-hybrid-latency"
+    verify: "semantic-enabled hermetic scorecard: hybrid p95 <= 1s and file hit@5 >= 0.68"
+    blocked_by: ["1.0x"]
+  - id: "1.2b"
+    title: "Exact and quoted query mode"
+    state: todo
+    branch: "packet/1.2b-exact-mode"
+    verify: "identifier task subset exact-mode hit@1 >= 0.9"
+    blocked_by: ["1.2"]
+  - id: "1.4"
+    title: "Card embeddings and local-model evaluation"
+    state: todo
+    branch: "packet/1.4-local-embedding-evaluation"
+    verify: "subset-first Vertex comparison; local adoption only with owner sign-off and hybrid hit@5 within 0.05 absolute"
+    blocked_by: ["1.2b"]
+  - id: "1.6"
+    title: "Deterministic query planner"
+    state: todo
+    branch: "packet/1.6-query-planner"
+    verify: "packet verification and semantic-enabled scorecard delta"
+    blocked_by: ["1.4"]
+  - id: "1.7"
+    title: "Hierarchical retrieval"
+    state: todo
+    branch: "packet/1.7-hierarchical-retrieval"
+    verify: "packet verification and semantic-enabled scorecard delta"
+    blocked_by: ["1.6"]
+  - id: "1.8"
+    title: "Rerank evaluation"
+    state: todo
+    branch: "packet/1.8-rerank-evaluation"
+    verify: "retain only if scorecard value justifies latency"
+    blocked_by: ["1.7"]
+next_instruction:
+  issued_by: "navigator"
+  issued_at: "2026-08-20T10:45:00+02:00"
+  packet: "1.0x"
+  objective: "Close obsolete PR #55 unmerged and repair docker-compose worker command to python -m app.adapters.outbound.rq_jobs.worker."
+  constraints:
+    - "Case-(c) owner-directed housekeeping; no future-stage work."
+    - "Use a packet branch; do not modify STATUS.md or RUNLOG files on that branch."
+    - "Run docker compose worker startup without command overrides and scripts/quickstart_smoke.sh."
+    - "Open a PR to integration/roadmap-v2 with exact-head evidence."
+  done_when: "PR #55 is closed unmerged; compose worker starts via docker compose up without command override; quickstart smoke passes; packet PR is pr_open."
 last_review: REVIEW-059
 drift_flags: []
 ```
