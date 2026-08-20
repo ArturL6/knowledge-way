@@ -230,7 +230,7 @@ drift_flags:
     detected_by: "benchmark-run"
     scope: "semantic-enabled benchmark runner"
     status: "open"
-    detail: "origin/integration/roadmap-v2 advanced to 262938b, but the binding semantic-enabled scorecard could not run: ${HOME}/.gcloud-kw/application_default_credentials.json is absent in this scheduler environment, and scripts/quickstart_smoke.sh at the exact head refuses EMBEDDING_PROVIDER=vertex by requiring EMBEDDING_PROVIDER=none in .env. No pre-existing service was scored."
+    detail: "origin/integration/roadmap-v2 advanced through b6d52ee, but the binding semantic-enabled scorecard could not run: ${HOME}/.gcloud-kw/application_default_credentials.json is absent in this scheduler environment, and scripts/quickstart_smoke.sh at exact heads still refuses EMBEDDING_PROVIDER=vertex by requiring EMBEDDING_PROVIDER=none in .env. No pre-existing service was scored."
 ```
 
 The YAML block is the machine-readable source used by scheduled jobs. Packet state changes require a corresponding committed review artifact or PR evidence.
