@@ -184,7 +184,7 @@ packets:
     integration_merge: "ce1352e22ea53fb3745e61e5393caf06385d900d"
     verify: "same exact integration head produces hermetic keyless and semantic-enabled scorecards with pinned served-manifest verification and teardown; default keyless quickstart remains green"
     blocked_by: ["1.0x"]
-    notes: "PR #85 merged at ce1352e22ea53fb3745e61e5393caf06385d900d from exact REVIEW-061-authorized head 6747379bc383a51882d1887621431d4fd4607a39. Independent keyless quickstart, 113 tests, boundaries, ADC fail-fast, scope hygiene, and mergeability passed. Provisioning-only teardown remediation PR #87 merged at cbab2743f4aeaa9cc663b8052c0dce5080365302 from exact REVIEW-063-authorized head c33381326c485f88d671cdc41c835559d522efae; its project-scoped fixture volume and Compose down --volumes leave no isolated project resources or checkout residue. Semantic guard remains awaiting_owner because the sole authorized ADC path is absent; mandatory first post-ADC scorecard must confirm hybrid >=0.68 or reopen drift."
+    notes: "PR #85 merged at ce1352e22ea53fb3745e61e5393caf06385d900d from exact REVIEW-061-authorized head 6747379bc383a51882d1887621431d4fd4607a39. Independent keyless quickstart, 113 tests, boundaries, ADC fail-fast, scope hygiene, and mergeability passed. Provisioning-only teardown remediation PR #87 merged at cbab2743f4aeaa9cc663b8052c0dce5080365302 from exact REVIEW-063-authorized head c33381326c485f88d671cdc41c835559d522efae; its project-scoped fixture volume and Compose down --volumes leave no isolated project resources or checkout residue. REVIEW-064 authorizes PR #91 exact head b5745d38ca31db51c76c92b6f9fdbfe21b0c86ae to add project-scoped --rmi local teardown, removing disposable quickstart images without broad pruning. Semantic guard remains awaiting_owner because the sole authorized ADC path is absent; mandatory first post-ADC scorecard must confirm hybrid >=0.68 or reopen drift."
   - id: "K.1"
     title: "Query digestion, BM25 re-scoring, and lexical latency"
     state: todo
@@ -260,7 +260,7 @@ next_instruction:
     - "The first post-ADC semantic scorecard must confirm hybrid >=0.68; regression reopens drift."
     - "Do not add comparator code, contact, or references. Preserve boundaries, evidence guarantees, test-count ratchet, and HD-011 disk safety."
   done_when: "K.1 exact-head review demonstrates materially improved keyless text hit@5 toward >=0.40, improved text p95, digester/BM25 tests, and the dual-scorecard guard; while ADC is absent, approval may be awaiting_owner only with the mandatory first-post-ADC hybrid >=0.68 follow-up."
-last_review: REVIEW-062
+last_review: REVIEW-064
 drift_flags:
   - detected_at: "2026-08-20T17:23:57+00:00"
     detected_by: "sol-navigator-run"
