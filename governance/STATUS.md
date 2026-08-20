@@ -178,11 +178,12 @@ packets:
     notes: "PR #55 closed unmerged as obsolete under HUMAN-DIRECTIVE-009/ADR-010. PR #83 merged at 3448d4d8e351365bf13f0950a735ff36e954185e from exact reviewed head 80b49d6dfc044548b3f752dd6fc036f8c19e1099 under committed REVIEW-060 on_track. The Compose worker now starts with python -m app.adapters.outbound.rq_jobs.worker without command overrides; direct worker startup and scripts/quickstart_smoke.sh including real-browser seed/index/search/evidence flow passed."
   - id: "K.0"
     title: "Semantic-capable quickstart provisioning and benchmark hygiene"
-    state: todo
+    state: pr_open
     branch: "packet/K.0-semantic-quickstart-provisioning"
+    pr: 85
     verify: "same exact integration head produces hermetic keyless and semantic-enabled scorecards with pinned served-manifest verification and teardown; default keyless quickstart remains green"
     blocked_by: ["1.0x"]
-    notes: "HD-011 micro-packet: preserve EMBEDDING_PROVIDER=none default; honor caller semantic environment and safe ADC mount; fail fast if requested Vertex ADC is absent; prepare disposable-worktree browser dependencies. No retrieval-code changes. Benchmark must enforce disk hygiene before provisioning."
+    notes: "REVIEW-061 on_track authorizes only exact head 6747379bc383a51882d1887621431d4fd4607a39. Independent keyless quickstart, 113 tests, boundaries, ADC fail-fast, scope hygiene, and mergeability passed. Semantic guard is awaiting_owner because the sole authorized ADC path is absent; mandatory first post-ADC scorecard must confirm hybrid >=0.68 or reopen drift."
   - id: "K.1"
     title: "Query digestion, BM25 re-scoring, and lexical latency"
     state: todo
@@ -258,7 +259,7 @@ next_instruction:
     - "Install or reuse disposable-worktree web/Playwright dependencies before browser smoke; run keyless and semantic-enabled scorecards on the same exact head with pinned served-manifest verification and teardown."
     - "Before provisioning, enforce HD-011 disk rule: below 5 GB run docker builder prune -af and log reclamation; if still below 5 GB, block as disk. Never docker system prune --volumes."
   done_when: "K.0 PR is pr_open with unchanged default keyless quickstart evidence plus same-head hermetic keyless and semantic-enabled scorecards, or explicit awaiting_owner ADC evidence when owner provisioning is not yet complete."
-last_review: REVIEW-060
+last_review: REVIEW-061
 drift_flags:
   - detected_at: "2026-08-20T09:49:42+00:00"
     detected_by: "benchmark-run"
