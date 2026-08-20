@@ -168,12 +168,13 @@ packets:
     notes: "REVIEW-059 on_track. Fixes: add-repo excludes repos owned by another workspace (+note); graph falls back to all repos when active workspace empty. Real-API Playwright 3/3 re-run by reviewer against the live stack. Frontend-only."
   - id: "1.0x"
     title: "Compose worker entrypoint repair and obsolete PR housekeeping"
-    state: pr_open
+    state: done
     branch: "packet/1.0x-worker-entrypoint-housekeeping"
     pr: 83
     verify: "docker compose up starts the worker without command overrides; scripts/quickstart_smoke.sh passes"
     blocked_by: []
-    notes: "PR #55 closed unmerged as obsolete under HUMAN-DIRECTIVE-009/ADR-010. PR #83 is open at exact head 80b49d6dfc044548b3f752dd6fc036f8c19e1099; it replaces the Compose worker command with python -m app.adapters.outbound.rq_jobs.worker. Implementer verification: 113 pytest passed; import-linter contracts passed; direct Compose worker startup passed without a worker command override; scripts/quickstart_smoke.sh passed including real-browser seed/index/search/evidence flow."
+    integration_merge: "3448d4d8e351365bf13f0950a735ff36e954185e"
+    notes: "PR #55 closed unmerged as obsolete under HUMAN-DIRECTIVE-009/ADR-010. PR #83 merged at 3448d4d8e351365bf13f0950a735ff36e954185e from exact reviewed head 80b49d6dfc044548b3f752dd6fc036f8c19e1099 under committed REVIEW-060 on_track. The Compose worker now starts with python -m app.adapters.outbound.rq_jobs.worker without command overrides; direct worker startup and scripts/quickstart_smoke.sh including real-browser seed/index/search/evidence flow passed."
   - id: "1.2"
     title: "Hybrid retrieval latency"
     state: todo
@@ -210,18 +211,8 @@ packets:
     branch: "packet/1.8-rerank-evaluation"
     verify: "retain only if scorecard value justifies latency"
     blocked_by: ["1.7"]
-next_instruction:
-  issued_by: "navigator"
-  issued_at: "2026-08-20T10:45:00+02:00"
-  packet: "1.0x"
-  objective: "Close obsolete PR #55 unmerged and repair docker-compose worker command to python -m app.adapters.outbound.rq_jobs.worker."
-  constraints:
-    - "Case-(c) owner-directed housekeeping; no future-stage work."
-    - "Use a packet branch; do not modify STATUS.md or RUNLOG files on that branch."
-    - "Run docker compose worker startup without command overrides and scripts/quickstart_smoke.sh."
-    - "Open a PR to integration/roadmap-v2 with exact-head evidence."
-  done_when: "PR #55 is closed unmerged; compose worker starts via docker compose up without command override; quickstart smoke passes; packet PR is pr_open."
-last_review: REVIEW-059
+next_instruction: null
+last_review: REVIEW-060
 drift_flags:
   - detected_at: "2026-08-20T09:49:42+00:00"
     detected_by: "benchmark-run"
