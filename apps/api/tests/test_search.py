@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.models import Repository, File, CodeChunk
+from app.domain.retrieval import bm25_score, digest_query, select_rarest_terms
 from app import search as search_module
 from app.search import parse_query, query_terms, result, search_with_capability, _fuse, select_discriminating_terms
 
@@ -19,6 +20,26 @@ def test_sourcegraph_filter_parser():
 
 def test_query_terms_keep_code_identifiers_and_drop_question_words():
     assert query_terms("Where is get_dependant defined?") == ["get_dependant"]
+
+
+def test_digest_query_strips_issue_boilerplate_and_splits_identifiers():
+    raw = "<!-- template -->\n- [x] repro\n```ignored_code()```\nhttps://example.test/x\nfix HTTPResponse.parse_value"
+    assert digest_query(raw) == ["fix", "httpresponse", "parse", "value"]
+
+
+def test_bm25_rewards_rare_terms_and_penalizes_long_documents():
+    df = {"rare": 1, "common": 90}
+    rare = bm25_score({"rare": 1}, ["rare"], 10, 10, df, 100)
+    common = bm25_score({"common": 1}, ["common"], 10, 10, df, 100)
+    long = bm25_score({"rare": 1}, ["rare"], 100, 10, df, 100)
+    assert rare > common
+    assert rare > long
+
+
+def test_domain_rarest_terms_defaults_to_twelve():
+    terms = [f"term{i}" for i in range(20)]
+    df = {term: i for i, term in enumerate(terms)}
+    assert select_rarest_terms(terms, df) == terms[:12]
 
 
 # --- ADR-008: rare-term query digestion -----------------------------------

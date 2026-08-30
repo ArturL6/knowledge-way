@@ -16,6 +16,8 @@ adapters or frameworks (pyproject.toml [[tool.importlinter.contracts]]). This mo
 ever sees plain result dicts (as produced by app.search.result()) tagged with a plain mode
 string -- it has no idea a database exists.
 """
+import math
+import re
 
 DEFAULT_RRF_K = 60
 
@@ -31,6 +33,45 @@ DEFAULT_MODE_WEIGHTS = {
     "lexical": 0.5,
     "symbol": 0.4,
 }
+
+
+# Public IR basis: Spärck Jones (1972) on IDF and Robertson & Zaragoza (2009)
+# on BM25. These helpers are intentionally database- and framework-free.
+STOP_WORDS = frozenset({"a", "an", "and", "are", "defined", "do", "for", "how", "in", "is", "of", "the", "to", "what", "where", "which", "with"})
+_CAMEL_BOUNDARY = re.compile(r"([a-z0-9])([A-Z])")
+_IDENTIFIER_SEPARATORS = re.compile(r"[._/]+")
+_BOILERPLATE = re.compile(r"<!--.*?-->|```.*?```|^[ \t]*[-*+][ \t]*\[[ xX]\][^\n]*|https?://\S+", re.DOTALL | re.MULTILINE)
+_TOKEN = re.compile(r"[A-Za-z_][A-Za-z0-9_]{2,}")
+
+
+def digest_query(value: str) -> list[str]:
+    """Strip issue-template noise and tokenize identifiers deterministically."""
+    clean = _BOILERPLATE.sub(" ", value)
+    clean = _IDENTIFIER_SEPARATORS.sub(" ", _CAMEL_BOUNDARY.sub(r"\1 \2", clean))
+    return [term.lower() for term in _TOKEN.findall(clean) if term.lower() not in STOP_WORDS]
+
+
+def select_rarest_terms(terms, document_frequency, limit=12):
+    """Select corpus-rarest known terms, with deterministic ties."""
+    unique = list(dict.fromkeys(terms))
+    known = [term for term in unique if term in document_frequency]
+    pool = known or unique
+    return sorted(pool, key=lambda term: (document_frequency.get(term, 0), -len(term), term))[:limit]
+
+
+def bm25_score(term_frequencies, query_terms, document_length, average_document_length, document_frequency, document_count, k1=1.2, b=0.75):
+    """Return one pure Okapi BM25 score (Robertson & Zaragoza, 2009)."""
+    if not document_count or not average_document_length:
+        return 0.0
+    normalization = k1 * (1 - b + b * document_length / average_document_length)
+    score = 0.0
+    for term in set(query_terms):
+        frequency = term_frequencies.get(term, 0)
+        if frequency:
+            df = document_frequency.get(term, 0)
+            idf = math.log(1 + (document_count - df + 0.5) / (df + 0.5))
+            score += idf * (frequency * (k1 + 1)) / (frequency + normalization)
+    return score
 
 
 def _key(item):

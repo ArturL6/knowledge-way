@@ -6,7 +6,7 @@ from sqlalchemy import select, or_, func, literal_column, delete, text as sql_te
 from app.config import settings
 from app.adapters.outbound.postgres.models import Repository, File, Symbol, CodeChunk, TermDocumentFrequency
 from app.adapters.outbound.llm_providers.providers import embedding_provider, rerank_provider, semantic_capability
-from app.domain.retrieval import fuse_rankings
+from app.domain.retrieval import bm25_score, digest_query, fuse_rankings, select_rarest_terms
 
 STOP_WORDS = {"a", "an", "and", "are", "defined", "do", "for", "how", "in", "is", "of", "the", "to", "what", "where", "which", "with"}
 
@@ -77,6 +77,8 @@ def parse_query(raw: str) -> Query:
 
 
 def query_terms(text: str) -> list[str]:
+    # Compatibility helper for callers that need complete identifier tokens; the Postgres
+    # lexical path further digests these into identifier components via ``digest_query``.
     return [term.lower() for term in re.findall(r"[A-Za-z_][A-Za-z0-9_]{2,}", text) if term.lower() not in STOP_WORDS]
 
 
@@ -108,7 +110,8 @@ def _fuse(result_sets, limit):
 
 
 def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id: str | None = None, rerank: bool = False):
-    q, terms = parse_query(raw), query_terms(parse_query(raw).text)
+    q = parse_query(raw)
+    terms = digest_query(q.text)
     repos = {r.id: r for r in db.scalars(select(Repository)).all()}
     lexical, symbols, semantic = [], [], []
     exact_lexical_match = False
@@ -162,7 +165,7 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
                 select(TermDocumentFrequency.term, TermDocumentFrequency.document_frequency)
                 .where(TermDocumentFrequency.term.in_(query_tokens))
             ).all()) if query_tokens else {}
-            chosen_tokens = select_discriminating_terms(query_tokens, document_frequency, settings.rare_term_limit)
+            chosen_tokens = select_rarest_terms(query_tokens, document_frequency, limit=min(settings.rare_term_limit, 12))
             if chosen_tokens:
                 fts_tokens = literal_column('code_chunks.fts_tokens')
                 tsquery = func.to_tsquery('simple', ' | '.join(chosen_tokens))
@@ -171,8 +174,17 @@ def search_with_capability(db, raw: str, mode='hybrid', limit=30, repository_id:
                          .join(File, CodeChunk.file_id == File.id)
                          .where(*chunk_filters()).where(fts_tokens.op('@@')(tsquery))
                          .order_by(rank_expr.desc()).limit(limit * 8))
-                for chunk, file, rank_score in db.execute(stmt):
-                    score = .45 + .35 * (rank_score / (1.0 + rank_score))
+                candidates = list(db.execute(stmt))
+                # GIN/tsquery remains candidate generation; BM25 deterministically re-scores
+                # the bounded window in the pure domain helper.  Lengths and term frequencies
+                # are calculated only for these candidates, never by a corpus scan on hot SQL.
+                lengths = [len(digest_query(chunk.source_text)) for chunk, _, _ in candidates]
+                average_length = sum(lengths) / len(lengths) if lengths else 0
+                document_count = db.scalar(select(func.count()).select_from(CodeChunk).where(*chunk_filters())) or 0
+                for (chunk, file, _), length in zip(candidates, lengths):
+                    tokens = digest_query(chunk.source_text)
+                    frequencies = {term: tokens.count(term) for term in chosen_tokens}
+                    score = bm25_score(frequencies, chosen_tokens, length, average_length, document_frequency, document_count)
                     lexical.append(result('chunk', score, repos[chunk.repository_id], file, chunk))
         else:
             clauses = [CodeChunk.source_text.ilike(f'%{term}%') for term in terms]
